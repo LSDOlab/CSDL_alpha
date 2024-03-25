@@ -1,3 +1,4 @@
+from .src.graph.variable import Variable
 from .manager import RecManager
 manager = RecManager()
 

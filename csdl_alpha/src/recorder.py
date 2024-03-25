@@ -92,6 +92,7 @@ class Recorder:
         Args:
             node: The node to add.
         """
+        print
         self.active_namespace.nodes.append(node)
         node.namespace = self.active_namespace_node.value
         self.active_graph.add_node(node)
