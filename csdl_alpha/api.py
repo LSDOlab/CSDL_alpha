@@ -1,4 +1,5 @@
 from .src.graph.variable import Variable
+from .src.model import Model
 from .manager import RecManager
 manager = RecManager()
 

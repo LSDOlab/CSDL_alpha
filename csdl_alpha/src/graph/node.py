@@ -10,3 +10,8 @@ class Node:
         namespace (Namespace): The namespace of the node.
     """
     namespace: Namespace = None
+
+    def __eq__(self, other):
+        return self is other
+    def __hash__(self):
+        return id(self)

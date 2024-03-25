@@ -31,8 +31,8 @@ class Recorder:
         from csdl_alpha.api import manager
         self.manager = manager
 
-        self.graph_tree = Tree(Namespace("root", []))
-        self.namespace_tree = Tree(Graph())
+        self.namespace_tree = Tree(Namespace("root", []))
+        self.graph_tree = Tree(Graph())
 
         self.active_graph_node = self.graph_tree
         self.active_namespace_node = self.namespace_tree
@@ -54,14 +54,16 @@ class Recorder:
         """
         self.manager.deactivate_recorder(self)
 
-    def _enter_namespace(self, namespace: str):
+    def _enter_namespace(self, name: str):
         """
         Enters a new namespace.
 
         Args:
-            namespace: The name of the namespace to enter.
+            name: The name of the namespace to enter.
         """
-        self.active_namespace_node = self.active_namespace_node.add_child(Namespace(namespace, []))
+        prepend = self.active_namespace.prepend + '.' + name
+        namespace = Namespace(name, [], prepend=prepend)
+        self.active_namespace_node = self.active_namespace_node.add_child(namespace)
         self.active_namespace = self.active_namespace_node.value
 
     def _exit_namespace(self):
@@ -92,7 +94,6 @@ class Recorder:
         Args:
             node: The node to add.
         """
-        print
         self.active_namespace.nodes.append(node)
         node.namespace = self.active_namespace_node.value
         self.active_graph.add_node(node)
@@ -133,8 +134,6 @@ class Tree:
         self.children.append(child)
         return child
 
-
-@dataclass
 class Namespace:
     """
     Represents a namespace.
@@ -142,6 +141,19 @@ class Namespace:
     Attributes:
         name: The name of the namespace.
         nodes: The list of nodes in the namespace.
+        prepend: The string to prepend to the namespace name.
     """
-    name: str
-    nodes: list
+    def __init__(self, name, nodes=[], prepend=None):
+        """
+        Initializes a new instance of the Namespace class.
+
+        Args:
+            name: The name of the namespace.
+            nodes: The list of nodes in the namespace.
+            prepend: The string to prepend to the namespace name.
+        """
+        self.name = name
+        self.nodes = nodes
+        self.prepend = prepend
+        if prepend is None:
+            self.prepend = name
