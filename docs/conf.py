@@ -12,11 +12,11 @@
 
 # import os
 # import sys
-# sys.path.insert(0, os.path.abspath('../lsdo_project_template/core'))     # for autodoc
+# sys.path.insert(0, os.path.abspath('../csdl_alpha/core'))     # for autodoc
 
 # -- Project information -----------------------------------------------------
 
-project = 'lsdo_project_template'
+project = 'csdl_alpha'
 copyright = '2023, Anugrah'
 author = 'Anugrah'
 version = '0.1'
@@ -54,7 +54,7 @@ myst_enable_extensions = ["dollarmath", "amsmath", "tasklist"]
 nb_execution_mode = 'off'
 
 # autoapi options
-autoapi_dirs = ["../lsdo_project_template/core"]
+autoapi_dirs = ["../csdl_alpha/core"]
 autoapi_root = 'src/autoapi'
 autoapi_type = 'python'
 autoapi_file_patterns = ['*.py', '*.pyi']

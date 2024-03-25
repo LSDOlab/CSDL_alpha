@@ -12,7 +12,7 @@ Customize/add/remove pages from the template according to your package's require
 
 For automatically generated API references, add docstrings to your modules, classes, functions, etc., and
 then edit the list of directories containing files with docstrings intended for automatic API generation. 
-This can be done by editing the line `autoapi_dirs = ["../../lsdo_project_template/core"]` 
+This can be done by editing the line `autoapi_dirs = ["../../csdl_alpha/core"]` 
 in `conf.py` in the `/src` directory.
 
 Add Python files for examples and Jupyter notebooks for tutorials into the main project repository. 

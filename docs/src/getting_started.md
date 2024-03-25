@@ -7,22 +7,22 @@ and running a minimal example.
 ### Installation instructions for users
 For direct installation with all dependencies, run on the terminal or command line
 ```sh
-$ pip install git+https://github.com/LSDOlab/lsdo_project_template.git
+$ pip install git+https://github.com/LSDOlab/csdl_alpha.git
 ```
 If you want users to install a specific branch, run
 ```sh
-$ pip install git+https://github.com/LSDOlab/lsdo_project_template.git@branch
+$ pip install git+https://github.com/LSDOlab/csdl_alpha.git@branch
 ```
 
 **Enabled by**: Copying the `setup.py` file, changing your repository name and version, 
 and adding all your dependencies into the list `install_requires`.
 
 ### Installation instructions for developers
-To install `lsdo_project_template`, first clone the repository and install using pip.
+To install `csdl_alpha`, first clone the repository and install using pip.
 On the terminal or command line, run
 ```sh
-$ git clone https://github.com/LSDOlab/lsdo_project_template.git
-$ pip install -e ./lsdo_project_template
+$ git clone https://github.com/LSDOlab/csdl_alpha.git
+$ pip install -e ./csdl_alpha
 ```
 **Enabled by**: Copying the setup.py file, and changing your repository name and version.
 
@@ -39,7 +39,7 @@ Customize/add/remove pages from the template according to your package's require
 
 For automatically generated API references, add docstrings to your modules, classes, functions, etc., and
 then edit the list of directories containing files with docstrings intended for automatic API generation. 
-This can be done by editing the line `autoapi_dirs = ["../../lsdo_project_template/core"]` 
+This can be done by editing the line `autoapi_dirs = ["../../csdl_alpha/core"]` 
 in `conf.py` in the `/src` directory.
 
 Add Python files for examples and Jupyter notebooks for tutorials into the main project repository. 

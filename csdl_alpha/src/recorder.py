@@ -1,0 +1,146 @@
+from csdl_alpha.src.graph.graph import Graph
+from dataclasses import dataclass
+
+class Recorder:
+    """
+    The Recorder class represents a recorder object that is used to record data.
+
+    Attributes:
+        manager: The manager object that manages the recorders.
+        graph_tree: The tree structure representing the graph hierarchy.
+        namespace_tree: The tree structure representing the namespace hierarchy.
+        active_graph_node: The currently active graph node.
+        active_namespace_node: The currently active namespace node.
+        active_graph: The currently active graph.
+        active_namespace: The currently active namespace.
+
+    Methods:
+        start: Activates the recorder.
+        stop: Deactivates the recorder.
+        _enter_namespace: Enters a new namespace.
+        _exit_namespace: Exits the current namespace.
+        _enter_subgraph: Enters a new subgraph.
+        _exit_subgraph: Exits the current subgraph.
+        _add_node: Adds a node to the active namespace and graph.
+    """
+
+    def __init__(self):
+        """
+        Initializes a new instance of the Recorder class.
+        """
+        from csdl_alpha.api import manager
+        self.manager = manager
+
+        self.graph_tree = Tree(Namespace("root", []))
+        self.namespace_tree = Tree(Graph())
+
+        self.active_graph_node = self.graph_tree
+        self.active_namespace_node = self.namespace_tree
+
+        self.active_graph = self.active_graph_node.value
+        self.active_namespace = self.active_namespace_node.value
+
+        manager.constructed_recorders.append(self)
+        
+    def start(self):
+        """
+        Activates the recorder.
+        """
+        self.manager.activate_recorder(self)
+
+    def stop(self):
+        """
+        Deactivates the recorder.
+        """
+        self.manager.deactivate_recorder(self)
+
+    def _enter_namespace(self, namespace: str):
+        """
+        Enters a new namespace.
+
+        Args:
+            namespace: The name of the namespace to enter.
+        """
+        self.active_namespace_node = self.active_namespace_node.add_child(Namespace(namespace, []))
+        self.active_namespace = self.active_namespace_node.value
+
+    def _exit_namespace(self):
+        """
+        Exits the current namespace.
+        """
+        self.active_namespace_node = self.active_namespace_node.parent
+        self.active_namespace = self.active_namespace_node.value
+
+    def _enter_subgraph(self):
+        """
+        Enters a new subgraph.
+        """
+        self.active_graph_node = self.active_graph_node.add_child(Graph())
+        self.active_graph = self.active_graph_node.value
+
+    def _exit_subgraph(self):
+        """
+        Exits the current subgraph.
+        """
+        self.active_graph_node = self.active_graph_node.parent
+        self.active_graph = self.active_graph_node.value
+
+    def _add_node(self, node):
+        """
+        Adds a node to the active namespace and graph.
+
+        Args:
+            node: The node to add.
+        """
+        self.active_namespace.nodes.append(node)
+        node.namespace = self.active_namespace_node.value
+        self.active_graph.add_node(node)
+
+class Tree:
+    """
+    Represents a tree data structure.
+
+    Attributes:
+        value: The value stored in the tree node.
+        parent: The parent node of the current node.
+        children: The list of child nodes of the current node.
+    """
+
+    def __init__(self, value, parent=None):
+        """
+        Initializes a new instance of the Tree class.
+
+        Args:
+            value: The value stored in the tree node.
+            parent: The parent node of the current node.
+        """
+        self.value = value
+        self.children = []
+        self.parent = parent
+
+    def add_child(self, value):
+        """
+        Adds a child node to the current node.
+
+        Args:
+            value: The value to be stored in the child node.
+
+        Returns:
+            The newly created child node.
+        """
+        child = Tree(value, parent=self)
+        self.children.append(child)
+        return child
+
+
+@dataclass
+class Namespace:
+    """
+    Represents a namespace.
+
+    Attributes:
+        name: The name of the namespace.
+        nodes: The list of nodes in the namespace.
+    """
+    name: str
+    nodes: list

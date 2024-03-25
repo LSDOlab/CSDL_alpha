@@ -1,4 +1,4 @@
-# Welcome to lsdo_project_template
+# Welcome to csdl_alpha
 
 ![alt text](/src/images/lsdolab.png "Title displayed")
 

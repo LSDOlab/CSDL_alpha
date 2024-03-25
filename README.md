@@ -1,16 +1,16 @@
-# lsdo_project_template
+# csdl_alpha
 
 <!---
-[![Python](https://img.shields.io/pypi/pyversions/lsdo_project_template)](https://img.shields.io/pypi/pyversions/lsdo_project_template)
-[![Pypi](https://img.shields.io/pypi/v/lsdo_project_template)](https://pypi.org/project/lsdo_project_template/)
+[![Python](https://img.shields.io/pypi/pyversions/csdl_alpha)](https://img.shields.io/pypi/pyversions/csdl_alpha)
+[![Pypi](https://img.shields.io/pypi/v/csdl_alpha)](https://pypi.org/project/csdl_alpha/)
 [![Coveralls Badge][13]][14]
 [![PyPI version][10]][11]
 [![PyPI Monthly Downloads][12]][11]
 -->
 
-[![GitHub Actions Test Badge](https://github.com/LSDOlab/lsdo_project_template/actions/workflows/actions.yml/badge.svg)](https://github.com/lsdo_project_template/lsdo_project_template/actions)
-[![Forks](https://img.shields.io/github/forks/LSDOlab/lsdo_project_template.svg)](https://github.com/LSDOlab/lsdo_project_template/network)
-[![Issues](https://img.shields.io/github/issues/LSDOlab/lsdo_project_template.svg)](https://github.com/LSDOlab/lsdo_project_template/issues)
+[![GitHub Actions Test Badge](https://github.com/LSDOlab/csdl_alpha/actions/workflows/actions.yml/badge.svg)](https://github.com/csdl_alpha/csdl_alpha/actions)
+[![Forks](https://img.shields.io/github/forks/LSDOlab/csdl_alpha.svg)](https://github.com/LSDOlab/csdl_alpha/network)
+[![Issues](https://img.shields.io/github/issues/LSDOlab/csdl_alpha.svg)](https://github.com/LSDOlab/csdl_alpha/issues)
 
 
 A template repository for LSDOlab projects
@@ -25,21 +25,21 @@ Note that template users need to edit the README badge definitions for their res
 ## Installation instructions for users
 For direct installation with all dependencies, run on the terminal or command line
 ```sh
-pip install git+https://github.com/LSDOlab/lsdo_project_template.git
+pip install git+https://github.com/LSDOlab/csdl_alpha.git
 ```
 If you want users to install a specific branch, run
 ```sh
-pip install git+https://github.com/LSDOlab/lsdo_project_template.git@branch
+pip install git+https://github.com/LSDOlab/csdl_alpha.git@branch
 ```
 
 <!-- **Enabled by**: `packages=find_packages()` in the `setup.py` file. -->
 
 ## Installation instructions for developers
-To install `lsdo_project_template`, first clone the repository and install using pip.
+To install `csdl_alpha`, first clone the repository and install using pip.
 On the terminal or command line, run
 ```sh
-git clone https://github.com/LSDOlab/lsdo_project_template.git
-pip install -e ./lsdo_project_template
+git clone https://github.com/LSDOlab/csdl_alpha.git
+pip install -e ./csdl_alpha
 ```
 
 # For Developers

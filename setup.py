@@ -20,14 +20,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name='lsdo_project_template',
-    version=get_version('lsdo_project_template/__init__.py'),
+    name='csdl_alpha',
+    version=get_version('csdl_alpha/__init__.py'),
     author='Author name',
     author_email='author@gmail.com',
     license='LGPLv3+',
     keywords='python project template repository package',
-    url='http://github.com/LSDOlab/lsdo_project_template',
-    download_url='http://pypi.python.org/pypi/lsdo_project_template',
+    url='http://github.com/LSDOlab/csdl_alpha',
+    download_url='http://pypi.python.org/pypi/csdl_alpha',
     description='A template repository/package for LSDOlab projects',
     long_description=long_description,
     long_description_content_type='text/markdown',
