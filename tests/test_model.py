@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 def define_my_model():
     import csdl_alpha as csdl
@@ -22,9 +23,9 @@ def test_model_correct():
     b2 = model.evaluate()
     recorder.stop()
     assert b.namespace.name == 'test'
-    assert b.value == 9
+    assert b.value == np.array([9])
     assert b2.namespace.name == 'MyModel'
-    assert b2.value == 9
+    assert b2.value == np.array([9])
 
 def test_wrong_inputs():
     import csdl_alpha as csdl

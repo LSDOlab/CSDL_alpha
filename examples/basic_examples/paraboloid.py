@@ -16,7 +16,7 @@ if __name__ == '__main__':
             f.name = 'f' # This gives f the name 'paraboloid.f'
             return f
 
-    recorder = csdl.build_new_recorder(inline=True)
+    recorder = csdl.build_new_recorder(inline=True, debug=True)
     recorder.start()
 
     x = csdl.Variable(value=2., name='x')
@@ -31,6 +31,9 @@ if __name__ == '__main__':
     # Call the evaluate method of the model functionally.
     f = parabolid_model.evaluate(x, y, name = 'paraboloid_submodel')
 
+    recorder.active_graph.visualize()
+
     print(f.value) # should be 108
+    f.print_trace()
 
     recorder.stop()

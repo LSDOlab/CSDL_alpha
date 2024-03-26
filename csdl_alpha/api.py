@@ -6,9 +6,9 @@ manager = RecManager()
 def get_current_recorder():
     return manager.active_recorder
 
-def build_new_recorder(inline = False):
+def build_new_recorder(inline = False, debug = False, expand_ops = False):
     from .src.recorder import Recorder
-    return Recorder(inline = inline)
+    return Recorder(inline = inline, debug=debug, expand_ops=expand_ops)
 
 def enter_namespace(namespace: str):
     """

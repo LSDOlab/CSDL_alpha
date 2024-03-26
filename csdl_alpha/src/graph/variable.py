@@ -1,6 +1,7 @@
 from csdl_alpha.src.graph.node import Node
 import numpy as np
 from typing import Union
+from csdl_alpha.utils.inputs import ingest_value, check_shape
 
 class Variable(Node):
     is_input = True
@@ -17,20 +18,8 @@ class Variable(Node):
         super().__init__()
         self.recorder._add_node(self)
 
-        if isinstance(value, (float, int)):
-            value = np.array([value])
-        elif not isinstance(value, np.ndarray) and value is not None:
-            raise ValueError("Value must be a numpy array, float or int")
-        
-        if shape is None:
-            if value is not None:
-                shape = value.shape
-            else:
-                raise ValueError("Shape or value must be provided")
-        else:
-            if value is not None:
-                if shape != value.shape:
-                    raise ValueError("Shape and value shape must match")
+        value = ingest_value(value)
+        check_shape(shape, value)
         
         self.shape = shape
         self.name = name

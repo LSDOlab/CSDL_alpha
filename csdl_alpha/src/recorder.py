@@ -1,4 +1,5 @@
 from csdl_alpha.src.graph.graph import Graph
+import inspect
 
 class Recorder:
     """
@@ -109,7 +110,7 @@ class Recorder:
         """
         self.active_graph.add_node(node)
         self.node_graph_map[node] = [self.active_graph]
-        
+
     def _set_namespace(self, node):
         """
         sets namespace of node.
