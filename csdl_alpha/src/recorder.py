@@ -42,6 +42,8 @@ class Recorder:
         self.active_graph = self.active_graph_node.value
         self.active_namespace = self.active_namespace_node.value
 
+        self.node_graph_map = {}
+
         manager.constructed_recorders.append(self)
         
     def start(self):
@@ -111,6 +113,7 @@ class Recorder:
         """
 
         self.active_graph.add_node(node)
+        self.node_graph_map[node] = [self.active_graph]
         
     def _set_namespace(self, node):
         """
