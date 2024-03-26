@@ -8,7 +8,7 @@
 [![PyPI Monthly Downloads][12]][11]
 -->
 
-[![GitHub Actions Test Badge](https://github.com/LSDOlab/csdl_alpha/.github/workflows/actions.yml/badge.svg)](https://github.com/csdl_alpha/csdl_alpha/.github)
+[![GitHub Actions Test Badge](https://github.com/LSDOlab/csdl_alpha/actions/workflows/actions.yml/badge.svg)](https://github.com/csdl_alpha/csdl_alpha/.github)
 [![Forks](https://img.shields.io/github/forks/LSDOlab/csdl_alpha.svg)](https://github.com/LSDOlab/csdl_alpha/network)
 [![Issues](https://img.shields.io/github/issues/LSDOlab/csdl_alpha.svg)](https://github.com/LSDOlab/csdl_alpha/issues)
 
