@@ -112,6 +112,20 @@ class Recorder:
         self.active_namespace.nodes.append(node)
         node.namespace = self.active_namespace_node.value
         self.active_graph.add_node(node)
+        
+    def _add_edge(self, node_from, node_to):
+        """
+        Adds an edge between two nodes in the active graph.
+
+        Args:
+            node_from: The source node.
+            node_to: The target node.
+        """
+        if node_from not in self.active_graph.node_table:
+            raise ValueError(f"Node {node_from} not in graph")
+        if node_to not in self.active_graph.node_table:
+            raise ValueError(f"Node {node_to} not in graph")
+        self.active_graph.add_edge(node_from, node_to)
 
 class Tree:
     """

@@ -6,10 +6,9 @@ manager = RecManager()
 def get_current_recorder():
     return manager.active_recorder
 
-def build_new_recorder():
+def build_new_recorder(inline = False):
     from .src.recorder import Recorder
-    return Recorder()
-
+    return Recorder(inline = inline)
 
 def enter_namespace(namespace: str):
     """
@@ -42,8 +41,6 @@ def exit_subgraph():
     """
     recorder = get_current_recorder()
     recorder._exit_subgraph()
-
-
 
 def print_all_recorders():
     print(manager)
