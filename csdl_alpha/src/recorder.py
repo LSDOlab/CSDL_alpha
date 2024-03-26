@@ -116,7 +116,7 @@ class Recorder:
         sets namespace of node.
         """
         self.active_namespace.nodes.append(node)
-        node.namespace = self.active_namespace_node.value
+        node.namespace = self.active_namespace
 
     def _add_edge(self, node_from, node_to):
         """
