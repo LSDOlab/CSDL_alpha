@@ -38,8 +38,6 @@ def test_namespacing():
     assert recorder.active_namespace.name is None
     recorder.stop()
 
-    recorder.active_graph.visualize()
-
     assert a.namespace.name is None
     assert b.namespace.name == 'test1'
     assert b.namespace.prepend == 'test1'
