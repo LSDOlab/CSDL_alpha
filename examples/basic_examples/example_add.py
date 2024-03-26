@@ -11,8 +11,8 @@ if __name__ == '__main__':
     start = time.time()
     recorder = csdl.build_new_recorder(inline = True)
     recorder.start()
-    x = csdl.Variable((1,), name = 'x', value = np.ones((1,))*3.0)
-    z = csdl.Variable((1,), name = 'z', value = np.ones((1,))*2.0)
+    x = csdl.Variable(name = 'x', value = 3.0)
+    z = csdl.Variable(name = 'z', value = 2.0)
 
     for i in range(10):
         csdl.enter_namespace('test'+str(i))
