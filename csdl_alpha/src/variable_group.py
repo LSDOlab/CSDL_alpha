@@ -1,4 +1,5 @@
 from typing import TypedDict
+from csdl_alpha.src.graph.variable import Variable
 
 class VariableGroup(TypedDict):
     """
@@ -17,12 +18,13 @@ class VariableGroup(TypedDict):
 
     def __init__(self, *args):
         self.shape_dict = {}
+        self.type_dict = {}
 
         self.define(*args)
 
     def define(self, *args):
         """
-        Defines the variables in the group.
+        User-defined method to enforce shape and type of the variables in the group.
 
         Args:
             *args: Variable names.
@@ -41,6 +43,17 @@ class VariableGroup(TypedDict):
         """
         self.shape_dict[name] = shape
 
+    def declare_type(self, name, type):
+        """
+        Declares the type of a variable.
+
+        Args:
+            name (str): The name of the variable.
+            type: The type of the variable.
+
+        """
+        self.type_dict[name] = type
+
     def __setitem__(self, key, value):
         """
         Sets the value of a variable.
@@ -51,8 +64,23 @@ class VariableGroup(TypedDict):
 
         Raises:
             ValueError: If the shape of the value does not match the expected shape.
+            ValueError: If the type of the value does not match the expected type.
         """
         if key in self.shape_dict:
             if value.shape != self.shape_dict[key]:
                 raise ValueError(f"Shape mismatch. Expected {self.shape_dict[key]}, got {value.shape}")
+            if type(value) != self.type_dict[key]:
+                raise ValueError(f"Type mismatch. Expected {self.type_dict[key]}, got {type(value)}")
         super().__setitem__(key, value)
+
+    def add_tag(self, tag):
+        """
+        Adds a tag to the group.
+
+        Args:
+            tag: The tag to be added.
+
+        """
+        for key in self.keys():
+            if type(self[key]) == Variable or type(self[key]) == VariableGroup:
+                self[key].add_tag(tag)

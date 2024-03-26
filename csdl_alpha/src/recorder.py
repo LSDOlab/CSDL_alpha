@@ -1,5 +1,4 @@
 from csdl_alpha.src.graph.graph import Graph
-from dataclasses import dataclass
 
 class Recorder:
     """
@@ -24,14 +23,17 @@ class Recorder:
         _add_node: Adds a node to the active namespace and graph.
     """
 
-    def __init__(self):
+    def __init__(self, inline: bool = False, debug: bool = False):
         """
         Initializes a new instance of the Recorder class.
         """
         from csdl_alpha.api import manager
         self.manager = manager
+        self.inline = inline
+        self.debug = debug
 
-        self.namespace_tree = Tree(Namespace("root", []))
+        self.namespace_tree = Tree(Namespace(None))
+        self.namespace_tree.child_names = set()
         self.graph_tree = Tree(Graph())
 
         self.active_graph_node = self.graph_tree
@@ -61,9 +63,22 @@ class Recorder:
         Args:
             name: The name of the namespace to enter.
         """
-        prepend = self.active_namespace.prepend + '.' + name
+        if not isinstance(name, str):
+            raise TypeError("Name of namespace is not a string")
+        
+        if name in self.active_namespace_node.child_names:
+            raise Exception("Attempting to enter existing namespace")
+        
+        self.active_namespace_node.child_names.add(name)
+
+        if self.active_namespace.name is None:
+            prepend = name
+        else:
+            prepend = self.active_namespace.prepend + '.' + name
+
         namespace = Namespace(name, [], prepend=prepend)
         self.active_namespace_node = self.active_namespace_node.add_child(namespace)
+        self.active_namespace_node.child_names = set()
         self.active_namespace = self.active_namespace_node.value
 
     def _exit_namespace(self):

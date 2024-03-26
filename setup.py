@@ -50,6 +50,7 @@ setup(
         'setuptools',
         'wheel',
         'twine',
+        'rustworkx',
     ],
     classifiers=[
         'Programming Language :: Python',

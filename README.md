@@ -13,12 +13,7 @@
 [![Issues](https://img.shields.io/github/issues/LSDOlab/csdl_alpha.svg)](https://github.com/LSDOlab/csdl_alpha/issues)
 
 
-A template repository for LSDOlab projects
-
-This repository serves as a template for all LSDOlab projects with regard to documentation, testing and hosting of open-source code.
-Note that template users need to edit the README badge definitions for their respective packages.
-
-*README.md file contains high-level information about your package: it's purpose, high-level instructions for installation and usage.*
+Alpha version of the new CSDL 1.0. WIP
 
 # Installation
 
@@ -27,10 +22,7 @@ For direct installation with all dependencies, run on the terminal or command li
 ```sh
 pip install git+https://github.com/LSDOlab/csdl_alpha.git
 ```
-If you want users to install a specific branch, run
-```sh
-pip install git+https://github.com/LSDOlab/csdl_alpha.git@branch
-```
+
 
 <!-- **Enabled by**: `packages=find_packages()` in the `setup.py` file. -->
 
