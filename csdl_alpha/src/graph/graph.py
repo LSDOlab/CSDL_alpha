@@ -46,4 +46,4 @@ class Graph(rx.PyDiGraph):
             return attr_dict
 
 
-        graphviz_draw(self, node_attr_fn = name_node, filename= 'graph')
+        graphviz_draw(self, node_attr_fn = name_node, filename= 'graph.png')
