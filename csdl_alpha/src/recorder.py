@@ -9,7 +9,7 @@ class Recorder:
         graph_tree: The tree structure representing the graph hierarchy.
         namespace_tree: The tree structure representing the namespace hierarchy.
         active_graph_node: The currently active graph node.
-        active_namespace_node: The currently active namespace node.
+        active_namespace: The currently active namespace node.
         active_graph: The currently active graph.
         active_namespace: The currently active namespace.
 
@@ -32,15 +32,13 @@ class Recorder:
         self.inline = inline
         self.debug = debug
 
-        self.namespace_tree = Tree(Namespace(None))
-        self.namespace_tree.child_names = set()
+        self.namespace_tree = Namespace(None)
         self.graph_tree = Tree(Graph())
 
         self.active_graph_node = self.graph_tree
-        self.active_namespace_node = self.namespace_tree
 
         self.active_graph = self.active_graph_node.value
-        self.active_namespace = self.active_namespace_node.value
+        self.active_namespace = self.namespace_tree
 
         self.node_graph_map = {}
 
@@ -68,27 +66,24 @@ class Recorder:
         if not isinstance(name, str):
             raise TypeError("Name of namespace is not a string")
         
-        if name in self.active_namespace_node.child_names:
+        if name in self.active_namespace.child_names:
             raise Exception("Attempting to enter existing namespace")
         
-        self.active_namespace_node.child_names.add(name)
+        self.active_namespace.child_names.add(name)
 
         if self.active_namespace.name is None:
             prepend = name
         else:
             prepend = self.active_namespace.prepend + '.' + name
 
-        namespace = Namespace(name, [], prepend=prepend)
-        self.active_namespace_node = self.active_namespace_node.add_child(namespace)
-        self.active_namespace_node.child_names = set()
-        self.active_namespace = self.active_namespace_node.value
+        self.active_namespace = self.active_namespace.add_child(name, prepend=prepend)
 
     def _exit_namespace(self):
         """
         Exits the current namespace.
         """
-        self.active_namespace_node = self.active_namespace_node.parent
-        self.active_namespace = self.active_namespace_node.value
+        self.active_namespace = self.active_namespace.parent
+        self.active_namespace = self.active_namespace
 
     def _enter_subgraph(self):
         """
@@ -112,7 +107,7 @@ class Recorder:
             node: The node to add.
         """
         self.active_namespace.nodes.append(node)
-        node.namespace = self.active_namespace_node.value
+        node.namespace = self.active_namespace
         self.active_graph.add_node(node)
         self.node_graph_map[node] = [self.active_graph]
         
@@ -166,7 +161,7 @@ class Tree:
         self.children.append(child)
         return child
 
-class Namespace:
+class Namespace(Tree):
     """
     Represents a namespace.
 
@@ -175,7 +170,7 @@ class Namespace:
         nodes: The list of nodes in the namespace.
         prepend: The string to prepend to the namespace name.
     """
-    def __init__(self, name, nodes=[], prepend=None):
+    def __init__(self, name, nodes=[], prepend=None, parent=None):
         """
         Initializes a new instance of the Namespace class.
 
@@ -189,3 +184,22 @@ class Namespace:
         self.prepend = prepend
         if prepend is None:
             self.prepend = name
+        self.children = []
+        self.parent = parent
+        self.child_names = set()
+
+    def add_child(self, name, nodes=[], prepend=None):
+        """
+        Adds a child namespace to the current namespace.
+
+        Args:
+            name: The name of the child namespace.
+            nodes: The list of nodes in the child namespace.
+            prepend: The string to prepend to the child namespace name.
+
+        Returns:
+            The newly created child namespace.
+        """
+        child = Namespace(name, nodes, prepend, parent=self)
+        self.children.append(child)
+        return child

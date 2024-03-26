@@ -21,6 +21,8 @@ if __name__ == '__main__':
     print(z.value)
 
     # recorder.active_graph.visualize()
+    # recorder.active_graph.visualize_n2()
+
     recorder.stop()
     # profiler.disable()
     # profiler.dump_stats('output')

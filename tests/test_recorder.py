@@ -38,6 +38,8 @@ def test_namespacing():
     assert recorder.active_namespace.name is None
     recorder.stop()
 
+    recorder.active_graph.visualize()
+
     assert a.namespace.name is None
     assert b.namespace.name == 'test1'
     assert b.namespace.prepend == 'test1'
@@ -54,3 +56,5 @@ def test_duplicate_namespace_error():
     csdl.exit_namespace()
     with pytest.raises(Exception) as e_info:
         csdl.enter_namespace('test1')
+
+test_namespacing()
