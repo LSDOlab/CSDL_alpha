@@ -1,10 +1,6 @@
 import rustworkx as rx
 from rustworkx.visualization import graphviz_draw
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-from IPython.display import display, HTML
-import pydot
 
 class Graph(rx.PyDiGraph):
     def __init__(self):
@@ -29,7 +25,6 @@ class Graph(rx.PyDiGraph):
         self.add_node(operation)
 
     def visualize(self):
-        
         from csdl_alpha.src.graph.variable import Variable
         inverse_node_table = {v: k for k, v in self.node_table.items()}
 
@@ -51,7 +46,8 @@ class Graph(rx.PyDiGraph):
         # graphviz_draw(self, node_attr_fn = self.name_node, filename= 'graph.png')
 
     def to_dot(self, node_attr_fn=None):
-        from csdl_alpha.src.graph.variable import Variable
+        import pydot
+
 
         dot = pydot.Dot(graph_type='digraph')
 
@@ -132,6 +128,7 @@ class Graph(rx.PyDiGraph):
         return n2_matrix
 
     def visualize_n2(self):
+        import matplotlib.pyplot as plt
         from csdl_alpha.src.graph.variable import Variable
         # Create the N2 matrix
         n2_matrix = self.create_n2()

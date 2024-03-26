@@ -14,13 +14,16 @@ if __name__ == '__main__':
     x = csdl.Variable((1,), name = 'x', value = np.ones((1,))*3.0)
     z = csdl.Variable((1,), name = 'z', value = np.ones((1,))*2.0)
 
-    for i in range(5):
+    for i in range(10):
+        csdl.enter_namespace('test'+str(i))
         z = csdl.add(x,z)
         z.name = f'z_{i}'
+    for i in range(10):
+        csdl.exit_namespace()
 
     print(z.value)
 
-    # recorder.active_graph.visualize()
+    recorder.active_graph.visualize()
     # recorder.active_graph.visualize_n2()
 
     recorder.stop()

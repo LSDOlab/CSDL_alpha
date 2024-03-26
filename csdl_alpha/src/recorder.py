@@ -23,7 +23,7 @@ class Recorder:
         _add_node: Adds a node to the active namespace and graph.
     """
 
-    def __init__(self, inline: bool = False, debug: bool = False):
+    def __init__(self, inline: bool = False, debug: bool = False, expand_ops: bool = False):
         """
         Initializes a new instance of the Recorder class.
         """
@@ -31,6 +31,7 @@ class Recorder:
         self.manager = manager
         self.inline = inline
         self.debug = debug
+        self.expand_ops = expand_ops
 
         self.namespace_tree = Namespace(None)
         self.graph_tree = Tree(Graph())
