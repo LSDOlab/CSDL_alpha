@@ -11,9 +11,9 @@ class Variable(Node):
                  value: np.ndarray = None,  
                  tags: list[str] = [], 
                  hierarchy: int = None):
-        from csdl_alpha.api import manager
-        recorder = manager.active_recorder
-        recorder._add_node(self) # sets namespace and index
+        
+        super().__init__()
+        self.recorder._add_node(self) # sets namespace and index
         
         self.shape = shape
         self.name = name
@@ -21,3 +21,19 @@ class Variable(Node):
         self.tags = tags
         self.hierarchy = hierarchy
 
+
+    def __add__(self, other):
+        from csdl_alpha.src.operations.add import add
+        return add(self,other)
+    
+    def __mul__(self, other):
+        from csdl_alpha.src.operations.mult import mult
+        return mult(self,other)
+
+    def __neg__(self):
+        from csdl_alpha.src.operations.neg import neg
+        return neg(self)
+    
+    def __sub__(self, other):
+        from csdl_alpha.src.operations.sub import sub
+        return sub(self, other)

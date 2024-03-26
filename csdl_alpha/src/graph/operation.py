@@ -13,34 +13,36 @@ class Operation(Node):
         List of csdl variables.
     outputs : list
         List of csdl variables.
-    output_shapes : list
-        List of output variable shapes.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
-        self.name = 'op'
 
-        # determined by operation subclass using self.add_output_shape
-        self.output_shapes:list = None
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+
+        self.name = 'op'
 
         # ordered CSDL input variables
         self.inputs:list = args
 
-        # ordered CSDL output variables (filled later by add_output_shape)
-        self.outputs:list = []
+        # ordered CSDL output variables (filled later by add_outputs/add_outputs_shapes)
+        self.outputs:list = None
 
-        # recorder object
-        import csdl_alpha
-        self.recorder = csdl_alpha.get_current_recorder()
-
-    def add_output_shapes(self, *shapes):
-        if self.output_shapes is not None:
-            raise ValueError("Output shapes have already been assigned")
+    def set_output_shapes(self, *shapes:tuple[int]):
+        if self.outputs is not None:
+            raise ValueError("Outputs already been assigned")
 
         for shape in shapes:
             if not isinstance(shape, tuple):
                 raise ValueError("Output shapes must be tuples")
-        self.output_shapes = shapes
+        self.outputs = [Variable(shape = shape) for shape in shapes]
+
+    def set_outputs_shape_type(self, *vars: Variable):
+        if self.outputs is not None:
+            raise ValueError("Outputs already been assigned")
+        for var in vars:
+            if not isinstance(var, Variable):
+                raise ValueError(f"var must be a Variable. {var} given")
+        self.outputs = vars
 
     def get_outputs(self):
 
@@ -48,12 +50,7 @@ class Operation(Node):
         for input_variable in self.inputs:
             self.recorder._add_edge(input_variable, self)
 
-        for shape in self.output_shapes:
-            output_var = Variable(shape)
-            
-            self.outputs.append(output_var)
-
-            # self.recorder._add_node(output_var)
+        for output_var in self.outputs:
             self.recorder._add_edge(self, output_var)
 
         # if we're computing inline:
@@ -69,7 +66,7 @@ class Operation(Node):
     def set_inline_values(self):
         output_values = self.compute_inline(*self.inputs)
 
-        if not isinstance(output_values, tuple):
+        if len(self.outputs) == 1:
             self.outputs[0].value = output_values
         else:
             for output, value in zip(self.outputs, output_values):
@@ -94,4 +91,34 @@ class ElementwiseOperation(Operation):
     def __init__(self,*args, **kwargs):
         super().__init__(*args, **kwargs)
         out_shape = (args[0].shape,)
-        self.add_output_shapes(out_shape)
+        self.set_output_shapes(out_shape)
+
+
+class ComposedOperation(Operation):
+
+    def __init__(self,*args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.recorder._enter_subgraph()
+        
+        for input in self.inputs:
+            self.recorder._add_node(input)
+        outputs = self.evaluate_composed(*args)
+
+        if isinstance(outputs, tuple):
+            self.outputs = outputs
+        else:
+            self.outputs = [outputs]
+        self.graph = self.recorder.active_graph
+
+        self.recorder._exit_subgraph()
+
+        for output in self.outputs:
+            self.recorder._add_node(output)
+
+    def get_outputs(self):
+        outputs = super().get_outputs()
+        return outputs
+
+    
+    def set_inline_values(self):
+        pass

@@ -111,6 +111,13 @@ class Recorder:
         self.active_graph.add_node(node)
         self.node_graph_map[node] = [self.active_graph]
         
+    def _set_namespace(self, node):
+        """
+        sets namespace of node.
+        """
+        self.active_namespace.nodes.append(node)
+        node.namespace = self.active_namespace_node.value
+
     def _add_edge(self, node_from, node_to):
         """
         Adds an edge between two nodes in the active graph.
