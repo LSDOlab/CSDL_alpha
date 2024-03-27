@@ -15,7 +15,6 @@ class VariableGroup(TypedDict):
         __setitem__(key, value): Sets the value of a variable.
 
     """
-
     def __init__(self, *args):
         self.shape_dict = {}
         self.type_dict = {}
@@ -84,3 +83,12 @@ class VariableGroup(TypedDict):
         for key in self.keys():
             if type(self[key]) == Variable or type(self[key]) == VariableGroup:
                 self[key].add_tag(tag)
+
+    def save(self):
+        """
+        Sets the save attribute of all variables in the group to True.
+
+        """
+        for key in self.keys():
+            if type(self[key]) == Variable or type(self[key]) == VariableGroup:
+                self[key].save()

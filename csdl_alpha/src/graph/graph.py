@@ -66,6 +66,12 @@ class Graph(rx.PyDiGraph):
             if namespace_obj not in subgraphs:
                 subgraphs[namespace_obj] = pydot.Cluster(namespace, label=namespace)
                 if namespace_obj.parent is not None:
+                    if namespace_obj.parent not in subgraphs:
+                        if namespace_obj.parent.name is None:
+                            parent_name = 'global'
+                        else:
+                            parent_name = namespace_obj.parent.name
+                        subgraphs[namespace_obj.parent] = pydot.Cluster(parent_name, label=parent_name)
                     subgraphs[namespace_obj.parent].add_subgraph(subgraphs[namespace_obj])
 
             # Create a new node for the dot graph
