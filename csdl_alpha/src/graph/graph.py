@@ -94,7 +94,7 @@ class Graph(rx.PyDiGraph):
     def name_node(self, node):
         attr_dict = {}
         if node.name is None:
-            attr_dict['label'] = 'test'
+            attr_dict['label'] = 'var'
         else:
             attr_dict['label'] = node.name
         return attr_dict
