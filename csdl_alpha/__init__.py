@@ -7,4 +7,6 @@ from csdl_alpha.src.operations.add import add
 from csdl_alpha.src.operations.mult import mult
 from csdl_alpha.src.operations.square import square
 
+from csdl_alpha.src.operations.implicit_operations.solvers import *
+
 from .api import *

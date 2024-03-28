@@ -15,14 +15,15 @@ if __name__ == '__main__':
     z = csdl.Variable((1,), name = 'z', value = np.ones((1,))*2.0)
 
     # for i in range(5_000_000):
-    for i in range(10):
-        z = x-csdl.square(z)
+    for i in range(2):
+        # z = x-csdl.square(z)
+        z = x-z
         z.name = f'z_{i}'
 
     print(z.value)
 
     # post processing analysis
-    # recorder.active_graph.visualize()
+    recorder.active_graph.visualize()
     # recorder.stop()
     # profiler.disable()
     # profiler.dump_stats('output')
