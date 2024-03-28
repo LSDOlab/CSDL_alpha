@@ -13,6 +13,8 @@ class Sub(ComposedOperation):
 def evaluate_sub(x, y):
     return x+(-y)
 
+# TODO: decorator to expand composed operation to flat graph 
+# @expand_graph(evaluate_sub)
 def sub(x,y):
     """
     doc strings
@@ -27,3 +29,11 @@ def sub(x,y):
 #     """
 
 #     return evaluate_sub(x,y)
+
+# TODO: decorator to expand composed operation to flat graph 
+# def expand_graph(f, evaluate_function):
+    
+#     if global_expand == True:
+#         return evaluate_function
+#     else:
+#         return f

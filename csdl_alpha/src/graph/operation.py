@@ -17,19 +17,38 @@ class Operation(Node):
     """
 
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, metadata = None, **kwargs) -> None:
         super().__init__()
+
+        # check all args are CSDL variables
 
         self.name = 'op'
 
+        # Properties for the operation
+        self.properties = {
+            'linear': False,
+            'elementwise': False,
+            'diagonal_jacobian': False,
+            'convex': False,
+            'elementary': True,
+            'supports_sparse': False,
+        } 
+
+        # ordered CSDL input variables
+        self.inputs:list = args
         if not all(isinstance(arg, (Variable, int, float, np.ndarray)) for arg in args):
             raise ValueError("All args must be either Variable instances or convertible to Variable instances")
 
         # ordered CSDL input variables, convert int/float/ndarray to Variable
-        self.inputs:list = [Variable(value=arg) if isinstance(arg, (int, float, np.ndarray)) else arg for arg in args]
+        # self.inputs:list = [Variable(value=arg) if isinstance(arg, (int, float, np.ndarray)) else arg for arg in args]
 
         # ordered CSDL output variables (filled later by add_outputs/add_outputs_shapes)
         self.outputs:list = None
+
+        # metadata
+        if metadata is None:
+            metadata = {}
+        self.metadata = metadata
 
     def set_output_shapes(self, *shapes:tuple[int]):
         if self.outputs is not None:
@@ -79,7 +98,10 @@ class Operation(Node):
     def compute_inline(self, *args):
         raise NotImplementedError('not implemented') 
     
-    def evaluate_diagonal_jacobian(self, *args):
+    def evaluate_jacobian(self, *args):
+        raise NotImplementedError('not implemented') 
+
+    def evaluate_sparse_jacobian(self, *args):
         raise NotImplementedError('not implemented') 
 
     def evaluate_jvp(self, *args):
@@ -88,12 +110,15 @@ class Operation(Node):
     def evaluate_vjp(self, *args):
         raise NotImplementedError('not implemented')
 
-
-
 class ElementwiseOperation(Operation):
 
     def __init__(self,*args, **kwargs):
+        
         super().__init__(*args, **kwargs)
+
+        self.properties['elementwise'] = True
+        self.properties['diagonal_jacobian'] = True
+
         out_shape = (args[0].shape,)
         self.set_output_shapes(out_shape)
 
@@ -102,6 +127,8 @@ class ComposedOperation(Operation):
 
     def __init__(self,*args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.properties['elementary'] = False
+
         self.recorder._enter_subgraph()
         
         for input in self.inputs:

@@ -84,3 +84,6 @@ class Variable(Node):
     def __sub__(self, other):
         from csdl_alpha.src.operations.sub import sub
         return sub(self, other)
+    
+class ImplicitVariable(Variable):
+    pass

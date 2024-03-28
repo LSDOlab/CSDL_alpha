@@ -38,6 +38,7 @@ setup(
         'numpy',
         'pytest',
         'rustworkx',
+        'h5py',
     ],
     classifiers=[
         'Programming Language :: Python',
