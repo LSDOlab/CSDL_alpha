@@ -15,7 +15,7 @@ class Model:
         self.initialize()
         self.parameters.check(kwargs)
 
-    def _apply_namespacing(self, evaluate):
+    def _apply_namespacing(self, evaluate): # TODO: seperate this from model
         """
         Applies namespacing to the evaluate method.
 

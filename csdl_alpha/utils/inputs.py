@@ -17,3 +17,4 @@ def check_shape(shape, value):
         if value is not None:
             if shape != value.shape:
                 raise ValueError("Shape and value shape must match")
+    return shape

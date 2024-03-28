@@ -1,6 +1,5 @@
-import h5py
-
 def inline_save(filename:str):
+    import h5py
     from ..src.graph.variable import Variable
     from ..api import get_current_recorder
     
@@ -31,6 +30,7 @@ def inline_save(filename:str):
 
 
 def import_h5py(filename:str, group:str):
+    import h5py
     from ..src.graph.variable import Variable
     f = h5py.File(f'{filename}', 'r')
     grp = f[group]

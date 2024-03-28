@@ -23,7 +23,7 @@ class Variable(Node):
         self.name = None
 
         value = ingest_value(value)
-        check_shape(shape, value)
+        shape = check_shape(shape, value)
         
         self.shape = shape
         if name is not None:
