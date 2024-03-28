@@ -1,4 +1,5 @@
 from csdl_alpha.src.graph.graph import Graph
+import inspect
 
 class Recorder:
     """
@@ -23,7 +24,11 @@ class Recorder:
         _add_node: Adds a node to the active namespace and graph.
     """
 
-    def __init__(self, inline: bool = False, debug: bool = False, expand_ops: bool = False):
+    def __init__(self, 
+                 inline: bool = False, 
+                 debug: bool = False, 
+                 expand_ops: bool = False,
+                 auto_hierarchy: bool = False):
         """
         Initializes a new instance of the Recorder class.
         """
@@ -32,6 +37,13 @@ class Recorder:
         self.inline = inline
         self.debug = debug
         self.expand_ops = expand_ops
+        self.auto_hierarchy = auto_hierarchy
+
+        self.hierarchy = 0
+
+        self.design_variables = {}
+        self.constraints = {}
+        self.objectives = {}
 
         self.namespace_tree = Namespace(None)
         self.graph_tree = Tree(Graph())
@@ -70,6 +82,7 @@ class Recorder:
         if name in self.active_namespace.child_names:
             raise Exception("Attempting to enter existing namespace")
         
+        self.hierarchy += 1
         self.active_namespace.child_names.add(name)
 
         if self.active_namespace.name is None:
@@ -83,6 +96,7 @@ class Recorder:
         """
         Exits the current namespace.
         """
+        self.hierarchy -= 1
         self.active_namespace = self.active_namespace.parent
         self.active_namespace = self.active_namespace
 
@@ -109,13 +123,16 @@ class Recorder:
         """
         self.active_graph.add_node(node)
         self.node_graph_map[node] = [self.active_graph]
-        
+
     def _set_namespace(self, node):
         """
         sets namespace of node.
         """
+        from csdl_alpha.src.graph.variable import Variable
         self.active_namespace.nodes.append(node)
         node.namespace = self.active_namespace
+        if self.auto_hierarchy and isinstance(node, Variable):
+            node.set_hierarchy(self.hierarchy)
 
     def _add_edge(self, node_from, node_to):
         """
@@ -130,6 +147,41 @@ class Recorder:
         if node_to not in self.active_graph.node_table:
             raise ValueError(f"Node {node_to} not in graph")
         self.active_graph.add_edge(node_from, node_to)
+
+    def _add_design_variable(self, variable, upper, lower, scalar):
+        """
+        Adds a design variable to the recorder.
+
+        Args:
+            variable: The design variable.
+            upper: The upper bound of the design variable.
+            lower: The lower bound of the design variable.
+            scalar: The scalar value of the design variable.
+        """
+        self.design_variables[variable] = (upper, lower, scalar)
+
+    def _add_constraint(self, variable, upper, lower, scalar):
+        """
+        Adds a constraint to the recorder.
+
+        Args:
+            variable: The constraint variable.
+            upper: The upper bound of the constraint.
+            lower: The lower bound of the constraint.
+            scalar: The scalar value of the constraint.
+        """
+        self.constraints[variable] = (upper, lower, scalar)
+
+    def _add_objective(self, variable, scalar):
+        """
+        Adds an objective to the recorder.
+
+        Args:
+            variable: The objective variable.
+            scalar: The scalar value of the objective.
+        """
+        self.objectives[variable] = scalar
+
 
 class Tree:
     """

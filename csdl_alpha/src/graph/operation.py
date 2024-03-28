@@ -1,5 +1,6 @@
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.node import Node
+import numpy as np
 
 class Operation(Node):
     """
@@ -35,6 +36,11 @@ class Operation(Node):
 
         # ordered CSDL input variables
         self.inputs:list = args
+        if not all(isinstance(arg, (Variable, int, float, np.ndarray)) for arg in args):
+            raise ValueError("All args must be either Variable instances or convertible to Variable instances")
+
+        # ordered CSDL input variables, convert int/float/ndarray to Variable
+        # self.inputs:list = [Variable(value=arg) if isinstance(arg, (int, float, np.ndarray)) else arg for arg in args]
 
         # ordered CSDL output variables (filled later by add_outputs/add_outputs_shapes)
         self.outputs:list = None
