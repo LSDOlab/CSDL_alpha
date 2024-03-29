@@ -33,12 +33,11 @@ class ComposedOperation(Operation):
             self.recorder._add_node(output)
 
     def finalize_and_return_outputs(self):
-        outputs = super().finalize_and_return_outputs()
+        outputs = super().finalize_and_return_outputs(skip_inline = True)
         return outputs
-
     
     def set_inline_values(self):
-        pass
+        self.graph.execute_inline()
 
 
 # def set_property(cls, name, value):

@@ -9,9 +9,11 @@ if __name__ == '__main__':
     recorder = csdl.build_new_recorder(inline = True)
     recorder.start()
 
-    x = csdl.ImplicitVariable(shape=(1,), name='x', value=np.ones((1,))*3.0)
-    y = csdl.ImplicitVariable(shape=(1,), name='y', value=np.ones((1,))*3.0)
-    param = csdl.Variable(shape=(1,), name='param', value=np.ones((1,))*3.0)
+    # x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.6180339)
+    # y = csdl.ImplicitVariable(shape=(1,), name='y', value=0.7861513777)
+    x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.61803)
+    y = csdl.ImplicitVariable(shape=(1,), name='y', value=0.78)
+    param = csdl.Variable(shape=(1,), name='param', value=np.ones((1,))*1.0)
     test = param+param # should be ignored
     test.name = 'ignore'
     
@@ -29,8 +31,8 @@ if __name__ == '__main__':
     # apply coupling:
     # ONE SOLVER COUPLING:
     solver = csdl.GaussSeidel('gs_xy')
-    solver.add_state(x, residual_1, initial_value=0.0)
-    solver.add_state(y, residual_2, initial_value=0.0)
+    solver.add_state(x, residual_1)
+    solver.add_state(y, residual_2)
     solver.run()
 
     # NESTED (x) SOLVER COUPLING:
@@ -54,6 +56,7 @@ if __name__ == '__main__':
 
     print('x Value:', x.value)
     print('y Value:', y.value)
+    print('param Value:', param.value)
 
     # A solution: 
     x_sol = (np.sqrt(5)-1)/2

@@ -1,9 +1,15 @@
-from csdl_alpha.src.graph.variable import Variable
+from csdl_alpha.src.graph.variable import ImplicitVariable, Variable
 from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation
+from csdl_alpha.utils.inputs import scalarize, ingest_value
 
 class NonlinearSolver(object):
-    def __init__(self, name = 'nlsolver'):
+    def __init__(
+            self,
+            name = 'nlsolver', 
+            print_status = True,
+        ):
         self.name = name
+        self.print_status = print_status
 
         self.metadata = {}
         
@@ -30,9 +36,12 @@ class NonlinearSolver(object):
         self._intersection_targets = set()
 
 
+        # Dictionary to keep track of values for inline evaluations
+
+
     def add_state_residual_pair(
             self, 
-            state: Variable,
+            state: ImplicitVariable,
             residual: Variable):
         
         """
@@ -40,6 +49,7 @@ class NonlinearSolver(object):
 
         Initializes mappings between states and residuals, and stores metadata about the state.
         """
+        
         self.state_to_residual_map[state] = residual
         self.residual_to_state_map[residual] = state
         self.state_metadata[state] = {}
@@ -92,8 +102,8 @@ class NonlinearSolver(object):
         recorder.active_graph.replace(S)
         recorder.active_graph.visualize(f'implicit_function_{self.name}')
         self.update_residual = recorder.active_graph.execute_inline
+        self.residual_graph = recorder.active_graph
         recorder._exit_subgraph()
-
 
         # 1.d/e
         state_variables = set(self.state_to_residual_map.keys())
@@ -107,17 +117,53 @@ class NonlinearSolver(object):
             name = f'implicit_{self.name}'
         )
         implicit_operation.outputs = list(output_variables_set)
-        implicit_operation.get_outputs()
+
+        # TODO: only perform these checks in debug mode?
+        state_keys = set(self.state_to_residual_map.keys())
+        if state_keys.symmetric_difference(set(self.state_metadata.keys())):
+            raise ValueError("State variables do not match metadate state keys")
+        
+
+        implicit_operation.finalize_and_return_outputs()
 
         recorder.active_graph.visualize(f'top_level_{self.name}_after')
         
 
-    def solve(self, *args):
+    def _inline_solve_(self):
+        raise NotImplementedError("Solve method must be implemented by subclass")
+
+    def _inline_set_initial_values(self):
+        """
+        Set initial values for the state variables.
+        'initial_value' must be a metadata key where value is a number or variable
+        """
+        for state in self.state_metadata:
+            state.value = ingest_value(self.state_metadata[state]['initial_value'])
+
+    def _inline_print_nl_status(self, iter_num, did_converge):
+        """
+        Print the status of the nonlinear solver.
+        """
+        if did_converge:
+            return f'nonlinear solver: {self.name} converged in {iter_num} iterations.'
+        else:
+            main_str = f'\nnonlinear solver: {self.name} did not converge in {iter_num} iterations.\n'
+            for state,residual in self.state_to_residual_map.items():
+                state_str = f'\t{state}\n'
+                state_str += f'\t\tname:  {state.name}\n'
+                state_str += f'\t\tval:    {state.value}\n'
+                state_str += f'\t\tres:    {residual.value}\n'
+                main_str += state_str
+            return main_str
+
+    def solve_implicit_inline(self, *args):
         """
         Solves the nonlinear system of equations.
         """
         
-        for arg in args:
-            print(arg)
+        # for arg in args:
+        #     print(arg)
 
+        self._inline_solve_()
         self.update_residual()
+        

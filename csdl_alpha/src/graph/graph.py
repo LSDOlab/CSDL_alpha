@@ -32,10 +32,23 @@ class Graph():
         sorted_nodes = rx.topological_sort(self.rxgraph)
         for node_index in sorted_nodes:
             node = self.rxgraph[node_index]
+            # print(get_node_info_string(node, self))
             if is_operation(node):
-                # print(get_node_info_string(node, self))
+                # print(f"Executing {node}")
+                # print('\t', *[input.value for input in node.inputs])
+                # print('\t', *[output.value for output in node.outputs])
                 node.set_inline_values()
+                # print('\t', *[output.value for output in node.outputs])
+
         # exit()
+
+    def print_all_values(self):
+        """
+        prints all values of variables in the graph
+        """
+        for node in self.rxgraph.nodes():
+            if is_variable(node):
+                print(f"{node.name}: {node.value}")
 
     def extract_subgraph(
             self,
@@ -381,4 +394,6 @@ def get_node_info_string(node, graph):
     node_info += f"\nType:                  {node_type}"
     node_info += f"\nPredecessors:          {node_preds}"
     node_info += f"\nSuccessors:            {node_succs}"
+    if is_variable(node):
+        node_info += f"\nValue:                 {node.value}"
     return node_info

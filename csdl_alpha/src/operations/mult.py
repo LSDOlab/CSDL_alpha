@@ -22,4 +22,5 @@ def mult(x,y):
     """
     doc strings
     """
-    return Mult(x,y).finalize_and_return_outputs()
+    op =  Mult(x,y)
+    return op.finalize_and_return_outputs()

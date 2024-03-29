@@ -35,7 +35,7 @@ class Operation(Node):
             inputs.append(variablize(arg))
 
         # ordered CSDL input variables
-        self.inputs:list = args
+        self.inputs:list = inputs
         self.num_inputs = len(self.inputs)
 
         # ordered CSDL input variables
@@ -102,7 +102,7 @@ class Operation(Node):
             for output, value in zip(self.outputs, output_values):
                 output.value = value
 
-    def finalize_and_return_outputs(self):
+    def finalize_and_return_outputs(self, skip_inline = False):
         """
         Three things:
         - builds edges between inputs to op and outputs to op
@@ -113,7 +113,8 @@ class Operation(Node):
 
         # if we're computing inline:
         if self.recorder.inline:
-            self.set_inline_values()
+            if not skip_inline:
+                self.set_inline_values()
 
         if len(self.outputs) == 1:
             return self.outputs[0]

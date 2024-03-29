@@ -11,9 +11,8 @@ class ImplicitOperation(Operation):
 
     def compute_inline(self, *args):
 
-        print(args)
         print(f'COMPUTING NLSOLVER INLINE: {self.nonlinear_solver.name}')
-        self.nonlinear_solver.solve(*args)
+        self.nonlinear_solver.solve_implicit_inline(*args)
         print()
 
-        return print('COMPUTE INLINE')
+        return [output.value for output in self.outputs]
