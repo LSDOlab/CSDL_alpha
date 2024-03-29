@@ -24,14 +24,23 @@ class Graph():
     def add_operation(self, operation):
         self.add_node(operation)
 
-    def execute_inline(self):
+    def execute_inline(self, subset = None):
         """
         executes the graph inline
         """
+        if subset is not None:
+            if not isinstance(subset, set):
+                raise TypeError("subset is not a set")
+
         self.check_self()
         sorted_nodes = rx.topological_sort(self.rxgraph)
         for node_index in sorted_nodes:
             node = self.rxgraph[node_index]
+
+            if subset is not None:
+                if self.node_table[node] not in subset:
+                    continue
+
             # print(get_node_info_string(node, self))
             if is_operation(node):
                 # print(f"Executing {node}")
@@ -40,7 +49,9 @@ class Graph():
                 node.set_inline_values()
                 # print('\t', *[output.value for output in node.outputs])
 
-        # exit()
+    def update_downstream(self, node):
+        descendants = rx.descendants(self.rxgraph, self.node_table[node])
+        self.execute_inline(subset = descendants)
 
     def print_all_values(self):
         """
@@ -186,7 +197,7 @@ class Graph():
         Returns all nodes between sources and targets.
         """
 
-        # D = Union of all source descendents
+        # D = Union of all source descendants
         # A = Union of all target ancestors
         # S = D intersection A
 

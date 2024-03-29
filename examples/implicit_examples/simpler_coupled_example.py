@@ -34,10 +34,10 @@ if __name__ == '__main__':
     print('param Value:', a.value)
     print('b Value:', b.value)
     print('c Value:', c.value)
+    print('sum states:', sum_states.value)
 
 
     # A solution: 
     x_sol = (np.sqrt(5)-1)/2
-    print('an x solution:', x_sol)
 
     recorder.active_graph.visualize('FINAL_simpler_top_level')

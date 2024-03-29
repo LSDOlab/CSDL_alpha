@@ -165,5 +165,5 @@ class NonlinearSolver(object):
         #     print(arg)
 
         self._inline_solve_()
-        self.update_residual()
+
         

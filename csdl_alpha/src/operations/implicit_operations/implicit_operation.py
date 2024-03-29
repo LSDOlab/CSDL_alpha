@@ -13,6 +13,10 @@ class ImplicitOperation(Operation):
 
         print(f'COMPUTING NLSOLVER INLINE: {self.nonlinear_solver.name}')
         self.nonlinear_solver.solve_implicit_inline(*args)
-        print()
-
+        
+        print(f'UPDATING DOWNSTREAM:')
+        import csdl_alpha as csdl
+        current_graph = csdl.get_current_recorder().active_graph
+        current_graph.update_downstream(self)
+        
         return [output.value for output in self.outputs]
