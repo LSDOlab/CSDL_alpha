@@ -138,3 +138,9 @@ top_level_req.in
 top_level_req.txt
 _autosummary
 _conf_master.py
+
+# images
+.png
+
+# data
+.hdf5

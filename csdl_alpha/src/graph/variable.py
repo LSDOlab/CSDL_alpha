@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.node import Node
 import numpy as np
 from typing import Union
-from csdl_alpha.utils.inputs import ingest_value, check_shape
+from csdl_alpha.utils.inputs import ingest_value, get_shape
 
 class Variable(Node):
 
@@ -23,8 +23,8 @@ class Variable(Node):
         self.name = None
 
         value = ingest_value(value)
-        check_shape(shape, value)
-        
+        shape = get_shape(shape, value)
+
         self.shape = shape
         if name is not None:
             self.add_name(name)
@@ -50,7 +50,7 @@ class Variable(Node):
 
     def set_value(self, value: Union[np.ndarray, float, int]):
         self.value = ingest_value(value)
-        check_shape(self.shape, self.value)
+        self.shape = get_shape(self.shape, self.value)
 
     def set_as_design_variable(self, upper: float = None, lower: float = None, scalar: float = None):
         if not self.is_input:

@@ -33,9 +33,9 @@ class Graph():
         for node_index in sorted_nodes:
             node = self.rxgraph[node_index]
             if is_operation(node):
-                print(get_node_info_string(node, self))
+                # print(get_node_info_string(node, self))
                 node.set_inline_values()
-        exit()
+        # exit()
 
     def extract_subgraph(
             self,

@@ -1,4 +1,4 @@
-from csdl_alpha.src.graph.operation import ElementwiseOperation
+from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 
 class Neg(ElementwiseOperation):
 
@@ -7,9 +7,9 @@ class Neg(ElementwiseOperation):
         self.name = 'neg'
 
     def compute_inline(self, x):
-        return -x.value
-
-    def evaluate_diagonal_jacobian(self, x):
+        return -x
+    
+    def evaluate_jacobian(self, x):
         return csdl.Constant(x.size, val = -1)
 
     def evaluate_jvp(self, x, vx):
@@ -22,6 +22,4 @@ def neg(x):
     """
     doc strings
     """
-
-    op = Neg(x)
-    return op.get_outputs()
+    return Neg(x).finalize_and_return_outputs()

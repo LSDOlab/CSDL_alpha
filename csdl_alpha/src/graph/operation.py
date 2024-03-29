@@ -1,6 +1,6 @@
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.node import Node
-import numpy as np
+from csdl_alpha.utils.inputs import variablize
 
 class Operation(Node):
     """
@@ -16,65 +16,100 @@ class Operation(Node):
         List of csdl variables.
     """
 
+    # Properties for the operation
+    properties = {
+        'linear': False,
+        'elementwise': False,
+        'diagonal_jacobian': False,
+        'convex': False,
+        'elementary': True,
+        'supports_sparse': False,
+        'contains_subgraph':True
+    }
 
     def __init__(self, *args, metadata = None, **kwargs) -> None:
         super().__init__()
 
-        # check all args are CSDL variables
-
-        self.name = 'op'
-
-        # Properties for the operation
-        self.properties = {
-            'linear': False,
-            'elementwise': False,
-            'diagonal_jacobian': False,
-            'convex': False,
-            'elementary': True,
-            'supports_sparse': False,
-        } 
+        inputs = []
+        for arg in args:
+            inputs.append(variablize(arg))
 
         # ordered CSDL input variables
         self.inputs:list = args
-        if not all(isinstance(arg, (Variable, int, float, np.ndarray)) for arg in args):
-            raise ValueError("All args must be either Variable instances or convertible to Variable instances")
+        self.num_inputs = len(self.inputs)
 
-        # ordered CSDL input variables, convert int/float/ndarray to Variable
-        # self.inputs:list = [Variable(value=arg) if isinstance(arg, (int, float, np.ndarray)) else arg for arg in args]
-
-        # ordered CSDL output variables (filled later by add_outputs/add_outputs_shapes)
+        # ordered CSDL input variables
         self.outputs:list = None
+        self.num_outputs = None
 
         # metadata
         if metadata is None:
             metadata = {}
         self.metadata = metadata
 
-    def set_output_shapes(self, *shapes:tuple[int]):
+    def set_outputs(self, outputs:list[Variable]):
+        """
+        outputs of operation can only be specified once
+        """
         if self.outputs is not None:
-            raise ValueError("Outputs already been assigned")
+            raise ValueError("Outputs already set")
+        for output in outputs:
+            if not isinstance(output, Variable):
+                raise ValueError("Outputs must be a list of csdl variables!")
+        self.outputs = outputs
+        self.num_outputs = len(self.outputs)
 
+    def set_dense_outputs(self, shapes:list[tuple]):
+        """
+        if variables are dense, automatically create variables given shapes
+        """
         for shape in shapes:
             if not isinstance(shape, tuple):
-                raise ValueError("Output shapes must be tuples")
-        self.outputs = [Variable(shape = shape) for shape in shapes]
+                raise ValueError(f"Output shapes must be tuples. {shape} given.")
 
-    def set_outputs_shape_type(self, *vars: Variable):
-        if self.outputs is not None:
-            raise ValueError("Outputs already been assigned")
-        for var in vars:
-            if not isinstance(var, Variable):
-                raise ValueError(f"var must be a Variable. {var} given")
-        self.outputs = vars
+        self.set_outputs([Variable(shape = shape) for shape in shapes])
 
-    def get_outputs(self):
 
+    def set_sparse_outputs(self, shapes:list[list, list, tuple]):
+        """
+        if output variables are sparse, automatically create sparse variables given rows/vals/shapes
+        """
+        raise NotImplementedError("Sparse outputs not yet implemented")
+    
+    def _add_to_graph(self):
         self.recorder._add_node(self)
         for input_variable in self.inputs:
             self.recorder._add_edge(input_variable, self)
 
         for output_var in self.outputs:
             self.recorder._add_edge(self, output_var)
+
+    def set_inline_values(self):
+        # DOESNT WORK
+        # output_values = self.compute_inline(x.value for x in self.inputs)
+
+        # just in case:
+        if self.num_inputs == 1:
+            output_values = self.compute_inline(self.inputs[0].value)
+        elif self.num_inputs == 2:
+            output_values = self.compute_inline(self.inputs[0].value, self.inputs[1].value)
+        else:
+            output_values = self.compute_inline(x.value for x in self.inputs)
+
+        if self.num_outputs == 1:
+            self.outputs[0].value = output_values
+        else:
+            for output, value in zip(self.outputs, output_values):
+                output.value = value
+
+    def finalize_and_return_outputs(self):
+        """
+        Three things:
+        - builds edges between inputs to op and outputs to op
+        - computes values inline if necessary
+        - returns output variables
+        """
+        self._add_to_graph()
 
         # if we're computing inline:
         if self.recorder.inline:
@@ -84,20 +119,13 @@ class Operation(Node):
             return self.outputs[0]
         else:
             return tuple(self.outputs)
-        
-
-    def set_inline_values(self):
-        output_values = self.compute_inline(*self.inputs)
-
-        if len(self.outputs) == 1:
-            self.outputs[0].value = output_values
-        else:
-            for output, value in zip(self.outputs, output_values):
-                output.value = output_values
 
     def compute_inline(self, *args):
         raise NotImplementedError('not implemented') 
-    
+
+    def compute_jax(self, *args):
+        raise NotImplementedError('not implemented') 
+
     def evaluate_jacobian(self, *args):
         raise NotImplementedError('not implemented') 
 
@@ -109,47 +137,21 @@ class Operation(Node):
 
     def evaluate_vjp(self, *args):
         raise NotImplementedError('not implemented')
-
-class ElementwiseOperation(Operation):
-
-    def __init__(self,*args, **kwargs):
-        
-        super().__init__(*args, **kwargs)
-
-        self.properties['elementwise'] = True
-        self.properties['diagonal_jacobian'] = True
-
-        out_shape = (args[0].shape,)
-        self.set_output_shapes(out_shape)
-
-
-class ComposedOperation(Operation):
-
-    def __init__(self,*args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.properties['elementary'] = False
-
-        self.recorder._enter_subgraph()
-        
-        for input in self.inputs:
-            self.recorder._add_node(input)
-        outputs = self.evaluate_composed(*args)
-
-        if isinstance(outputs, tuple):
-            self.outputs = outputs
-        else:
-            self.outputs = [outputs]
-        self.graph = self.recorder.active_graph
-
-        self.recorder._exit_subgraph()
-
-        for output in self.outputs:
-            self.recorder._add_node(output)
-
-    def get_outputs(self):
-        outputs = super().get_outputs()
-        return outputs
-
     
-    def set_inline_values(self):
-        pass
+
+def set_properties(**kwargs):
+    for property, value in kwargs.items():
+        if not isinstance(property, str):
+            raise ValueError("Property names must be strings")
+        if property not in Operation.properties:
+            raise ValueError(f"Property {property} not recognized. Must be one of {Operation.properties.keys()}")
+        if not isinstance(value, bool):
+            raise ValueError("Property values must be boolean")
+        
+    def decorator(cls):
+        properties = cls.properties.copy()
+        for property, value in kwargs.items():
+            properties[property] = value
+        cls.properties = properties
+        return cls
+    return decorator

@@ -1,4 +1,4 @@
-from csdl_alpha.src.graph.operation import ComposedOperation
+from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 
 class Square(ComposedOperation):
 
@@ -18,5 +18,4 @@ def square(x):
     doc strings
     """
 
-    op = Square(x)
-    return op.get_outputs()
+    return Square(x).finalize_and_return_outputs()

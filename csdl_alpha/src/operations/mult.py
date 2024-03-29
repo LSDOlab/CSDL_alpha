@@ -1,4 +1,4 @@
-from csdl_alpha.src.graph.operation import ElementwiseOperation
+from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 
 class Mult(ElementwiseOperation):
 
@@ -7,9 +7,9 @@ class Mult(ElementwiseOperation):
         self.name = 'mult'
 
     def compute_inline(self, x, y):
-        return x.value*y.value
+        return x*y
 
-    def evaluate_diagonal_jacobian(self, x, y):
+    def evaluate_jacobian(self, x, y):
         return y, x
 
     def evaluate_jvp(self, x,y, vx, vy):
@@ -22,6 +22,4 @@ def mult(x,y):
     """
     doc strings
     """
-
-    op = Mult(x,y)
-    return op.get_outputs()
+    return Mult(x,y).finalize_and_return_outputs()

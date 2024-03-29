@@ -1,4 +1,4 @@
-from csdl_alpha.src.graph.operation import ComposedOperation
+from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 
 class Sub(ComposedOperation):
 
@@ -21,7 +21,7 @@ def sub(x,y):
     """
 
     op = Sub(x,y)
-    return op.get_outputs()
+    return op.finalize_and_return_outputs()
 
 # def sub(x,y):
 #     """
