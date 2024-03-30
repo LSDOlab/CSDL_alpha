@@ -39,6 +39,7 @@ setup(
         'pytest',
         'rustworkx',
         'h5py',
+        'pydot',
     ],
     classifiers=[
         'Programming Language :: Python',

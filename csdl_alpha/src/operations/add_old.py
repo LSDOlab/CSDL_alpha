@@ -1,4 +1,4 @@
-from csdl_alpha.src.graph.operation import ElementwiseOperation
+from csdl_alpha.src.graph.operation_old import ElementwiseOperation
 
 class Add(ElementwiseOperation):
 
