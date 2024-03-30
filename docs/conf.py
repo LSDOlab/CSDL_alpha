@@ -54,7 +54,7 @@ myst_enable_extensions = ["dollarmath", "amsmath", "tasklist"]
 nb_execution_mode = 'off'
 
 # autoapi options
-autoapi_dirs = ["../csdl_alpha/core"]
+autoapi_dirs = ["../csdl_alpha/src"]
 autoapi_root = 'src/autoapi'
 autoapi_type = 'python'
 autoapi_file_patterns = ['*.py', '*.pyi']
@@ -133,6 +133,38 @@ def py2md(config):
     return
 
 import re
+import textwrap
+def py2md_op(config):
+    # root_dir needs a trailing slash (i.e. /root/dir/)
+    for op in glob.iglob(config['target'] + '**/*.py', recursive=True):
+        with open(op) as f:
+            code = f.read()
+            no_line_breaks = ' '.join(code.splitlines())
+            start = 1e20 if code.find("# docs:entry") == -1 else code.find("# docs:entry")
+            end   = 1e20 if code.find("# docs:exit") == -1 else code.find("# docs:exit")
+
+        l = len('docs:entry \n ')
+        start = start + l
+        if start != 1e20:
+          if end != 1e20:
+            # l = len(' \n')
+            # end = end - l
+            end = end
+            code = code[start:end]
+          else:
+            code = code[start:]
+        else:
+          continue
+        
+        title = re.search("operations/(.+?).py", op).group(1)
+        with open(op[:-3]+'.md', 'w') as g:
+            g.write('# ' + title + '\n')
+            g.write('```python\n')
+            g.write(textwrap.dedent(code))
+            g.write('\n```')
+
+    return
+
 
 def split_first_string_between_quotes(code_string, quotes):
     if quotes == "'":
@@ -190,6 +222,28 @@ collections = {
       'from'  : '_temp/examples/',  # source relative to path of makefile, not wrt /src
       'source': py2md,              # custom function written above in `conf.py`
       'target': 'examples/',        # target was a file for original FunctionDriver, e.g., 'target': 'examples/temp.txt'
+                                    # the original FunctionDriver was supposed to write only 1 file.
+      'clean': True,       
+      'final_clean': True,      
+    #   'write_result': True,   # this prevents original FunctionDriver from writing to the target file
+   },
+
+   'copy_operations': {
+      'driver': 'copy_folder',
+      'source': '../csdl_alpha/src/operations',  # source relative to path of makefile, not wrt /src
+      'target': 'operations/',
+      'ignore': [],
+      'clean': True,            # default: True. If False, no cleanup is done before collections get executed.
+      'final_clean': True,      # default: True. If True, a final cleanup is done at the end of a Sphinx build.
+   },
+
+    # convert_operations collection converts all .py files to .md files recursively inside `_temp/examples` 
+    # directory and also extracts the examples from the .py files.
+   'convert_operations': {
+      'driver': 'writer_function',  # uses custom WriterFunctionDriver written by Anugrah
+      'from'  : '_temp/operations/',  # source relative to path of makefile, not wrt /src
+      'source': py2md_op,              # custom function written above in `conf.py`
+      'target': 'operations/',        # target was a file for original FunctionDriver, e.g., 'target': 'examples/temp.txt'
                                     # the original FunctionDriver was supposed to write only 1 file.
       'clean': True,       
       'final_clean': True,      

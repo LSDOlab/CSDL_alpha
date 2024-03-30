@@ -146,7 +146,7 @@ class TestAdd():
     def test_example(self,):
         from numpy.testing import assert_array_equal
 
-        # docs: entry
+        # docs:entry
         import csdl_alpha as csdl
         import numpy as np
 
@@ -167,7 +167,7 @@ class TestAdd():
         
         s3 = csdl.add(3,z)
         print(s3.value)
-        # docs: exit
+        # docs:exit
 
         assert_array_equal(s1.value, np.ones((3,2))*5.0)
         assert_array_equal(s2.value, np.ones((3,2))*5.0)
