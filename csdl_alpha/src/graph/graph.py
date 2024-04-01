@@ -120,7 +120,7 @@ class Graph():
             delete_nodes.add(node_index)
     
 
-        self.visualize(f'in_extract_b')
+        # self.visualize(f'in_extract_b')
 
         # Checks: (temporary)
         # TODO: apply checks in debug mode?
@@ -149,7 +149,7 @@ class Graph():
             print("Check complete...\n")
 
         self._delete_nodes(delete_nodes)
-        self.visualize(f'in_extract_a')
+        # self.visualize(f'in_extract_a')
 
         return subgraph, subgraph_inputs, subgraph_outputs
 
