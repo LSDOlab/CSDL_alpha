@@ -87,7 +87,7 @@ class NonlinearSolver(object):
 
         import csdl_alpha as csdl
         recorder = csdl.get_current_recorder()
-        recorder.active_graph.visualize(f'top_level_{self.name}_before')
+        # recorder.active_graph.visualize(f'top_level_{self.name}_before')
 
         # 1.a/b
         G = recorder.active_graph
@@ -100,7 +100,7 @@ class NonlinearSolver(object):
         # 1.c
         recorder._enter_subgraph()
         recorder.active_graph.replace(S)
-        recorder.active_graph.visualize(f'implicit_function_{self.name}')
+        # recorder.active_graph.visualize(f'implicit_function_{self.name}')
         self.update_residual = recorder.active_graph.execute_inline
         self.residual_graph = recorder.active_graph
         recorder._exit_subgraph()
@@ -126,7 +126,7 @@ class NonlinearSolver(object):
 
         implicit_operation.finalize_and_return_outputs()
 
-        recorder.active_graph.visualize(f'top_level_{self.name}_after')
+        # recorder.active_graph.visualize(f'top_level_{self.name}_after')
         
 
     def _inline_solve_(self):
