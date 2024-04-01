@@ -1,6 +1,7 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.test_utils import CSDLTest
 
 @set_properties(linear=True)
 class Add(ElementwiseOperation):
@@ -85,7 +86,29 @@ def add(x,y):
     return op.finalize_and_return_outputs()
 
 
-class TestAdd():
+class TestAdd(CSDLTest):
+    def test_values(self,):
+
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+        x_val = np.ones((3,2))*3.0
+        y_val = np.ones((3,2))*2.0
+        x = csdl.Variable(name = 'x', value = x_val)
+        y = csdl.Variable(name = 'y', value = y_val)
+        
+        # add scalar variables
+        s = csdl.add(x,y)
+
+        real_s = np.ones((3,2))*5.0
+
+        self.run_tests(
+            compare_values = {s: real_s},
+            compare_derivatives = {(s,x): 2.0, (s,y): 1.0},
+        )
+
+
     def test_functionality(self,):
         import csdl_alpha as csdl
         import numpy as np
