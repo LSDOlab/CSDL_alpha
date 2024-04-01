@@ -1,1 +1,1 @@
-from .csdl_test import CSDLTest
+from .csdl_test import CSDLTest, TestingPair
