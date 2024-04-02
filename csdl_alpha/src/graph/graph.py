@@ -1,6 +1,8 @@
 import rustworkx as rx
 from rustworkx.visualization import graphviz_draw
 import numpy as np
+import csdl_alpha.utils.error_utils as error_utils
+# from csdl_alpha.utils.error_utils import GraphError
 
 class Graph():
     def __init__(self):
@@ -192,9 +194,17 @@ class Graph():
 
         self.check_self()
 
-    def _get_intersection(self, sources, targets):
+    def _get_intersection(
+            self,
+            sources,
+            targets,
+            check_sources = True,
+            check_targets = True,
+        ):
         """
         Returns all nodes between sources and targets.
+        If check_sources is True, then checks to make sure all sources should affect atleast one target
+        If check_targets is True, then checks to make sure all targets should be affected by atleast one source
         """
 
         # D = Union of all source descendants
@@ -215,6 +225,27 @@ class Graph():
             A = A.union(rx.ancestors(self.rxgraph, target_index))
             A.add(target_index)
 
+        if check_sources:
+            for source_index in source_indices:
+                if source_index not in A:
+                    targets_string = error_utils.get_node_name_string(targets)
+                    raise error_utils.GraphError(
+                        f"Source node {self.rxgraph[source_index].name} does not affect any target node(s) {targets_string}",
+                        tag = 'no_path',
+                        relevant_nodes = self.rxgraph[source_index],
+                    )
+        if check_targets:
+            for target_index in target_indices:
+                if target_index not in D:
+                    sources_string = error_utils.get_node_name_string(sources)
+                    raise error_utils.GraphError(
+                        f"Target node {self.rxgraph[target_index].name} is not affected by any source node(s) {sources_string}",
+                        tag = 'no_path',
+                        relevant_nodes = self.rxgraph[target_index],
+                    )
+
+
+        # Find intersection
         S = D.intersection(A)
 
         # S contains operation nodes which could be leaf nodes in the graph

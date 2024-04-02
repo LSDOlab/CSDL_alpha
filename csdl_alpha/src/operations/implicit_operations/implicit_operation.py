@@ -17,6 +17,7 @@ class ImplicitOperation(Operation):
         print(f'UPDATING DOWNSTREAM:')
         import csdl_alpha as csdl
         current_graph = csdl.get_current_recorder().active_graph
+        # current_graph.visualize()
         current_graph.update_downstream(self)
         
         return [output.value for output in self.outputs]

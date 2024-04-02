@@ -20,7 +20,6 @@ class CustomExplicitModel(CustomModel):
             super().__init__(*args, **kwargs)
 
             self.evaluate = self._wrap_evaluate(self.evaluate)
-
     
         def initialize(self):
             raise NotImplementedError('not implemented')

@@ -40,4 +40,4 @@ if __name__ == '__main__':
     # A solution: 
     x_sol = (np.sqrt(5)-1)/2
 
-    recorder.active_graph.visualize('FINAL_simpler_top_level')
+    # recorder.active_graph.visualize('FINAL_simpler_top_level')

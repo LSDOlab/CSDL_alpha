@@ -1,6 +1,8 @@
 from csdl_alpha.src.graph.variable import ImplicitVariable, Variable
 from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation
 from csdl_alpha.utils.inputs import scalarize, ingest_value
+import csdl_alpha.utils.error_utils as error_utils
+from csdl_alpha.utils.error_utils import GraphError
 
 class NonlinearSolver(object):
     def __init__(
@@ -49,7 +51,14 @@ class NonlinearSolver(object):
 
         Initializes mappings between states and residuals, and stores metadata about the state.
         """
+        if not isinstance(state, ImplicitVariable):
+            raise TypeError(f"State must be an ImplicitVariable. {state} given")
+        if not isinstance(residual, Variable):
+            raise TypeError(f"Residual must be a Variable. {residual} given")
         
+        if state.shape != residual.shape:
+            raise ValueError(error_utils.get_check_shape_mismatch_string(state, residual, 'state', 'residual'))
+
         self.state_to_residual_map[state] = residual
         self.residual_to_state_map[residual] = state
         self.state_metadata[state] = {}
@@ -65,8 +74,10 @@ class NonlinearSolver(object):
 
     def run(self):
         """
-        Creates the implicit operation graph and runs the solver if inline
+        Creates the implicit operation graph and runs the solver if inline is True
         """
+        if len(self.state_to_residual_map) == 0:
+            raise ValueError("No state-residual pairs added to the solver")
 
         # Steps:
         # G is the current graph we are in
@@ -91,16 +102,20 @@ class NonlinearSolver(object):
 
         # 1.a/b
         G = recorder.active_graph
-        S, S_inputs, S_outputs = G.extract_subgraph(            
-            sources = self._intersection_sources,
-            targets = self._intersection_targets,
-            keep_variables = True,    
-        )
+        try:
+            S, S_inputs, S_outputs = G.extract_subgraph(            
+                sources = self._intersection_sources,
+                targets = self._intersection_targets,
+                keep_variables = True,    
+            )
+        except Exception as e:
+            raise ValueError(f"Error extracting non-linear solver residual function subgraph: {e.message}")
+        
+        print(S.node_table, S_inputs, S_outputs)
 
         # 1.c
         recorder._enter_subgraph()
         recorder.active_graph.replace(S)
-        # recorder.active_graph.visualize(f'implicit_function_{self.name}')
         self.update_residual = recorder.active_graph.execute_inline
         self.residual_graph = recorder.active_graph
         recorder._exit_subgraph()

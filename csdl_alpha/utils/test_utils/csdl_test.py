@@ -35,7 +35,7 @@ class CSDLTest():
 
         # TODO: make compatible with sparse variables
         for ind, testing_pair in enumerate(compare_values):
-            testing_pair.compare(ind)
+            testing_pair.compare(ind+1)
 
         # for variable, real_value in compare_values.items():
         #     if not isinstance(variable, csdl.Variable):
@@ -105,7 +105,7 @@ class TestingPair():
         error_str = "\n"
         error_str += f"{error_type} assertion error in\n"
         error_str += f"Var/value pair:   \"{self.tag}\"\n"
-        error_str += f"Number:           {ind}\n"
+        error_str += f"Index in list:    {ind}\n"
         error_str += f"Variable name:    {self.csdl_variable.name}\n"
         return error_str
 
