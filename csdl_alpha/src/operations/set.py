@@ -30,7 +30,7 @@ class BroadcastSet(Set):
     '''
 
     def __init__(self, x, y, slice):
-        super().__init__(x, y)
+        super().__init__(x, y, slice)
         self.name = 'broadcast_set'
 
 
@@ -38,7 +38,7 @@ class SparseSet(ComposedOperation):
 
     def __init__(self,x,y):
         super().__init__(x,y)
-        self.name = 'sparse_add'
+        self.name = 'sparse_set'
 
     def compute_inline(self, x, y):
         pass
@@ -47,7 +47,7 @@ class SparseBroadcastSet(ComposedOperation):
 
     def __init__(self,x,y):
         super().__init__(x,y)
-        self.name = 'sparse_broadcast_add'
+        self.name = 'sparse_broadcast_set'
 
     def compute_inline(self, x, y):
         pass
@@ -59,17 +59,22 @@ def set(x, s, y):
     x = variablize(x)
     y = variablize(y)
 
-    import numpy as np
-    slice_shape = np.zeros(x.shape)[s].shape
-
     if y.size != 1:
+        import numpy as np
+        # TODO: index out of bounds error from csdl instead of numpy
+        slice_shape = np.zeros(x.shape)[s].shape
+
+        # from csdl_alpha.utils.slice import get_slice_shape
+        # slice_shape_ = get_slice_shape(s, x.shape)
+        # print(slice_shape_, slice_shape)
+
         if slice_shape != y.shape:
             raise ValueError('Shapes of inputs do not match for the set operation.')
         op = Set(x, y, s)
     else:
         # TODO: use y.flatten() later once flatten() is implemented
-        # op = Set(x, y.flatten(), s)
-        op = Set(x, y, s)
+        # op = BroadcastSet(x, y.flatten(), s)
+        op = BroadcastSet(x, y, s)
     
     return op.finalize_and_return_outputs()
 
