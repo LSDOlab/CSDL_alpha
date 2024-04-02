@@ -87,87 +87,62 @@ def add(x,y):
 
 
 class TestAdd(csdl_tests.CSDLTest):
-    def test_values(self,):
-
+    
+    def test_functionality(self,):
         self.prep()
 
         import csdl_alpha as csdl
         import numpy as np
-        x_val = np.ones((3,2))*3.0
-        y_val = np.ones((3,2))*2.0
+        x_val = 3.0
+        y_val = 2.0
         x = csdl.Variable(name = 'x', value = x_val)
         y = csdl.Variable(name = 'y', value = y_val)
         
+        compare_values = []
         # add scalar variables
-        s = csdl.add(x,y)
-
-        real_s = np.ones((3,2))*5.0
-
-        self.run_tests(
-            compare_values = [
-                csdl_tests.TestingPair(s, real_s, tag = 's'),
-            ],
-        )
-
-
-    def test_functionality(self,):
-        import csdl_alpha as csdl
-        import numpy as np
-        from numpy.testing import assert_array_equal
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-        x = csdl.Variable(name = 'x', value = 3.0)
-        y = csdl.Variable(name = 'y', value = 2.0)
-        
-        # add scalar variables
-        s = csdl.add(x,y)
-        assert s.value == np.array([5.])
-        assert s.shape == (1,)
+        s1 = csdl.add(x,y)
+        t1 = np.array([x_val + y_val])
+        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
 
         # add scalar constants
-        s = csdl.add(3.0, 2.0)
-        assert s.value == np.array([5.])
-        assert s.shape == (1,)
-
-        # add tensor constants
-        s = csdl.add(3.0*np.ones((3,2)), 2.0*np.ones((3,2)))
-        assert_array_equal(s.value, np.ones((3,2))*5.0)
-        assert s.shape == (3,2)
-
-        # add scalar constant and tensor constant
-        s = csdl.add(3.0, 2.0*np.ones((3,2)))
-        assert_array_equal(s.value, np.ones((3,2))*5.0)
-        assert s.shape == (3,2)
-
-        # add scalar variable and tensor constant
-        s = csdl.add(x, 2.0*np.ones((3,2)))
-        assert_array_equal(s.value, np.ones((3,2))*5.0)
-        assert s.shape == (3,2)
+        s2 = csdl.add(3.0, 2.0)
+        compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
 
         # add scalar constant and scalar variable
-        s = csdl.add(3.0, y)
-        assert s.value == np.array([5.])
-        assert s.shape == (1,)
+        s3 = csdl.add(3.0, y)
+        compare_values += [csdl_tests.TestingPair(s3, t1, tag = 's3')]
 
-        z = csdl.Variable(name = 'z', value = 2.0*np.ones((3,2)))
-        
+        # add tensor constants
+        s4 = csdl.add(3.0*np.ones((3,2)), 2.0*np.ones((3,2)))
+        t2 = 5.0 * np.ones((3,2))
+        compare_values += [csdl_tests.TestingPair(s4, t2, tag = 's4')]
+
+        # add scalar constant and tensor constant
+        s5 = csdl.add(3.0, 2.0*np.ones((3,2)))
+        compare_values += [csdl_tests.TestingPair(s5, t2, tag = 's5')]
+
+        # add scalar variable and tensor constant
+        s6 = csdl.add(x, 2.0*np.ones((3,2)))
+        compare_values += [csdl_tests.TestingPair(s6, t2, tag = 's6')]
+
+        z_val = 2.0*np.ones((3,2))
+        z = csdl.Variable(name = 'z', value = z_val)
         # add scalar variable and tensor variable
-        s = csdl.add(x, z)
-        assert_array_equal(s.value, np.ones((3,2))*5.0)
-        assert s.shape == (3,2)
+        s7 = csdl.add(x, z)
+        compare_values += [csdl_tests.TestingPair(s7, t2, tag = 's7')]
 
         # add scalar constant and tensor variable
-        s = csdl.add(3.0, z)
-        assert_array_equal(s.value, np.ones((3,2))*5.0)
-        assert s.shape == (3,2)
+        s8 = csdl.add(3.0, z)
+        compare_values += [csdl_tests.TestingPair(s8, t2, tag = 's8')]
 
         # add tensor variables
-        s = csdl.add(x, z)
-        assert_array_equal(s.value, np.ones((3,2))*5.0)
-        assert s.shape == (3,2)
+        s9 = csdl.add(x, z)
+        compare_values += [csdl_tests.TestingPair(s9, t2, tag = 's9')]
+
+        self.run_tests(compare_values = compare_values,)
 
     def test_example(self,):
+        self.prep()
         from numpy.testing import assert_array_equal
 
         # docs:entry
@@ -183,18 +158,28 @@ class TestAdd(csdl_tests.CSDLTest):
         x = csdl.Variable(name = 'x', value = np.ones((3,2))*3.0)
         y = csdl.Variable(name = 'y', value = 2.0)
         z = csdl.Variable(name = 'z', value = np.ones((3,2))*2.0)
+        
+        # add a tensor variable and a scalar variable
         s1 = csdl.add(x,y)
         print(s1.value)
 
+        # add 2 tensor variables
         s2 = csdl.add(x,z)
         print(s2.value)
         
+        # add a tensor variable and a scalar constant
         s3 = csdl.add(3,z)
         print(s3.value)
         # docs:exit
 
-        assert_array_equal(s1.value, np.ones((3,2))*5.0)
-        assert_array_equal(s2.value, np.ones((3,2))*5.0)
+        compare_values = []
+        t = np.ones((3,2))*5.0
+
+        compare_values += [csdl_tests.TestingPair(s1, t)]
+        compare_values += [csdl_tests.TestingPair(s2, t)]
+        compare_values += [csdl_tests.TestingPair(s3, t)]
+
+        self.run_tests(compare_values = compare_values,)
 
 if __name__ == '__main__':
     test = TestAdd()

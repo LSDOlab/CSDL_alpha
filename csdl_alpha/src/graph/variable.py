@@ -67,8 +67,12 @@ class Variable(Node):
             raise Exception("Variable is an input variable")
         self.recorder._add_objective(self, scalar)
 
-    
 
+
+    def set(self, slice, value):
+        from csdl_alpha.src.operations.set import set
+        return set(self, slice, value)
+    
     def __add__(self, other):
         from csdl_alpha.src.operations.add import add
         return add(self,other)
