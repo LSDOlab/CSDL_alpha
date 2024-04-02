@@ -22,3 +22,14 @@ def get_node_name_string(nodes:Union[list[Node], Node]):
         nodes_str += f"{node.name}, "
     nodes_str = nodes_str[:-2]
     return nodes_str
+
+def check_if_valid_shape(shape):
+    """
+    checks if shape is a tuple of integers and raises TypeError otherwise
+    """
+    if not isinstance(shape, tuple):
+        raise TypeError(f"shape must be a tuple. {type(shape)} given.")
+    for dim in shape:
+        if not isinstance(dim, int):
+            raise TypeError(f"shape must consist of integers. {type(dim)} given.")
+    return True

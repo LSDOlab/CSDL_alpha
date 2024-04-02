@@ -4,6 +4,7 @@ from typing import Union
 from csdl_alpha.utils.inputs import ingest_value, get_shape
 
 class Variable(Node):
+    __array_priority__ = 1000
 
     def __init__(self, shape: tuple = None, 
                  *, 
@@ -90,5 +91,20 @@ class Variable(Node):
         from csdl_alpha.src.operations.sub import sub
         return sub(self, other)
     
+    def __truediv__(self, other):
+        from csdl_alpha.src.operations.division import div
+        return div(self, other)
+
+    def __rtruediv__(self, other):
+        from csdl_alpha.src.operations.division import div
+        return div(other, self)
+
+    def reshape(self, shape:tuple[int]):
+        """
+        doc strings
+        """
+        from csdl_alpha.src.operations.reshape import reshape
+        return reshape(self, shape)
+
 class ImplicitVariable(Variable):
     pass

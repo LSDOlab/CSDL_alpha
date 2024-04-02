@@ -107,6 +107,10 @@ class TestingPair():
         error_str += f"Var/value pair:   \"{self.tag}\"\n"
         error_str += f"Index in list:    {ind}\n"
         error_str += f"Variable name:    {self.csdl_variable.name}\n"
+
+        if error_type == 'value':
+            error_str += f"\nVariable value:   \n{self.csdl_variable.value}\n\n"
+            error_str += f"Real value:       \n{self.real_value}\n"
         return error_str
 
 # class TestingPairs():

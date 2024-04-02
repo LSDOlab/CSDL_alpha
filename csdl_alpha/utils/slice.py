@@ -43,3 +43,12 @@ def get_slice_shape(s, parent_shape):
             slice_shape = np.delete(slice_shape, delete_dims)    
     
     return tuple(slice_shape)
+
+if __name__ == '__main__':
+    import numpy as np
+
+    x = np.ones((10,10,10))
+
+    slices = (slice(0, 5), (1,2) , (2,3))
+    print(get_slice_shape(slices, x.shape))
+    print(x[slices].shape)
