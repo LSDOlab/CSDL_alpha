@@ -3,7 +3,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 
-@set_properties(linear=True, diagonal_jacobian=True)
+@set_properties(linear=True,)
 class Set(Operation):
     '''
     Elementwise setting of a slice s of a tensor x with another tensor y.
@@ -11,13 +11,10 @@ class Set(Operation):
 
     def __init__(self, x, y, slice):
         '''
-        Slice can be a tuple of slices or a single slice.
+        Slice can be a tuple of slices or a single slice or list of index sets.
         '''
         super().__init__(x, y)
         self.name = 'set'
-        if x.value[slice].shape != y.value.shape:    
-            raise ValueError('Shapes of inputs do not match for the set operation.')
-        
         out_shapes = (x.shape,) 
         self.set_dense_outputs(out_shapes)
         self.slice = slice
@@ -27,8 +24,7 @@ class Set(Operation):
         out[self.slice] = y
         return out
 
-@set_properties(linear=True, diagonal_jacobian=True)
-class BroadcastSet(Operation):
+class BroadcastSet(Set):
     '''
     Setting all the elements of a slice s of a tensor x with a scalar y.
     '''
@@ -36,14 +32,7 @@ class BroadcastSet(Operation):
     def __init__(self, x, y, slice):
         super().__init__(x, y)
         self.name = 'broadcast_set'
-        out_shapes = (x.shape,)
-        self.set_dense_outputs(out_shapes)
-        self.slice = slice
 
-    def compute_inline(self, x, y):
-        out = x.copy()
-        out[self.slice] = y
-        return out
 
 class SparseSet(ComposedOperation):
 
@@ -70,12 +59,18 @@ def set(x, s, y):
     x = variablize(x)
     y = variablize(y)
 
-    if y.shape == (1,):
-        op = BroadcastSet(x, y, s)
-    else:
+    import numpy as np
+    slice_shape = np.zeros(x.shape)[s].shape
+
+    if y.size != 1:
+        if slice_shape != y.shape:
+            raise ValueError('Shapes of inputs do not match for the set operation.')
         op = Set(x, y, s)
-    # else:
-    #     raise ValueError('Shapes do not match')
+    else:
+        # TODO: use y.flatten() later once flatten() is implemented
+        # op = Set(x, y.flatten(), s)
+        op = Set(x, y, s)
+    
     return op.finalize_and_return_outputs()
 
 
@@ -172,8 +167,6 @@ class TestSet(csdl_tests.CSDLTest):
         # set a tensor slice with a tensor variable
         x3 = x.set(slice[0:-1], z)
         print(x3.value)
-        
-        
         # docs:exit
 
         compare_values = []

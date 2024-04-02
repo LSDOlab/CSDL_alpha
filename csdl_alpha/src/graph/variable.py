@@ -26,6 +26,7 @@ class Variable(Node):
         shape = get_shape(shape, value)
 
         self.shape = shape
+        self.size = np.prod(shape)
         if name is not None:
             self.add_name(name)
         self.value = value
