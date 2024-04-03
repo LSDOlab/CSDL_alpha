@@ -100,12 +100,14 @@ class Recorder:
         self.active_namespace = self.active_namespace.parent
         self.active_namespace = self.active_namespace
 
-    def _enter_subgraph(self):
+    def _enter_subgraph(self, add_missing_variables: bool = False):
         """
         Enters a new subgraph.
         """
         self.active_graph_node = self.active_graph_node.add_child(Graph())
         self.active_graph = self.active_graph_node.value
+        self.active_graph.add_missing_variables = add_missing_variables
+        self.active_graph.inputs = set()
 
     def _exit_subgraph(self):
         """
@@ -142,9 +144,18 @@ class Recorder:
             node_from: The source node.
             node_to: The target node.
         """
-        if node_from not in self.active_graph.node_table:
-            raise ValueError(f"Node {node_from} not in graph")
+        from csdl_alpha.src.graph.variable import Variable
+        if node_from not in self.active_graph.node_table: # TODO: consider changing node_graph_map to reflect this
+            if self.active_graph.add_missing_variables and isinstance(node_from, Variable):
+                self.active_graph.add_node(node_from)
+                self.active_graph.inputs.add(node_from)
+            else:
+                raise ValueError(f"Node {node_from} not in graph")
         if node_to not in self.active_graph.node_table:
+            # if self.active_graph.add_missing_variables and isinstance(node_to, Variable):
+            #     self.active_graph.add_node(node_to)
+            # else:
+            #     raise ValueError(f"Node {node_to} not in graph")
             raise ValueError(f"Node {node_to} not in graph")
         self.active_graph.add_edge(node_from, node_to)
 

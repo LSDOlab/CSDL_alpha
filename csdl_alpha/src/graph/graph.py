@@ -6,12 +6,16 @@ class Graph():
     def __init__(self):
         self.rxgraph = rx.PyDiGraph()
         self.node_table = {}
+        self.add_missing_variables = False
     
     def add_node(self, node):
         if node in self.node_table:
             return
         index = self.rxgraph.add_node(node)
         self.node_table[node] = index
+
+    def in_degree(self, node):
+        return self.rxgraph.in_degree(self.node_table[node])
 
     def add_edge(self, node_from, node_to):
         from_ind = self.node_table[node_from]
@@ -153,14 +157,33 @@ class Graph():
 
         return subgraph, subgraph_inputs, subgraph_outputs
 
+    # TODO: make this work with variables only?
     def _delete_nodes(self, nodes):
         """
         Deletes nodes from the graph
         """
+        from csdl_alpha.src.graph.node import Node
         for node_index in nodes:
+            if isinstance(node_index, Node):
+                node_index = self.node_table[node_index]
             self.rxgraph.remove_node(node_index)
         self.update_node_table()
 
+    def _replace_node(self, old_node, new_node):
+        """
+        Replaces old_node with new_node in the graph
+        """
+        # replace node in graph
+        self._delete_nodes([new_node]) #NOTE: this is kinda dumb
+        old_node_index = self.node_table[old_node]
+        self.rxgraph[old_node_index] = new_node
+        self.update_node_table()
+        # TODO: update operations to refer to new node?
+        for operation in self.rxgraph.successors(old_node_index):
+            for i in range(len(operation.inputs)):
+                if operation.inputs[i] == old_node:
+                    operation.inputs[i] = new_node
+        
     def check_self(self):
         """
         raise error if the graph node table and nodes are not synced correctly
