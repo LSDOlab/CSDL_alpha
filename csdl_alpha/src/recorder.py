@@ -39,7 +39,7 @@ class Recorder:
         self.expand_ops = expand_ops
         self.auto_hierarchy = auto_hierarchy
 
-        self.hierarchy = 0
+        self.hierarchy = 1
 
         self.design_variables = {}
         self.constraints = {}
