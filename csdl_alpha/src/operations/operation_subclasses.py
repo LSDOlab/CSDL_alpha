@@ -25,7 +25,9 @@ class ComposedOperation(Operation):
             self.set_outputs(outputs)
         else:
             self.set_outputs([outputs])
-        self.graph = self.recorder.active_graph
+
+        # self.recorder.active_graph.link_parent_operation(self)
+        self.subgraph = self.recorder.active_graph
 
         self.recorder._exit_subgraph()
 
@@ -37,7 +39,7 @@ class ComposedOperation(Operation):
         return outputs
     
     def set_inline_values(self):
-        self.graph.execute_inline()
+        self.subgraph.execute_inline()
 
 
 # def set_property(cls, name, value):

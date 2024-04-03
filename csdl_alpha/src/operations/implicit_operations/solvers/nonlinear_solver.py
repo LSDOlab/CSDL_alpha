@@ -111,7 +111,7 @@ class NonlinearSolver(object):
         except Exception as e:
             raise ValueError(f"Error extracting non-linear solver residual function subgraph: {e.message}")
         
-        print(S.node_table, S_inputs, S_outputs)
+        # print(S.node_table, S_inputs, S_outputs)
 
         # 1.c
         recorder._enter_subgraph()
@@ -132,7 +132,8 @@ class NonlinearSolver(object):
             name = f'implicit_{self.name}'
         )
         implicit_operation.outputs = list(output_variables_set)
-
+        self.residual_graph.link_parent_operation(implicit_operation)
+        
         # TODO: only perform these checks in debug mode?
         state_keys = set(self.state_to_residual_map.keys())
         if state_keys.symmetric_difference(set(self.state_metadata.keys())):
@@ -140,6 +141,9 @@ class NonlinearSolver(object):
         
 
         implicit_operation.finalize_and_return_outputs()
+
+        print(f'UPDATING DOWNSTREAM:  {self.name}')
+        G.update_downstream(implicit_operation)
 
         # recorder.active_graph.visualize(f'top_level_{self.name}_after')
         

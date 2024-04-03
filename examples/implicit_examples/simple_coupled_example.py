@@ -11,8 +11,8 @@ if __name__ == '__main__':
 
     # x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.6180339)
     # y = csdl.ImplicitVariable(shape=(1,), name='y', value=0.7861513777)
-    x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.61803)
-    y = csdl.ImplicitVariable(shape=(1,), name='y', value=0.78)
+    x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.1)
+    y = csdl.ImplicitVariable(shape=(1,), name='y', value=0.1)
     param = csdl.Variable(shape=(1,), name='param', value=np.ones((1,))*1.0)
     test = param+param # should be ignored
     test.name = 'ignore'
@@ -29,29 +29,32 @@ if __name__ == '__main__':
     sum_states.name = 'states_sum'
 
     # apply coupling:
+    x_update = x-residual_1/(-csdl.square(y)-3.0*x*x)
+    y_update = y-residual_2/(2.0*y)
+
     # ONE SOLVER COUPLING:
-    solver = csdl.GaussSeidel('gs_xy')
-    solver.add_state(x, residual_1)
-    solver.add_state(y, residual_2)
-    solver.run()
+    # solver = csdl.GaussSeidel('gs_xy')
+    # solver.add_state(x, residual_1, state_update=x_update)
+    # solver.add_state(y, residual_2, state_update=y_update)
+    # solver.run()
 
     # NESTED (x) SOLVER COUPLING:
     # solver = csdl.GaussSeidel('gs_x')
-    # solver.add_state(x, residual_1, initial_value=0.0)
+    # solver.add_state(x, residual_1, state_update=x_update)
     # solver.run()
 
     # solver = csdl.GaussSeidel('gs_y')
-    # solver.add_state(y, residual_2, initial_value=0.0)
+    # solver.add_state(y, residual_2, state_update=y_update)
     # solver.run()
 
     # NESTED (y) SOLVER COUPLING:
-    # solver = csdl.GaussSeidel('gs_y')
-    # solver.add_state(y, residual_2, initial_value=0.0)
-    # solver.run()
+    solver = csdl.GaussSeidel('gs_y')
+    solver.add_state(y, residual_2, state_update=y_update)
+    solver.run()
 
-    # solver = csdl.GaussSeidel('gs_x')
-    # solver.add_state(x, residual_1, initial_value=0.0)
-    # solver.run()
+    solver = csdl.GaussSeidel('gs_x')
+    solver.add_state(x, residual_1, state_update=x_update)
+    solver.run()
 
 
     print('x Value:', x.value)

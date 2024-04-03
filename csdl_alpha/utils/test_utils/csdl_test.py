@@ -111,6 +111,9 @@ class TestingPair():
         if error_type == 'value':
             error_str += f"\nVariable value:   \n{self.csdl_variable.value}\n\n"
             error_str += f"Real value:       \n{self.real_value}\n"
+        elif error_type == 'shape':
+            error_str += f"\nVariable shape:   {self.csdl_variable.shape}\n"
+            error_str += f"Real shape:       {self.real_value.shape}\n"
         return error_str
 
 # class TestingPairs():

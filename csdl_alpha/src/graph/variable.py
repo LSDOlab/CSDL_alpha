@@ -83,6 +83,9 @@ class Variable(Node):
         from csdl_alpha.src.operations.mult import mult
         return mult(self,other)
 
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
     def __neg__(self):
         from csdl_alpha.src.operations.neg import neg
         return neg(self)

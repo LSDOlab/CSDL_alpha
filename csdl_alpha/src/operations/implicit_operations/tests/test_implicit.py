@@ -39,6 +39,142 @@ class TestImplicit(csdl_tests.CSDLTest):
         )
 
 
+    def test_double_state_nest1(self):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+
+        x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.1)
+        y = csdl.ImplicitVariable(shape=(1,), name='y', value=0.1)
+        param = csdl.Variable(shape=(1,), name='param', value=np.ones((1,))*1.0)
+        test = param+param # should be ignored
+        test.name = 'ignore'
+        
+        # simple 2d root finding problem: https://balitsky.com/teaching/phys420/Nm4_roots.pdf
+        residual_1 = csdl.square(y)*(param - x) - x*x*x
+        residual_2 = csdl.square(x) + csdl.square(y) - param*param
+
+        residual_1.name = 'residual_1'
+        residual_2.name = 'residual_2'
+
+        # sum of solved states
+        sum_states = x + y
+        sum_states.name = 'states_sum'
+
+        # apply coupling:
+        x_update = x-residual_1/(-csdl.square(y)-3.0*x*x)
+        y_update = y-residual_2/(2.0*y)
+
+        # NESTED (x) SOLVER COUPLING:
+        solver = csdl.GaussSeidel('gs_x')
+        solver.add_state(x, residual_1, state_update=x_update)
+        solver.run()
+
+        solver = csdl.GaussSeidel('gs_y')
+        solver.add_state(y, residual_2, state_update=y_update)
+        solver.run()
+
+        x_sol = np.array([(np.sqrt(5)-1)/2])
+        y_sol = np.array([np.sqrt((-1+np.sqrt(5))/2)])
+
+        self.run_tests(
+            compare_values = [
+                csdl_tests.TestingPair(y, y_sol, tag = 'state_y', decimal = 11),
+                csdl_tests.TestingPair(x, x_sol, tag = 'state_x', decimal = 11),
+            ],
+        )
+
+
+    def test_double_state_nest2(self):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+
+        x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.1)
+        y = csdl.ImplicitVariable(shape=(1,), name='y', value=0.1)
+        param = csdl.Variable(shape=(1,), name='param', value=np.ones((1,))*1.0)
+        test = param+param # should be ignored
+        test.name = 'ignore'
+        
+        # simple 2d root finding problem: https://balitsky.com/teaching/phys420/Nm4_roots.pdf
+        residual_1 = csdl.square(y)*(param - x) - x*x*x
+        residual_2 = csdl.square(x) + csdl.square(y) - param*param
+
+        residual_1.name = 'residual_1'
+        residual_2.name = 'residual_2'
+
+        # sum of solved states
+        sum_states = x + y
+        sum_states.name = 'states_sum'
+
+        # apply coupling:
+        x_update = x-residual_1/(-csdl.square(y)-3.0*x*x)
+        y_update = y-residual_2/(2.0*y)
+
+        # NESTED (x) SOLVER COUPLING:
+        solver = csdl.GaussSeidel('gs_y')
+        solver.add_state(y, residual_2, state_update=y_update)
+        solver.run()
+
+        solver = csdl.GaussSeidel('gs_x')
+        solver.add_state(x, residual_1, state_update=x_update)
+        solver.run()
+
+        x_sol = np.array([(np.sqrt(5)-1)/2])
+        y_sol = np.array([np.sqrt((-1+np.sqrt(5))/2)])
+
+        self.run_tests(
+            compare_values = [
+                csdl_tests.TestingPair(y, y_sol, tag = 'state_y', decimal = 9),
+                csdl_tests.TestingPair(x, x_sol, tag = 'state_x', decimal = 9),
+            ],
+        )
+
+    def test_double_state(self):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+
+        x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.1)
+        y = csdl.ImplicitVariable(shape=(1,), name='y', value=0.1)
+        param = csdl.Variable(shape=(1,), name='param', value=np.ones((1,))*1.0)
+        test = param+param # should be ignored
+        test.name = 'ignore'
+        
+        # simple 2d root finding problem: https://balitsky.com/teaching/phys420/Nm4_roots.pdf
+        residual_1 = csdl.square(y)*(param - x) - x*x*x
+        residual_2 = csdl.square(x) + csdl.square(y) - param*param
+
+        residual_1.name = 'residual_1'
+        residual_2.name = 'residual_2'
+
+        # sum of solved states
+        sum_states = x + y
+        sum_states.name = 'states_sum'
+
+        # apply coupling:
+        x_update = x-residual_1/(-csdl.square(y)-3.0*x*x)
+        y_update = y-residual_2/(2.0*y)
+
+        # NESTED (x) SOLVER COUPLING:
+        solver = csdl.GaussSeidel('gs_y')
+        solver.add_state(y, residual_2, state_update=y_update)
+        solver.add_state(x, residual_1, state_update=x_update)
+        solver.run()
+
+        x_sol = np.array([(np.sqrt(5)-1)/2])
+        y_sol = np.array([np.sqrt((-1+np.sqrt(5))/2)])
+
+        self.run_tests(
+            compare_values = [
+                csdl_tests.TestingPair(y, y_sol, tag = 'state_y', decimal = 9),
+                csdl_tests.TestingPair(x, x_sol, tag = 'state_x', decimal = 9),
+            ],
+        )
+
     def test_arg_errors(self,):
         self.prep()
 
@@ -146,3 +282,7 @@ if __name__ == '__main__':
     # t.test_arg_errors()
     # t.test_insufficient_res_state_dependence_1()
     # t.test_insufficient_res_state_dependence_2()
+    # t.test_double_state_nest1()
+    # t.test_double_state_nest2()
+    t.test_double_state()
+
