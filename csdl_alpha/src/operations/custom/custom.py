@@ -62,7 +62,7 @@ class CustomExplicitModel(CustomModel):
         for key, output in self.outputs.items():
             output.value = comp_outputs[key]
 
-    def declare_output(self, name, shape):
+    def create_output(self, name, shape):
             """Create and store an output variable.
 
             This method creates a new output variable with the given name and shape,
@@ -83,6 +83,20 @@ class CustomExplicitModel(CustomModel):
             output = Variable(shape)
             self.outputs[name] = output
             return output
+    
+    def declare_input(self, key, variable):
+        """Declares a variable as an input.
+
+        This method stores the given input variable in the inputs dictionary under the given key.
+
+        Parameters
+        ----------
+        key : str
+            The key for the variable.
+        variable : csdl.Variable
+            The input variable.
+        """
+        self.inputs[key] = variable
     
     def declare_derivative_parameters(
         self,

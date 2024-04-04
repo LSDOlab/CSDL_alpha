@@ -5,7 +5,7 @@ if __name__ == '__main__':
 
     import csdl_alpha as csdl
 
-    # custom model
+    # custom paraboloid model
     class Paraboloid(csdl.CustomExplicitModel):
         def initialize(self):
             self.a = self.parameters.declare('a')
@@ -15,14 +15,16 @@ if __name__ == '__main__':
 
         def evaluate(self, x, y, z):
             # assign method inputs to input dictionary
-            self.inputs['x'] = x
-            self.inputs['y'] = y
-            self.inputs['z'] = z
+            # self.inputs['x'] = x
+            # self.inputs['y'] = y
+            # self.inputs['z'] = z
 
-            # TODO: consider self.set_input('x', x)
+            self.declare_input('x', x)
+            self.declare_input('y', y)
+            self.declare_input('z', z)
 
             # declare output variables
-            f = self.declare_output('f', x.shape)
+            f = self.create_output('f', x.shape)
 
             # declare any derivative parameters
             self.declare_derivative_parameters('f', 'z', dependent=False)
@@ -32,7 +34,7 @@ if __name__ == '__main__':
             output['f'] = f
 
             if self.return_g:
-                g = self.declare_output('g', x.shape)
+                g = self.create_output('g', x.shape)
                 output['g'] = g
 
             return output
@@ -74,7 +76,7 @@ if __name__ == '__main__':
     f = outputs['f']
     g = outputs['g']
 
-    print(f.value) # should be 0
+    print(f.value) # should be 8
     print(g.value) # should be 0 
 
     recroder.stop()

@@ -17,14 +17,16 @@ class Paraboloid(csdl.CustomExplicitModel):
 
     def evaluate(self, x, y, z):
         # assign method inputs to input dictionary
-        self.inputs['x'] = x
-        self.inputs['y'] = y
-        self.inputs['z'] = z
+        # self.inputs['x'] = x
+        # self.inputs['y'] = y
+        # self.inputs['z'] = z
 
-        # TODO: consider self.set_input('x', x)
+        self.declare_input('x', x)
+        self.declare_input('y', y)
+        self.declare_input('z', z)
 
         # declare output variables
-        f = self.declare_output('f', x.shape)
+        f = self.create_output('f', x.shape)
 
         # declare any derivative parameters
         self.declare_derivative_parameters('f', 'z', dependent=False)
@@ -34,7 +36,7 @@ class Paraboloid(csdl.CustomExplicitModel):
         output['f'] = f
 
         if self.return_g:
-            g = self.declare_output('g', x.shape)
+            g = self.create_output('g', x.shape)
             output['g'] = g
 
         return output
