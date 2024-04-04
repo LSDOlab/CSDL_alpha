@@ -2,9 +2,10 @@ from .src.data import inline_save, import_h5py, save_optimization_variables, sav
 from .src.graph.variable import Variable, ImplicitVariable
 from .src.model import Model
 from .src.recorder import Recorder
-from .src.custom import CustomExplicitModel
+from .src.operations.custom.custom import CustomExplicitModel
 from .src.variable_group import VariableGroup
 from .manager import RecManager
+from .src.operations.loops.loop import vrange
 manager = RecManager()
 
 def get_current_recorder():

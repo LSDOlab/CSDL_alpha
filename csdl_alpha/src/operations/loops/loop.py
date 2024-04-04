@@ -147,19 +147,17 @@ class vrange():
         return self
 
 
-    
+# if __name__ == '__main__':
+#     import csdl_alpha as csdl
+#     recorder = csdl.Recorder(inline=True)
+#     recorder.start()
+#     a = csdl.Variable(value=2, name='a')
+#     b = csdl.Variable(value=3, name='b')
+#     for i in vrange(0, 10):
+#         b = a + b
+#         c = a*2
 
-if __name__ == '__main__':
-    import csdl_alpha as csdl
-    recorder = csdl.Recorder(inline=True)
-    recorder.start()
-    a = csdl.Variable(value=2, name='a')
-    b = csdl.Variable(value=3, name='b')
-    for i in vrange(0, 10):
-        b = a + b
-        c = a*2
-
-    print(b.value) # should be 23
-    print(c.value) # should be 4
-    recorder.active_graph.visualize('outer_graph')
-    recorder.stop()
+#     print(b.value) # should be 23
+#     print(c.value) # should be 4
+#     recorder.active_graph.visualize('outer_graph')
+#     recorder.stop()
