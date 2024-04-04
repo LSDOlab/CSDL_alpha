@@ -141,6 +141,7 @@ class Operation(Node):
     
 
 def set_properties(**kwargs):
+    """set properties for an operation class"""
     for property, value in kwargs.items():
         if not isinstance(property, str):
             raise ValueError("Property names must be strings")

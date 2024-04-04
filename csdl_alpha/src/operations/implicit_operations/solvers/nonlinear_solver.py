@@ -132,7 +132,7 @@ class NonlinearSolver(object):
             name = f'implicit_{self.name}'
         )
         implicit_operation.outputs = list(output_variables_set)
-        self.residual_graph.link_parent_operation(implicit_operation)
+        implicit_operation.assign_subgraph(self.residual_graph)
         
         # TODO: only perform these checks in debug mode?
         state_keys = set(self.state_to_residual_map.keys())

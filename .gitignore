@@ -140,7 +140,7 @@ _autosummary
 _conf_master.py
 
 # images
-.png
+*.png
 
 # data
-.hdf5
+*.hdf5

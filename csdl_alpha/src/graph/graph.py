@@ -10,19 +10,10 @@ class Graph():
         self.rxgraph = rx.PyDiGraph()
         self.node_table = {}
         self.add_missing_variables = False
-        self.name = name
-        self.parent_operation = None
-
-    def link_parent_operation(self, parent_operation):
-        """
-        links a subgraph to an operation
-        """
-        if not is_operation(parent_operation):
-            raise TypeError("parent_operation is not an operation")
-        if self.parent_operation is not None:
-            raise ValueError(f"subgraph already linked to an operation {self.parent_operation}")
-        self.parent_operation = parent_operation
-        parent_operation.subgraph = self
+        if name is None:
+            self.name = 'graph'
+        else:
+            self.name = name
 
     def add_node(self, node):
         if node in self.node_table:

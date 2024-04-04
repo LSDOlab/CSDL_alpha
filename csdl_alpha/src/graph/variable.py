@@ -79,6 +79,9 @@ class Variable(Node):
         from csdl_alpha.src.operations.add import add
         return add(self,other)
     
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def __mul__(self, other):
         from csdl_alpha.src.operations.mult import mult
         return mult(self,other)
