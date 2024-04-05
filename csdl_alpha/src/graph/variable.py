@@ -19,7 +19,7 @@ class Variable(Node):
 
         self.is_input = True
         self.is_implicit = False
-        self.save = False
+        self._save = False
         self.names = []
         self.name = None
 
@@ -69,7 +69,10 @@ class Variable(Node):
             raise Exception("Variable is an input variable")
         self.recorder._add_objective(self, scalar)
 
-
+    def save(self):
+        """Sets variable to be saved
+        """
+        self._save = True
 
     def set(self, slice, value):
         from csdl_alpha.src.operations.set import set

@@ -1,94 +1,91 @@
-from typing import TypedDict
+from typing import Union
+import warnings
 from csdl_alpha.src.graph.variable import Variable
+from csdl_alpha.utils.inputs import variablize
+from dataclasses import dataclass
 
-class VariableGroup(TypedDict):
-    """
-    Represents a group of variables with optionally defined shapes.
 
-    Attributes:
-        shape_dict (dict): A dictionary that maps variable names to their shapes.
+@dataclass
+class VariableGroup:
 
-    Methods:
-        __init__(*args): Initializes the VariableGroup object.
-        define(*args): Define the shapes of variables.
-        declare_shape(name, shape): Declares the shape of a variable (used in define).
-        __setitem__(key, value): Sets the value of a variable.
+    def __post_init__(self):
+        self._metadata = {}
+        self.define()
+        self.check()
 
-    """
-    def __init__(self, *args):
-        self.shape_dict = {}
-        self.type_dict = {}
+    def __setattr__(self, name, value):
+        if hasattr(self, '_metadata'):
+            value = self._check_pamaeters(name, value)
+        super().__setattr__(name, value)
 
-        self.define(*args)
+    def _check_pamaeters(self, name, value):
+        if name in self._metadata:
+            if self._metadata[name]['variablize']:
+                value = variablize(value)
+            if self._metadata[name]['type'] is not None:
+                if type(value) != self._metadata[name]['type']:
+                    raise ValueError(f"Variable {name} must be of type {self._metadata[name]['type']}.")
+            if self._metadata[name]['shape'] is not None:
+                if value.shape != self._metadata[name]['shape']:
+                    raise ValueError(f"Variable {name} must have shape {self._metadata[name]['shape']}.")
+        return value
 
-    def define(self, *args):
-        """
-        User-defined method to enforce shape and type of the variables in the group.
+    def check(self):
+        for key in self._metadata.keys():
+            if not hasattr(self, key):
+                raise ValueError(f"Variable {key} not found in the group.")
+            val = getattr(self, key)
+            setattr(self, key, self._check_pamaeters(key, val))
 
-        Args:
-            *args: Variable names.
-
-        """
+    def define(self):
         pass
+    
+    def declare_parameters(self, name, type=None, shape=None, variablize=False):
+        """Declare parameters for a variable in the group.
 
-    def declare_shape(self, name, shape):
+        This method is used to declare parameters for a variable in the group. The parameters
+        include the name, type, shape, and whether the variable should be variablized.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable.
+        type : type, optional
+            The type of the variable, by default None.
+        shape : type, optional
+            The shape of the variable, by default None.
+        variablize : bool, optional
+            Whether the variable should be turned into a CSDL variable, by default False.
+
+        Raises
+        ------
+        ValueError
+            If the variable with the given name is not found in the group.
+        ValueError
+            If parameters for the variable with the given name are already declared.
         """
-        Declares the shape of a variable.
-
-        Args:
-            name (str): The name of the variable.
-            shape (tuple): The shape of the variable.
-
-        """
-        self.shape_dict[name] = shape
-
-    def declare_type(self, name, type):
-        """
-        Declares the type of a variable.
-
-        Args:
-            name (str): The name of the variable.
-            type: The type of the variable.
-
-        """
-        self.type_dict[name] = type
-
-    def __setitem__(self, key, value):
-        """
-        Sets the value of a variable.
-
-        Args:
-            key (str): The name of the variable.
-            value: The value to be assigned to the variable.
-
-        Raises:
-            ValueError: If the shape of the value does not match the expected shape.
-            ValueError: If the type of the value does not match the expected type.
-        """
-        if key in self.shape_dict:
-            if value.shape != self.shape_dict[key]:
-                raise ValueError(f"Shape mismatch. Expected {self.shape_dict[key]}, got {value.shape}")
-            if type(value) != self.type_dict[key]:
-                raise ValueError(f"Type mismatch. Expected {self.type_dict[key]}, got {type(value)}")
-        super().__setitem__(key, value)
+        if not name in self.__annotations__:
+            raise ValueError(f"Variable {name} not found in the group.")
+        if name in self._metadata:
+            raise ValueError(f"Parameters for variable {name} already declared.")
+        
+        self._metadata[name] = {'type': type, 'shape': shape, 'variablize': variablize}
 
     def add_tag(self, tag):
-        """
-        Adds a tag to the group.
+        """Adds a tag to all Variables in the group or subgroups.
 
-        Args:
-            tag: The tag to be added.
-
+        Parameters
+        ----------
+        tag : str
+            Tag to add to the Variables.
         """
-        for key in self.keys():
-            if type(self[key]) == Variable or type(self[key]) == VariableGroup:
-                self[key].add_tag(tag)
+        for key, val in self.__dict__.items():
+            if type(val) == Variable or type(val) == VariableGroup:
+                val.add_tag(tag)
 
     def save(self):
+        """saves any Variables in the group or subgroups.
         """
-        Sets the save attribute of all variables in the group to True.
-
-        """
-        for key in self.keys():
-            if type(self[key]) == Variable or type(self[key]) == VariableGroup:
-                self[key].save()
+        for key, val in self.__dict__.items():
+            if type(val) == Variable or type(val) == VariableGroup:
+                val.save()
