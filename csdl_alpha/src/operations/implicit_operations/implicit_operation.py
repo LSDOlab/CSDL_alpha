@@ -1,8 +1,8 @@
 
-from csdl_alpha.src.graph.operation import Operation
+from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
 # TODO: make variable and operation easier to import
 
-class ImplicitOperation(Operation):
+class ImplicitOperation(SubgraphOperation):
 
     def __init__(self, *args, name = 'nl_op', **kwargs) -> None:
         super().__init__(*args, **kwargs)

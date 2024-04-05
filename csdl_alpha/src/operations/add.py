@@ -19,6 +19,18 @@ class Add(ElementwiseOperation):
     def evaluate_jacobian(self, x, y):
         return csdl.Constant(x.size, val = 1), csdl.Constant(y.size, val = 1)
 
+    def evaluate_jacobian2(self, derivs_out):
+        for key in derivs_out:
+            #key = (output1,x)
+            #key = (output1,y)
+
+            derivs_out[key] = csdl.Constant(derivs_out[key].size, val = 1)
+
+        # return csdl.Constant(x.size, val = 1), csdl.Constant(y.size, val = 1)
+    
+    def evaluate_jacobian(self, x, y):
+        return csdl.Constant(x.size, val = 1), csdl.Constant(y.size, val = 1)
+
     def evaluate_jvp(self, x, y, vx, vy):
         # do we to flatten the inputs vx and vy (since they are already vectors)?
         return add(vx.flatten(), vy.flatten())
