@@ -12,7 +12,7 @@ def inline_save(filename:str):
     name_counter = 0 # TODO: make the name counter different for each namespace
     for key in recorder.node_graph_map.keys():
         if isinstance(key, Variable):
-            if key.save:
+            if key._save:
                 if not key.names:
                     savename = f'{key.namespace.prepend}.variable_{name_counter}'
                     name_counter += 1
@@ -53,15 +53,15 @@ def save_optimization_variables():
 
     recorder = get_current_recorder()
     for key in recorder.objectives:
-        key.save = True
+        key.save()
     for key in recorder.constraints:
-        key.save = True
+        key.save()
     for key in recorder.design_variables:
-        key.save = True
+        key.save()
 
 def save_all_variables():
     from ..api import get_current_recorder
 
     recorder = get_current_recorder()
     for key in recorder.node_graph_map.keys():
-        key.save = True
+        key.save()
