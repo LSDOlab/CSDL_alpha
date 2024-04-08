@@ -12,6 +12,6 @@ from .reshape import reshape
 
 
 # Linear algebra operations
-
+from .block_matrix import blockmat
 
 # Tensor operations

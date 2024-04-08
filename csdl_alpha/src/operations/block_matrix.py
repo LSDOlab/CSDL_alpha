@@ -6,6 +6,9 @@ import csdl_alpha.utils.test_utils as csdl_tests
 import numpy as np
 
 class BLockMatrix(Operation):
+    '''
+    Assemble a block matrix from a list of matrices or a list of lists.
+    '''
 
     def __init__(self, *args, num_row_blocks = None, shape=None):
         super().__init__(*args)
@@ -20,7 +23,7 @@ class BLockMatrix(Operation):
         else:
             l = self.num_row_blocks
             row_idx = np.cumsum([0] + l)
-            return np.block([[y for y in args[row_idx[i]:row_idx[i+1]]] for i in range(len(l))])
+            return np.block([list(args[row_idx[i]:row_idx[i+1]]) for i in range(len(l))])
 
 def blockmat(l):
     """
@@ -76,12 +79,12 @@ class TestBlockMat(csdl_tests.CSDLTest):
 
         compare_values = []
         # create a block row matrix
-        b1 = blockmat([x,y])
+        b1 = csdl.blockmat([x,y])
         t1 = np.block([x_val, y_val])
         compare_values += [csdl_tests.TestingPair(b1, t1, tag = 'b1')]
 
         # Create a block matrix with block rows and columns
-        b2 = blockmat([[x,y], [z]])
+        b2 = csdl.blockmat([[x,y], [z]])
         t2 = np.block([[x_val, y_val], [z_val]])
         compare_values += [csdl_tests.TestingPair(b2, t2, tag = 'b1')]
 
@@ -106,15 +109,15 @@ class TestBlockMat(csdl_tests.CSDLTest):
         z = csdl.Variable(name = 'z', value = z_val)
 
         # create a block row matrix
-        b1 = blockmat([x,y])
+        b1 = csdl.blockmat([x,y])
         print(b1.value)
 
         # Create a block matrix with block rows and columns
-        b2 = blockmat([[x,y], [z]])
+        b2 = csdl.blockmat([[x,y], [z]])
         print(b2.value)
 
         # Create a block matrix with block rows and columns using constant blocks
-        b3 = blockmat([[x,y_val], [z]])
+        b3 = csdl.blockmat([[x,y_val], [z]])
         print(b3.value)
         # docs:exit
 
