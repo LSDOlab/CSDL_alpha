@@ -94,7 +94,7 @@ class Operation(Node):
         elif self.num_inputs == 2:
             output_values = self.compute_inline(self.inputs[0].value, self.inputs[1].value)
         else:
-            output_values = self.compute_inline(x.value for x in self.inputs)
+            output_values = self.compute_inline(*[x.value for x in self.inputs])
 
         if self.num_outputs == 1:
             self.outputs[0].value = output_values
