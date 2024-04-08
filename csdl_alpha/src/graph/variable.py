@@ -5,13 +5,14 @@ from csdl_alpha.utils.inputs import ingest_value, get_shape
 
 class Variable(Node):
     __array_priority__ = 1000
-
-    def __init__(self, shape: tuple = None, 
-                 *, 
-                 name: str = None, 
-                 value: Union[np.ndarray, float, int] = None,  
-                 tags: list[str] = None, 
-                 hierarchy: int = None):
+    def __init__(
+            self,
+            shape: tuple = None, 
+            name: str = None, 
+            value: Union[np.ndarray, float, int] = None,  
+            tags: list[str] = None, 
+            hierarchy: int = None,
+        ):
         
         self.hierarchy = hierarchy
         super().__init__()
@@ -27,7 +28,10 @@ class Variable(Node):
         shape = get_shape(shape, value)
 
         self.shape = shape
-        self.size = np.prod(shape)
+        if len(shape) == 1:
+            self.size = shape[0]
+        else:
+            self.size = np.prod(shape)
         if name is not None:
             self.add_name(name)
         self.value = value
@@ -69,12 +73,15 @@ class Variable(Node):
             raise Exception("Variable is an input variable")
         self.recorder._add_objective(self, scalar)
 
-
-
-    def set(self, slice, value):
-        from csdl_alpha.src.operations.set import set
-        return set(self, slice, value)
+    def set(self, slice, value:'Variable') -> 'Variable':
+        from csdl_alpha.src.operations.set_get.setindex import set_index
+        return set_index(self, slice, value)
     
+    def __getitem__(self, slices) -> 'Variable':
+        from csdl_alpha.utils.slice import _slice as slice
+        from csdl_alpha.src.operations.set_get.getindex import get_index
+        return get_index(self, slice[slices])
+
     def __add__(self, other):
         from csdl_alpha.src.operations.add import add
         return add(self,other)
@@ -111,6 +118,13 @@ class Variable(Node):
         """
         from csdl_alpha.src.operations.reshape import reshape
         return reshape(self, shape)
+
+    def flatten(self):
+        """
+        doc strings
+        """
+        from csdl_alpha.src.operations.reshape import reshape
+        return reshape(self, (self.size,))
 
 class ImplicitVariable(Variable):
     pass

@@ -17,9 +17,6 @@ class Paraboloid(csdl.CustomExplicitModel):
 
     def evaluate(self, x, y, z):
         # assign method inputs to input dictionary
-        # self.inputs['x'] = x
-        # self.inputs['y'] = y
-        # self.inputs['z'] = z
 
         self.declare_input('x', x)
         self.declare_input('y', y)

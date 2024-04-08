@@ -26,11 +26,13 @@ def reshape(x, shape: tuple[int]) -> Variable:
     """
     doc strings
     """
+    # Given shape must be a tuple of integers
     try:
         error_utils.check_if_valid_shape(shape)
     except Exception as e:
         raise TypeError(f'Error with shape argument in reshape: {e}')
     
+    # shape must be compatible with shape of variable x
     if x.size == np.prod(shape):
         op = Reshape(x, shape = shape)
     else:
@@ -75,6 +77,9 @@ class TestReshape(csdl_tests.CSDLTest):
 
         y = y.reshape(y.shape)
         compare_values += [csdl_tests.TestingPair(y,x_val_large.reshape((1000,1)))]
+
+        y = y.flatten()
+        compare_values += [csdl_tests.TestingPair(y,x_val_large.flatten())]
 
         self.run_tests(compare_values = compare_values,)
 

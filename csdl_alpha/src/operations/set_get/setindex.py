@@ -1,10 +1,13 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
-from csdl_alpha.src.graph.operation import Operation, set_properties 
+from csdl_alpha.src.graph.operation import Operation, set_properties
+from csdl_alpha.src.graph.variable import Variable
+
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
+from csdl_alpha.utils.slice import Slice
 
 @set_properties(linear=True,)
-class Set(Operation):
+class SetIndex(Operation):
     '''
     Elementwise setting of a slice s of a tensor x with another tensor y.
     '''
@@ -24,7 +27,7 @@ class Set(Operation):
         out[self.slice] = y
         return out
 
-class BroadcastSet(Set):
+class BroadcastSetIndex(SetIndex):
     '''
     Setting all the elements of a slice s of a tensor x with a scalar y.
     '''
@@ -34,7 +37,7 @@ class BroadcastSet(Set):
         self.name = 'broadcast_set'
 
 
-class SparseSet(ComposedOperation):
+class SparseSetIndex(ComposedOperation):
 
     def __init__(self,x,y):
         super().__init__(x,y)
@@ -43,7 +46,7 @@ class SparseSet(ComposedOperation):
     def compute_inline(self, x, y):
         pass
     
-class SparseBroadcastSet(ComposedOperation):
+class SparseBroadcastSetIndex(ComposedOperation):
 
     def __init__(self,x,y):
         super().__init__(x,y)
@@ -52,7 +55,7 @@ class SparseBroadcastSet(ComposedOperation):
     def compute_inline(self, x, y):
         pass
 
-def set(x, s, y):
+def set_index(x:Variable, s, y:Variable) -> Variable:
     """
     doc strings
     """
@@ -70,11 +73,11 @@ def set(x, s, y):
 
         if slice_shape != y.shape:
             raise ValueError('Shapes of inputs do not match for the set operation.')
-        op = Set(x, y, s)
+        op = SetIndex(x, y, s)
     else:
         # TODO: use y.flatten() later once flatten() is implemented
         # op = BroadcastSet(x, y.flatten(), s)
-        op = BroadcastSet(x, y, s)
+        op = BroadcastSetIndex(x, y, s)
     
     return op.finalize_and_return_outputs()
 
