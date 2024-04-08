@@ -3,25 +3,18 @@ import inspect
 
 class Recorder:
     """
-    The Recorder class represents a recorder object that is used to record data.
+    The Recorder class assembles CSDL variables and operations into a computational graph.
 
-    Attributes:
-        manager: The manager object that manages the recorders.
-        graph_tree: The tree structure representing the graph hierarchy.
-        namespace_tree: The tree structure representing the namespace hierarchy.
-        active_graph_node: The currently active graph node.
-        active_namespace: The currently active namespace node.
-        active_graph: The currently active graph.
-        active_namespace: The currently active namespace.
-
-    Methods:
-        start: Activates the recorder.
-        stop: Deactivates the recorder.
-        _enter_namespace: Enters a new namespace.
-        _exit_namespace: Exits the current namespace.
-        _enter_subgraph: Enters a new subgraph.
-        _exit_subgraph: Exits the current subgraph.
-        _add_node: Adds a node to the active namespace and graph.
+    Attributes
+    ----------
+    manager : Manager
+        The global manager object that manages the recorders.
+    active_graph_node : Tree
+        The currently active graph node.
+    active_namespace : Namespace 
+        The currently active namespace node.
+    active_graph : Graph
+        The currently active graph.
     """
 
     def __init__(self, 
@@ -30,7 +23,18 @@ class Recorder:
                  expand_ops: bool = False,
                  auto_hierarchy: bool = False):
         """
-        Initializes a new instance of the Recorder class.
+        Initializes a Recorder object.
+
+        Parameters
+        ----------
+        inline : bool, optional
+            Specifies whether to run inline evaluations, by default False.
+        debug : bool, optional
+            Specifies whether to enable debug mode, by default False.
+        expand_ops : bool, optional
+            Specifies whether to expand composed operations, by default False.
+        auto_hierarchy : bool, optional
+            Specifies whether to automatically create a hierarchy, by default False.
         """
         from csdl_alpha.api import manager
         self.manager = manager
@@ -73,7 +77,8 @@ class Recorder:
         """
         Enters a new namespace.
 
-        Args:
+        Arguments
+        ---------
             name: The name of the namespace to enter.
         """
         if not isinstance(name, str):

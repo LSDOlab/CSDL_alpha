@@ -29,6 +29,7 @@ Include figures from the relevant paper and citation.
 src/getting_started
 src/background
 src/tutorials
+src/sparse_mtx
 src/custom_1
 src/custom_2
 src/examples

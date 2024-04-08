@@ -68,7 +68,7 @@ class vrange():
 
 
     def post_iteration_one(self):
-        self._graph.visualize('graph_loop_iter_1')
+        # self._graph.visualize('graph_loop_iter_1')
         self.iter1_inputs = [] # list of inputs to the first iteration
         self.iter1_outputs = [] # list of outputs to the first iteration
         # NOTE: variables that are created inside the loop but not used in the loop aren't going to show up in either of these lists, but that *should* be okay?
@@ -125,7 +125,7 @@ class vrange():
         external_inputs = self._graph.inputs
 
         # Stop the graph
-        self._graph.visualize('graph_loop_final')
+        # self._graph.visualize('graph_loop_final')
         self._recorder._exit_subgraph()
 
         # add the loop operation to the graph

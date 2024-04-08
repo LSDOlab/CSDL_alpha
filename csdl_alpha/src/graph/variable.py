@@ -20,7 +20,7 @@ class Variable(Node):
 
         self.is_input = True
         self.is_implicit = False
-        self.save = False
+        self._save = False
         self.names = []
         self.name = None
 
@@ -76,6 +76,14 @@ class Variable(Node):
     def set(self, slice, value:'Variable') -> 'Variable':
         from csdl_alpha.src.operations.set_get.setindex import set_index
         return set_index(self, slice, value)
+    def save(self):
+        """Sets variable to be saved
+        """
+        self._save = True
+
+    # def set(self, slice, value):
+    #     from csdl_alpha.src.operations.set import set
+    #     return set(self, slice, value)
     
     def __getitem__(self, slices) -> 'Variable':
         from csdl_alpha.utils.slice import _slice as slice

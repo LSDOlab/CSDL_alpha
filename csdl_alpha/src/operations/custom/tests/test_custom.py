@@ -30,11 +30,11 @@ class Paraboloid(csdl.CustomExplicitModel):
 
         # construct output of the model
         output = csdl.VariableGroup()
-        output['f'] = f
+        output.f = f
 
         if self.return_g:
             g = self.create_output('g', x.shape)
-            output['g'] = g
+            output.g = g
 
         return output
     
@@ -170,8 +170,8 @@ class TestCustom(csdl_tests.CSDLTest):
         paraboloid = Paraboloid(a=2, b=4, c=12, return_g=True)
         outputs = paraboloid.evaluate(x, y, z)
 
-        f = outputs['f']
-        g = outputs['g']
+        f = outputs.f
+        g = outputs.g
 
         self.run_tests(
             compare_values = [
