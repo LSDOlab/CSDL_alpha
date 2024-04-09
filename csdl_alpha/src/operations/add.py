@@ -38,6 +38,7 @@ class Add(ElementwiseOperation):
     def evaluate_vjp(self, x, y, vout):
         return vout.flatten(), vout.flatten()
 
+# TODO: Do we need a broadcast add? There's a lot of code duplication b/w both classes
 class BroadcastAdd(Operation):
     '''
     Addition after the first input is broadcasted to the shape of the second input.
@@ -94,7 +95,7 @@ def add(x,y):
     elif y.shape == (1,):
         op = BroadcastAdd(y,x)
     else:
-        raise ValueError('Shapes do not match')
+        raise ValueError('Shapes not compatible for add operation.')
     return op.finalize_and_return_outputs()
 
 
@@ -155,7 +156,6 @@ class TestAdd(csdl_tests.CSDLTest):
 
     def test_example(self,):
         self.prep()
-        from numpy.testing import assert_array_equal
 
         # docs:entry
         import csdl_alpha as csdl
@@ -164,8 +164,9 @@ class TestAdd(csdl_tests.CSDLTest):
         recorder = csdl.build_new_recorder(inline = True)
         recorder.start()
 
-        s1 = csdl.add(3,2)
-        print(s1.value)
+        # add two scalar constants
+        s0 = csdl.add(3,2)
+        print(s0.value)
 
         x = csdl.Variable(name = 'x', value = np.ones((3,2))*3.0)
         y = csdl.Variable(name = 'y', value = 2.0)
@@ -185,8 +186,10 @@ class TestAdd(csdl_tests.CSDLTest):
         # docs:exit
 
         compare_values = []
-        t = np.ones((3,2))*5.0
+        t0 = np.array([5.0])
+        t  = np.ones((3,2)) * t0
 
+        compare_values += [csdl_tests.TestingPair(s0, t0)]
         compare_values += [csdl_tests.TestingPair(s1, t)]
         compare_values += [csdl_tests.TestingPair(s2, t)]
         compare_values += [csdl_tests.TestingPair(s3, t)]
