@@ -44,6 +44,7 @@ class Recorder:
         self.auto_hierarchy = auto_hierarchy
 
         self.hierarchy = 0
+        self.in_loop = False
 
         self.design_variables = {}
         self.constraints = {}
