@@ -7,6 +7,7 @@ from .division import div
 from .log import log
 from .set import set
 from .reshape import reshape
+from .sum import sum
 
 # Trigonometric operations
 
