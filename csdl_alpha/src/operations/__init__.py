@@ -8,6 +8,7 @@ from .log import log
 from .set import set
 from .reshape import reshape
 from .sum import sum
+from .average import average
 
 # Trigonometric operations
 
