@@ -4,7 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 class IterationVariable(Variable):
     def __init__(self, vals):
         super().__init__(vals[0])
-        self.shape = None
+        self.shape = (1,)
         self.vals = vals
         self.name = 'iter'
 
@@ -133,44 +133,68 @@ class vrange():
                 else:
                     # this implies input 1 and input 2 are both made in the loop, so we can just keep input 2
                     pass
-        
-        self.loop_vars = loop_vars
 
         # delete any remnanats of the first iteration
         self._graph._delete_nodes(self.iter1_non_inputs)
 
-        self.external_inputs = self._graph.inputs
+        external_inputs = self._graph.inputs
+
+        # Stop the graph
+        # self._graph.visualize('graph_loop_final')
+        self._recorder._exit_subgraph()
+
+        # add the loop operation to the graph
+        #NOTE: this only exposes outputs of operations, not variables created within the loop
+        op = Loop(external_inputs, self.iter2_outputs, self._graph, self.vals, self.iteration_variable, loop_vars)
+        if self._recorder.inline:
+            op.compute_inline()
+
 
     def __next__(self):
-        if self.check:
-            if self.curr_index == 1:
-                self.ops, self.shapes = self.get_ops_and_shapes()
-            elif self.curr_index > 1:
-                ops, shapes = self.get_ops_and_shapes()
-                print(ops)
-                if ops != self.ops:
-                    raise ValueError(f'Graph changed between iterations')
-
         final = False
+        # no processing for zeroith iteration
+        # first iteration - get ops and shapes, figure out inputs
         if self.curr_index==1:
+            if self.check:
+                self.ops, self.shapes = self.get_ops_and_shapes()
             self.post_iteration_one()
+        # second iteration - check ops and shapes havent changed, find feedback
         elif self.curr_index == 2:
             self.post_iteration_two()
-            if not self.check:
-                final = True
-        if self.curr_index == self.max_index:
+            if self.check:
+                ops, shapes = self.get_ops_and_shapes()
+                if ops != self.ops:
+                    raise ValueError(f'Operations changed between iterations')
+                if shapes != self.shapes:
+                    raise ValueError(f'Shapes changed between iterations')
+            else:
+                final=True
+        # final iteration - check ops and shapes, end loop
+        elif self.curr_index >= self.max_index:
+            self._recorder._enter_subgraph()
+            graph = self._recorder.active_graph
+            ops, shapes = self.get_ops_and_shapes()
+            if self.check:
+                if ops != self.ops:
+                    raise ValueError(f'Operations changed between iterations')
+                if shapes != self.shapes:
+                    raise ValueError(f'Shapes changed between iterations')
+            self._recorder._delete_current_graph()
             final = True
+        # all other iterations - check ops and shapes
+        elif self.curr_index > 2:
+            self._recorder._enter_subgraph()
+            graph = self._recorder.active_graph
+            ops, shapes = self.get_ops_and_shapes()
+            if self.check:
+                if ops != self.ops:
+                    raise ValueError(f'Operations changed between iterations')
+                if shapes != self.shapes:
+                    raise ValueError(f'Shapes changed between iterations')
+            self._recorder._delete_current_graph()
 
         if final:
-            # Stop the graph
-            # self._graph.visualize('graph_loop_final')
-            self._recorder._exit_subgraph()
-
-            # add the loop operation to the graph
-            #NOTE: this only exposes outputs of operations, not variables created within the loop
-            op = Loop(self.external_inputs, self.iter2_outputs, self._graph, self.vals, self.iteration_variable, self.loop_vars)
-            if self._recorder.inline:
-                op.compute_inline()
+            raise StopIteration
 
         self.curr_index+=1
         return self.iteration_variable
@@ -187,7 +211,7 @@ if __name__ == '__main__':
     a = csdl.Variable(value=2, name='a')
     b = csdl.Variable(value=3, name='b')
     j = 0
-    for i in vrange(0, 10, check=False):
+    for i in vrange(0, 10, check=True):
         print(j)
         b = a + b
         c = a*2
