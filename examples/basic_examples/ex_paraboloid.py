@@ -27,7 +27,7 @@ if __name__ == '__main__':
     csdl.enter_namespace('test')
     x = csdl.Variable(value=2., name='x')
     csdl.exit_namespace()
-    x.save = True
+    x.save()
     x.add_tag('banana')
     x.add_tag('apple')
     y = csdl.Variable(value=1., name='y')
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     # Call the evaluate method of the model functionally.
     f = parabolid_model.evaluate(x, y, name = 'paraboloid_submodel')
-    f.save = True
+    f.save()
 
     recorder.active_graph.visualize()
 
