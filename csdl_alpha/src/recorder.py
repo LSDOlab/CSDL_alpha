@@ -199,6 +199,18 @@ class Recorder:
         """
         self.objectives[variable] = scalar
 
+    def _delete_current_graph(self):
+        """
+        Deletes the current graph.
+        """
+        current_graph_node = self.active_graph_node
+        parent_graph_node = current_graph_node.parent
+        parent_graph_node.children.remove(current_graph_node)
+        
+        self.active_graph_node = parent_graph_node
+        self.active_graph = parent_graph_node.value
+        
+
 
 class Tree:
     """
