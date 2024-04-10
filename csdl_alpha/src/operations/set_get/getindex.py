@@ -18,7 +18,7 @@ class GetVarIndex(Operation):
             slice_shape:tuple,
         ):
         super().__init__(x, *slice.vars)
-        self.name = 'get_var_ind'
+        self.name = 'get_index'
         self.out_shape = slice_shape
         out_shapes = (self.out_shape,) 
         self.set_dense_outputs(out_shapes)
