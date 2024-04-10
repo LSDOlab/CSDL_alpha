@@ -168,6 +168,14 @@ class TestMaximum(csdl_tests.CSDLTest):
         s6 = csdl.maximum(x_val, y_val, z_val)
         compare_values += [csdl_tests.TestingPair(s6, t5, tag = 's6', decimal=8)]
 
+        # TODO: maximum of a zero tensor - need to check this 
+        # to avoid errors from sum(log(1+1+..)) if there are multiple entries of zero
+        # and zero is the maximum
+        zeros = np.zeros((2,3))
+        s7 = csdl.maximum(zeros, rho=2000)
+        t7 = np.array([0.0])
+        compare_values += [csdl_tests.TestingPair(s7, t7, tag = 's7', decimal=3)]
+
         self.run_tests(compare_values = compare_values,)
 
 

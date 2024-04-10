@@ -64,6 +64,8 @@ def log(x, base=None):
 
     if x.shape == y.shape:
         op = Log(x, y)
+    # TODO: Need another Broadcast log for the case below for more efficiency?
+    # NOTE: When the base is a scalar, we can't just use the "Elementwise" log
     elif y.shape == (1,):
         op = Log(x, y)
     elif x.shape == (1,):
