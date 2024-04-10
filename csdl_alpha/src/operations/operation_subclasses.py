@@ -38,8 +38,8 @@ class ComposedOperation(SubgraphOperation):
     def __init__(self,*args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def finalize_and_return_outputs(self):
         self.recorder._enter_subgraph()
-        
         for input in self.inputs:
             self.recorder._add_node(input)
         outputs = self.evaluate_composed(*self.inputs)
@@ -56,7 +56,6 @@ class ComposedOperation(SubgraphOperation):
         for output in self.outputs:
             self.recorder._add_node(output)
 
-    def finalize_and_return_outputs(self):
         outputs = super().finalize_and_return_outputs(skip_inline = True)
         return outputs
     
