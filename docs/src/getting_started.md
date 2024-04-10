@@ -1,64 +1,50 @@
 # Getting started
-This page provides instructions for installing your package 
+This page provides instructions for installing CSDL 
 and running a minimal example.
 
 ## Installation
+
+`csdl_aphla` is tested on Linux, and may not work on other operating systems.
 
 ### Installation instructions for users
 For direct installation with all dependencies, run on the terminal or command line
 ```sh
 $ pip install git+https://github.com/LSDOlab/csdl_alpha.git
 ```
-If you want users to install a specific branch, run
-```sh
-$ pip install git+https://github.com/LSDOlab/csdl_alpha.git@branch
-```
-
-**Enabled by**: Copying the `setup.py` file, changing your repository name and version, 
-and adding all your dependencies into the list `install_requires`.
 
 ### Installation instructions for developers
-To install `csdl_alpha`, first clone the repository and install using pip.
-On the terminal or command line, run
+To install `csdl_alpha`, first clone the repository and install using pip. On the terminal or command line, run
 ```sh
 $ git clone https://github.com/LSDOlab/csdl_alpha.git
 $ pip install -e ./csdl_alpha
 ```
-**Enabled by**: Copying the setup.py file, and changing your repository name and version.
 
-## Setting up Documentation
+## Testing
 
-If you are not interested in using this repository as a template but only want to use the documentation template, 
-just copy the `/docs` directory and the `.readthedocs.yaml` file into your package root.
-However, make sure you have all the dependencies mentioned in the `setup.py` file installed before you build your
-documentation.
+To run all tests for the CSDL frontend, navigate to the CSDL directory and, from terminal, run
+```sh
+$ pytest
+```
 
-### Writing
-Start by modifying the documentation pages by editing `.md` files in the `/src` directory.
-Customize/add/remove pages from the template according to your package's requirements.
 
-For automatically generated API references, add docstrings to your modules, classes, functions, etc., and
-then edit the list of directories containing files with docstrings intended for automatic API generation. 
-This can be done by editing the line `autoapi_dirs = ["../../csdl_alpha/core"]` 
-in `conf.py` in the `/src` directory.
+## Writing CSDL Code
 
-Add Python files for examples and Jupyter notebooks for tutorials into the main project repository. 
-Filenames for examples should start with'ex_'.
-Add your examples and tutorials to the toctrees in `examples.md` and `tutorials.md` respectively.
+Writing CSDL code is similar to writing regular python code. However, CSDL code is compiled to a graph representation by the `Recorder` class, that can be optimized and executed efficiently. This means that CSDL code is not executed immediately, but rather compiled to a graph that is executed by the CSDL backend. However, the CSDL frontend provides a way to execute CSDL code inline, which can be useful for debugging and testing. Inline values can be accessed by the `value` attribute of the variable.
 
-### Building
-Once you have all the source code written for your documentation, on the terminal/command line, run `make html`.
-This will build all the html pages locally and you can verify if the documentation was built as intended by
-opening the `docs/_build/html/welcome.html` on your browser.
+```{warning}
+No backends currently exist for CSDL. 
+```
 
-### Hosting
-On your *Read the Docs* account, **import** your project **manually** from github repository, and link the `/docs` directory.
-Make sure to edit `requirements.txt` with dependencies for *Read the Docs* to build the documentation exactly
-as in your local build.
-Optionally, edit the `.readthedocs.yml` in the project root directory for building with specific operating systems or versions of Python.
-After you commit and push, *Read the Docs* will build your package on its servers and once its complete,
-you will see your documentation online.
-The default website address will be generated based on your *Read the Docs* project name as `https://<proj_name>.readthedocs.io/`.
-You can also customize the URL on *Read the Docs*, if needed.
+### Basic Example
 
-## Setting up Testing
+The following is an example of a simple CSDL code snippet that adds two variables `x` and `y` and stores the result in `z`. The code is executed inline by passing an argument to the `Recorder` class. All CSDL code should be enclosed within the `start()` and `stop()` methods of the `Recorder` class.
+
+```python
+import csdl_alpha as csdl
+recorder = csdl.Recorder(inline=True)
+recorder.start()
+x = csdl.Variable(value=1)
+y = csdl.Variable(value=2)
+z = x+y
+recorder.stop()
+```
