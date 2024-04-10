@@ -1,5 +1,7 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
+from csdl_alpha.src.graph.operation import set_properties 
 
+@set_properties(linear=True)
 class Neg(ElementwiseOperation):
 
     def __init__(self,x):

@@ -10,6 +10,7 @@ from .sum import sum
 from .average import average
 from .maximum import maximum
 from .minimum import minimum
+from .trig import sin, cos, tan
 
 # getting and setting
 from .set_get.setindex import set_index

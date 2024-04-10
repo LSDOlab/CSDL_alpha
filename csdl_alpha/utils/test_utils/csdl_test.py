@@ -52,6 +52,36 @@ class CSDLTest():
         #     assertion_error_str = get_assertion_error_string(variable, real_value)
         #     assert_array_equal(variable.value, real_value, err_msg=assertion_error_str)
 
+    def docstest(self, obj):
+        # self.prep()
+        # import doctest
+        # import csdl_alpha as csdl
+        # import numpy as np
+        # doctest.run_docstring_examples(
+        #     obj,
+        #     globs = {'csdl': csdl, 'np': np},
+        #     optionflags=doctest.FAIL_FAST,
+        # )
+        self.prep()
+        import doctest
+        import csdl_alpha as csdl
+        import numpy as np
+
+        # Create a new instance of a DocTestFinder and DocTestRunner class
+        finder = doctest.DocTestFinder()
+        runner = doctest.DocTestRunner(verbose=False)
+
+        # Find the tests
+        tests = finder.find(obj, globs={'csdl': csdl, 'np': np})
+
+        # Run the tests
+        for test in tests:
+            runner.run(test)
+
+        # If there were any failures, raise an exception
+        if runner.failures > 0:
+            raise Exception(f"{runner.failures} doctest(s) failed")
+
 def get_testing_error_string(error_string):
     return f"Test implementation error: {error_string}"
 
