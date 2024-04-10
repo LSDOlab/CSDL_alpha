@@ -10,31 +10,31 @@ class Sum(Operation):
     '''
     Sum entries in the input tensor along the specified axes.
     '''
-    def __init__(self, *args, axes=None, out_shape=None):
-        super().__init__(*args)
+    def __init__(self, x, axes=None, out_shape=None):
+        super().__init__(x)
         self.name = 'sum'
         out_shapes = (out_shape,)
         self.axes = axes
         self.set_dense_outputs(out_shapes)
 
-    def compute_inline(self, *args):
+    def compute_inline(self, x):
         if self.axes is None:
-            return np.sum(args[0])
+            return np.sum(x)
         else:
-            return np.sum(args[0], axis=self.axes)
+            return np.sum(x, axis=self.axes)
 
-class MultiSum(ComposedOperation):
+class ElementwiseSum(ComposedOperation):
     '''
     Elementwise sum of all the Variables in the arguments.
     '''
-    def __init__(self, *args, out_shape=None):
+    def __init__(self, *args):
         super().__init__(*args)
-        self.name = 'multi_sum'
+        self.name = 'elementwise_sum'
 
     def evaluate_composed(self, *args):
-        return evaluate_multisum(*args)
+        return evaluate_elementwise_sum(*args)
 
-def evaluate_multisum(*args):
+def evaluate_elementwise_sum(*args):
     out = args[0] + args[1]
     for i in range(2, len(args)):
         out = out + args[i]
@@ -64,12 +64,11 @@ def sum(*args, axes=None):
         else:
             out_shape = tuple([x for i, x in enumerate(args[0].shape) if i not in axes])
         
-        op = Sum(*args, axes=axes, out_shape=out_shape)
+        op = Sum(variablize(args[0]), axes=axes, out_shape=out_shape)
     else:
         # axes is None for multiple variables
         args = [variablize(x) for x in args]
-        out_shape = args[0].shape
-        op = MultiSum(*args, out_shape=out_shape)
+        op = ElementwiseSum(*args)
     
     return op.finalize_and_return_outputs()
 
@@ -105,12 +104,12 @@ class TestSum(csdl_tests.CSDLTest):
         t3 = np.array([9,9])
         compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
 
-        # sum of a multiple tensor variables
+        # elementwise sum of multiple tensor variables
         s4 = csdl.sum(x, y, z)
         t4 = 6.0*np.ones((2,3))
         compare_values += [csdl_tests.TestingPair(s4, t4, tag = 's4')]
 
-        # sum of a multiple tensor constants
+        # elementwise sum of multiple tensor constants
         s5 = csdl.sum(x_val, y_val, z_val)
         compare_values += [csdl_tests.TestingPair(s5, t4, tag = 's5')]
 
@@ -146,11 +145,11 @@ class TestSum(csdl_tests.CSDLTest):
         s3 = csdl.sum(x, axes=(1,))
         print(s3.value)
 
-        # sum of a multiple tensor variables
+        # elementwise sum of multiple tensor variables
         s4 = csdl.sum(x, y, z)
         print(s4.value)
 
-        # sum of a multiple tensor constants and variables
+        # elementwise sum of multiple tensor constants and variables
         s5 = csdl.sum(x_val, y_val, z)
         print(s5.value)
         # docs:exit

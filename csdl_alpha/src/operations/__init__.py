@@ -9,6 +9,8 @@ from .set import set
 from .reshape import reshape
 from .sum import sum
 from .average import average
+from .maximum import maximum
+# from .minimum import minimum
 
 # Trigonometric operations
 

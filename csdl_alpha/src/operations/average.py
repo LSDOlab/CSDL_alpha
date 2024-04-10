@@ -11,31 +11,31 @@ class Average(Operation):
     '''
     Average entries in the input tensor along the specified axes.
     '''
-    def __init__(self, *args, axes=None, out_shape=None):
-        super().__init__(*args)
+    def __init__(self, x, axes=None, out_shape=None):
+        super().__init__(x)
         self.name = 'average'
         out_shapes = (out_shape,)
         self.axes = axes
         self.set_dense_outputs(out_shapes)
 
-    def compute_inline(self, *args):
+    def compute_inline(self, x):
         if self.axes is None:
-            return np.average(args[0])
+            return np.average(x)
         else:
-            return np.average(args[0], axis=self.axes)
+            return np.average(x, axis=self.axes)
 
-class MultiAverage(ComposedOperation):
+class ElementwiseAverage(ComposedOperation):
     '''
     Elementwise average of all the Variables in the arguments.
     '''
-    def __init__(self, *args, out_shape=None):
+    def __init__(self, *args):
         super().__init__(*args)
-        self.name = 'multi_average'
+        self.name = 'elementwise_average'
 
     def evaluate_composed(self, *args):
-        return evaluate_multiaverage(*args)
+        return evaluate_elementwise_average(*args)
 
-def evaluate_multiaverage(*args):
+def evaluate_elementwise_average(*args):
     out = csdl.sum(*args)/len(args)
     return out
 
@@ -63,12 +63,11 @@ def average(*args, axes=None):
         else:
             out_shape = tuple([x for i, x in enumerate(args[0].shape) if i not in axes])
         
-        op = Average(*args, axes=axes, out_shape=out_shape)
+        op = Average(variablize(args[0]), axes=axes, out_shape=out_shape)
     else:
         # axes is None for multiple variables
         args = [variablize(x) for x in args]
-        out_shape = args[0].shape
-        op = MultiAverage(*args, out_shape=out_shape)
+        op = ElementwiseAverage(*args)
     
     return op.finalize_and_return_outputs()
 
@@ -104,12 +103,12 @@ class TestAverage(csdl_tests.CSDLTest):
         t3 = np.average(x_val, axis=1)
         compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
 
-        # average of a multiple tensor variables
+        # elementwise average of multiple tensor variables
         s4 = csdl.average(x, y, z)
         t4 = (x_val + y_val + z_val)/3
         compare_values += [csdl_tests.TestingPair(s4, t4, tag = 's4')]
 
-        # average of a multiple tensor constants
+        # elementwise average of multiple tensor constants
         s5 = csdl.average(x_val, y_val, z_val)
         compare_values += [csdl_tests.TestingPair(s5, t4, tag = 's5')]
 
@@ -145,11 +144,11 @@ class TestAverage(csdl_tests.CSDLTest):
         s3 = csdl.average(x, axes=(1,))
         print(s3.value)
 
-        # average of a multiple tensor variables
+        # elementwise average of multiple tensor variables
         s4 = csdl.average(x, y, z)
         print(s4.value)
 
-        # average of a multiple tensor constants and variables
+        # elementwise average of multiple tensor constants and variables
         s5 = csdl.average(x_val, y_val, z)
         print(s5.value)
         # docs:exit
