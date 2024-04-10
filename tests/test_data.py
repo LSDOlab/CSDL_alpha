@@ -33,7 +33,12 @@ class TestData(CSDLTest):
         assert variables['a'].hierarchy == a.hierarchy
         assert variables['a'].name == a.name
 
-
+# if __name__ == '__main__':
+#     import csdl_alpha as csdl
+#     recorder = csdl.Recorder()
+#     recorder.start()
+#     vars = csdl.import_h5py('test_data.hdf5', 'inline')
+#     print(vars)
 
 
         

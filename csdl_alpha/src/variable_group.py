@@ -95,23 +95,60 @@ class VariableGroup:
     # def print_all(self):
 
 
-
+# NOTE: change name of declare_parameters to declare_variable? - deconflict with model parameters dictionary
 
 if __name__ == '__main__':
     import csdl_alpha as csdl
 
-    @dataclass
-    class MyVG(VariableGroup):
-        a : Union[Variable, int, float]
-        b : Variable
+    
+    # @dataclass
+    # class MassProperties(VariableGroup):
+    #     cg : Union[Variable, int, float]
+    #     mass : Variable
+    #     inertia_tensor: Variable
 
-        def define(self):
-            self.declare_parameters('a', shape=(1,), variablize=True)
-            self.declare_parameters('b', type=Variable, shape=(1,))
+    #     def define(self):
+    #         self.declare_parameters('cg', shape=(3,), variablize=True)
+    #         self.declare_parameters('mass', type=Variable, shape=(1,))
+    #         self.declare_parameters('inertia_tensor', type=Variable, shape=(3,3))
 
-    recorder = csdl.Recorder()
-    recorder.start()
 
-    my_vg = MyVG(a=1, b=csdl.Variable(shape=(1,), value=1))
+    # my_vg  = VariableGroup()
+    # my_vg.a = 1
+    # my_vg.b = csdl.Variable(shape=(1,), value=1)
+    # my_vg.save()
 
-    b = my_vg.b
+
+    # class MyVG(VariableGroup):
+
+    #     @args2atts
+    #     def __init__(self, a:Union[Variable, int, float], b:Variable):
+    #         self.check_shape(a, (1,))
+    #         self.check_shape(b, (1,))
+
+
+    # vast = VAST(parameters)
+    # vast.evaluate(mesh, velocities, ...)
+
+    # vast = VAST(parameters)
+    # vast_inputs = VASTInputs(mesh, velocities, ...)
+    # vast.evaluate(vast_inputs)
+
+
+
+    # @dataclass
+    # class MyVG(VariableGroup):
+    #     a : Union[Variable, int, float]
+    #     b : Variable
+
+    #     # NOTE: change to self.add_check and define_checks
+    #     def define_checks(self):
+    #         self.add_check('a', shape=(1,), variablize=True)
+    #         self.add_check('b', shape=(1,))
+
+    # recorder = csdl.Recorder()
+    # recorder.start()
+
+    # my_vg = MyVG(a=1, b=csdl.Variable(shape=(1,), value=1))
+
+    # b = my_vg.b
