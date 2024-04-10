@@ -60,8 +60,10 @@ def save_optimization_variables():
         key.save()
 
 def save_all_variables():
+    from ..api import Variable
     from ..api import get_current_recorder
 
     recorder = get_current_recorder()
     for key in recorder.node_graph_map.keys():
-        key.save()
+        if isinstance(key, Variable):
+            key.save()

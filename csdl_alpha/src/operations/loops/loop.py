@@ -3,15 +3,14 @@ from csdl_alpha.src.graph.variable import Variable
 
 class IterationVariable(Variable):
     def __init__(self, vals):
-        super().__init__(vals[0])
-        self.shape = None
+        super().__init__(value=vals[0])
+        self.shape = (1,)
         self.vals = vals
         self.name = 'iter'
 
 class LoopVariable(Variable):
     def __init__(self, var1, var2):
         super().__init__(shape=(var1.shape)) #NOTE: idk if we even need to do this
-        self.shape=None
         self.var1 = var1
         self.var2 = var2
 
@@ -34,7 +33,8 @@ class Loop(Operation):
         for output in self.outputs:
             self.recorder.active_graph.add_node(output)
 
-    def compute_inline(self):
+    def compute_inline(self, *args):
+        # print(self.graph)
         for i in range(len(self.vals)):
             self.iter_var.set_value(self.vals[i])
             for loop_var in self.loop_vars:
@@ -43,29 +43,52 @@ class Loop(Operation):
                 else:
                     loop_var.set_value(loop_var.var2.value)
             self.graph.execute_inline()
+        return [output.value for output in self.outputs]
 
 
 class vrange():
-    def __init__(self, lower=0, upper = 100, increment=1, *, vals = None):
+    def __init__(self, lower:int=0, upper:int = 100, increment:int=1, *, vals:list[int] = None, check:bool=False):
         
-        # Process runtime iterations
-        if upper < lower:
-            raise ValueError(f'The lower bound of the for loop, {lower}, is above the upper bound of the for loop, {upper}')
-        self.curr_index = 0
-        if type(vals)==type(None):
+        self.check = check
+        self.disallow_feedback = True # turning off feedback for now
+
+        # process runtime iterations
+        if vals is None:
+            if upper < lower:
+                raise ValueError(f'The lower bound of the for loop, {lower}, is above the upper bound of the for loop, {upper}')
             self.vals = list(range(lower, upper, increment))
         else:
+            if not all(isinstance(val, int) for val in vals):
+                raise ValueError(f'All values in the list of values must be integers')
             self.vals = vals
+
+        self.curr_index = 0
+        if self.check:
+            self.max_index = len(self.vals)
+        else:
+            self.max_index = 2
 
         # enter new graph
         from csdl_alpha.api import manager
         self._recorder = manager.active_recorder
         self._recorder._enter_subgraph(add_missing_variables=True)
         self._graph = self._recorder.active_graph
+        self._graph_node = self._recorder.active_graph_node
 
         # initialize iteration variable:
         self.iteration_variable = IterationVariable(self.vals)
 
+    def get_ops_and_shapes(self, graph=None):
+        ops = []
+        shapes = []
+        if graph is None:
+            graph = self._recorder.active_graph
+        for node in graph.node_table.keys():
+            if isinstance(node, Operation):
+                ops.append(type(node))
+            elif isinstance(node, Variable):
+                shapes.append(node.shape)
+        return ops, shapes
 
     def post_iteration_one(self):
         # self._graph.visualize('graph_loop_iter_1')
@@ -88,6 +111,9 @@ class vrange():
         for input in self.iter1_inputs:
             self.iter1_non_inputs.discard(input)
 
+        # don't want iteration variable to be removed, even if it's not used
+        self.iter1_non_inputs.discard(self.iteration_variable)
+
         # deleting the operations so we cana find inputs to the second iteration in the same way
         self._graph._delete_nodes(ops)
 
@@ -104,42 +130,96 @@ class vrange():
 
         # any input that's changed represents an internal loop, so we need to replace it with a special variable
         loop_vars = []
+        strike_set = set() # set of inputs that are only used in the first iteration (feedback)
         for input1, input2 in zip(self.iter1_inputs, self.iter2_inputs):
             if not input1 is input2: 
                 if input2 in self.iter1_outputs:
                     # this implies input 1 comes from outside the loop and input 2 comes from the first iteration
-                    # we want to go from input2 to the corresponding output of the 2nd iteration
-                    output2 = self.iter2_outputs[self.iter1_outputs.index(input2)]
-                    loop_var = LoopVariable(input1, output2)
-                    loop_vars.append(loop_var)
-                    self._graph._delete_nodes([input1])
-                    self.iter1_non_inputs.remove(input2)
-                    self._graph._replace_node(input2, loop_var)
+                    if self.disallow_feedback:
+                        raise ValueError(f'Feedback from variable {input1} found')
+                    else:
+                        # we want to go from input2 to the corresponding output of the 2nd iteration
+                        output2 = self.iter2_outputs[self.iter1_outputs.index(input2)]
+                        loop_var = LoopVariable(input1, output2)
+                        loop_vars.append(loop_var)
+                        self._graph._delete_nodes([input1])
+                        self.iter1_non_inputs.remove(input2)
+                        self._graph._replace_node(input2, loop_var)
                 else:
                     # this implies input 1 and input 2 are both made in the loop, so we can just keep input 2
+                    self._graph._delete_nodes([input1])
                     pass
+        # remove any inputs that are no longer used
+        self._graph._delete_nodes(list(strike_set))
 
         # delete any remnanats of the first iteration
         self._graph._delete_nodes(self.iter1_non_inputs)
 
         external_inputs = self._graph.inputs
+        non_feedback_inputs = external_inputs - strike_set # external inputs that are used for things other than feedback (and maybe feedback too)
 
         # Stop the graph
         # self._graph.visualize('graph_loop_final')
         self._recorder._exit_subgraph()
 
+
         # add the loop operation to the graph
         #NOTE: this only exposes outputs of operations, not variables created within the loop
-        op = Loop(external_inputs, self.iter2_outputs, self._graph, self.vals, self.iteration_variable, loop_vars)
-        if self._recorder.inline:
-            op.compute_inline()
+        self.op = Loop(
+            list(external_inputs), 
+            self.iter2_outputs, 
+            self._graph, 
+            self.vals, 
+            self.iteration_variable, 
+            loop_vars
+            )
+
+    def _check_ops_and_shapes(self, ops, shapes):
+        if ops != self.ops:
+            raise ValueError(f'Operations changed between iterations')
+        if shapes != self.shapes:
+            raise ValueError(f'Shapes changed between iterations')
+
 
     def __next__(self):
+        final = False
+        # no processing for zeroith iteration
+        # first iteration - get ops and shapes, figure out inputs
         if self.curr_index==1:
+            if self.check:
+                self.ops, self.shapes = self.get_ops_and_shapes()
             self.post_iteration_one()
-        elif self.curr_index == 2:
+            if self.check:
+                self._recorder._enter_subgraph(add_missing_variables=True)
+                self._recorder._add_node(self.iteration_variable)
+        # last iteration - check feedback, check ops and shapes, end loop
+        elif self.curr_index == self.max_index:
+            final = True
             self.post_iteration_two()
+            if self.check:
+                # need to pass in graph here because we exited it in post_iteration_two
+                ops, shapes = self.get_ops_and_shapes(self._graph)
+                self._check_ops_and_shapes(ops, shapes)
+        # second to last iteration - need to re-enter main graph
+        elif self.curr_index == self.max_index-1:
+            if self.check:
+                ops, shapes = self.get_ops_and_shapes()
+                self._check_ops_and_shapes(ops, shapes)
+                self._recorder._delete_current_graph()
+        # all other iterations - enter/exit dummy graph, check ops and shapes
+        elif self.curr_index > 1:
+            if self.check:
+                ops, shapes = self.get_ops_and_shapes()
+                self._check_ops_and_shapes(ops, shapes)
+                self._recorder._delete_current_graph()
+                self._recorder._enter_subgraph(add_missing_variables=True)
+                self._recorder._add_node(self.iteration_variable)
+
+        if final:
+            if self._recorder.inline:
+                self.op.compute_inline()
             raise StopIteration
+
         self.curr_index+=1
         return self.iteration_variable
         
@@ -149,77 +229,60 @@ class vrange():
 
 if __name__ == '__main__':
     import csdl_alpha as csdl
+    from csdl_alpha.src.operations.add import Add
     recorder = csdl.Recorder(inline=True)
     recorder.start()
     a = csdl.Variable(value=2, name='a')
     b = csdl.Variable(value=3, name='b')
-    for i in csdl.vrange(0, 10):
-        b = a + b
-        c = a*2
+    k = 0
 
-        b[0:i] = c[0:i]
+    # for i in vrange(0, 10, check=True):
+    #     b2 = a + b
+    #     c = a*2
 
-        if i < 3:
-            b = b + 1
+    # print(b2.value)
+    # print(c.value)
 
-    a = csdl.Variable(shape = (n,m, p))
-    b = csdl.Variable(shape = (n,p))
-    c = csdl.InitializeVariable(shape = (m,p), val = 0)
+    # print(recorder.active_graph)
 
-    # inner
-    for i in csdl.vrange(n):
-        for j in csdl.vrange(m):
-            for k in csdl.vrange(p):
-                # c[j,k] = c[j,k] + a[i,j,k]*b[i,k]
-                c[j,k] += a[i,j,k]*b[i,k]
+    # top_graph_node = recorder.active_graph_node
+    # outer_loop_graph_node = top_graph_node.children[0]
 
-    # cartesian grid average
-    d = csdl.Variable(shape = (n,m))
-    e = csdl.InitializeVariable(shape = (n-1,m-1), val = 0)
+    # top_graph = top_graph_node.value
+    # outer_loop_graph = outer_loop_graph_node.value
 
-    # Option A:
-    # Pros:
-    # - less restrictive
-    # - Can check every iteration in debug mode
-    for i in csdl.vrange(n-1):
-        for j in csdl.vrange(m-1):
-            e[i,j] = e[i,j] + 1/4*(d[i,j] + d[i+1,j] + d[i,j+1] + d[i+1,j+1])
-
-    # Option B:
-    # Pros:
-    # - Avoids confusion with regular for loops
-    # - Potential for clearer and simpler rules
-    with csdl.vrange(0,n) as i:
-        with csdl.vrange(0,m) as j:
-            e[i,j] += 1/4*(d[i,j] + d[i+1,j] + d[i,j+1] + d[i+1,j+1])
-
-            e[i,j+2:2*j]
-
-    # Rules:
-    # - CSDL operations only
-    # - No conditionals
-    # - fixed slice sizes
-    # - each iteration independent from each other
-            
-
-    # for j in csdl.vrange(m):
-    #     for k in csdl.vrange(p):
-    #         sum = 0
-    #         for i in csdl.vrange(n):
-    #             sum += a[i,j,k]*b[i,k]
-    #         c[j,k] = sum
-
-    x = csdl.InitializeVariable(shape = (m,p), val = 0)
-    # a.shape = (10,10)
-    for j in csdl.vrange(m):
-        for k in csdl.vrange(p):
-            x[j] = a[j] # shape is known at compile time (10)
-            x[j,k] = a[j,k] # shape is known at compile time (1,)
-            x[[j,k],[j,k]] = a[[j, k],[j, k]] # shape is known at compile time (2,)
-            x[1:3, j:j+1] = a[1:3, j:j+1] # shape is unknown at compile time (2, ????)
+    # top_graph.visualize('top_graph')
+    # outer_loop_graph.visualize('outer_loop_graph')
 
 
-    print(b.value) # should be 23
+    for i in vrange(0, 10, check=True):
+        print(f'begin outer iteration {k}')
+        k += 1
+        l = 0
+        for j in vrange(0, 10, check=True):
+            print(f'inner iteration {l}')
+            l += 1
+            d = i*2
+            e = i*j
+            b2 = a + b
+            c = a*2
+        print(f'end outer iteration {k}')
+
+    top_graph_node = recorder.active_graph_node
+    outer_loop_graph_node = top_graph_node.children[0]
+    inner_loop_graph_node = outer_loop_graph_node.children[0]
+
+    top_graph = top_graph_node.value
+    outer_loop_graph = outer_loop_graph_node.value
+    inner_loop_graph = inner_loop_graph_node.value
+
+    top_graph.visualize('top_graph')
+    outer_loop_graph.visualize('outer_loop_graph')
+    inner_loop_graph.visualize('inner_loop_graph')
+
+    print(d.value) # should be 18
+    print(e.value) # should be 81
+    print(b2.value) # should be 5
     print(c.value) # should be 4
     recorder.active_graph.visualize('outer_graph')
     recorder.stop()

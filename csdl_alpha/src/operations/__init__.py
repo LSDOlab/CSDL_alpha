@@ -6,6 +6,10 @@ from .square import square
 from .division import div
 from .log import log
 from .reshape import reshape
+from .sum import sum
+from .average import average
+from .maximum import maximum
+# from .minimum import minimum
 
 # getting and setting
 from .set_get.setindex import set_index

@@ -188,6 +188,7 @@ class Graph():
         self.update_node_table()
         # TODO: update operations to refer to new node?
         for operation in self.rxgraph.successors(old_node_index):
+            print(operation)
             for i in range(len(operation.inputs)):
                 if operation.inputs[i] == old_node:
                     operation.inputs[i] = new_node
