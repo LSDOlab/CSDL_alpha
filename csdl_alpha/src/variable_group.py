@@ -2,13 +2,15 @@ from typing import Union
 import warnings
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass
 
-
+# TODO: add freeze and whatnot
 @dataclass
 class VariableGroup:
 
     def __post_init__(self):
+        if not is_dataclass(self):
+            raise ValueError("VariableGroup must be a dataclass.")
         self._metadata = {}
         self.define()
         self.check()
@@ -89,3 +91,27 @@ class VariableGroup:
         for key, val in self.__dict__.items():
             if type(val) == Variable or type(val) == VariableGroup:
                 val.save()
+
+    # def print_all(self):
+
+
+
+
+if __name__ == '__main__':
+    import csdl_alpha as csdl
+
+    @dataclass
+    class MyVG(VariableGroup):
+        a : Union[Variable, int, float]
+        b : Variable
+
+        def define(self):
+            self.declare_parameters('a', shape=(1,), variablize=True)
+            self.declare_parameters('b', type=Variable, shape=(1,))
+
+    recorder = csdl.Recorder()
+    recorder.start()
+
+    my_vg = MyVG(a=1, b=csdl.Variable(shape=(1,), value=1))
+
+    b = my_vg.b
