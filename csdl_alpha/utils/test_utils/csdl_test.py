@@ -19,12 +19,14 @@ class CSDLTest():
     def run_tests(
             self,
             compare_values = None,
-            compare_derivatives = None,    
+            compare_derivatives = None,
+            turn_off_recorder = True,
         ):
         import csdl_alpha as csdl
         import numpy as np
-        recorder = csdl.get_current_recorder()
-        recorder.stop()
+        if turn_off_recorder:
+            recorder = csdl.get_current_recorder()
+            recorder.stop()
 
         if compare_values is None:
             compare_values = []

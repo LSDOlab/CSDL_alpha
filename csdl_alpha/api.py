@@ -9,6 +9,8 @@ from .src.operations.loops.loop import vrange
 manager = RecManager()
 
 def get_current_recorder():
+    if manager.active_recorder is None:
+        raise ValueError("No active recorder found. Start a new recorder by csdl.Recorder().start()")
     return manager.active_recorder
 
 def build_new_recorder(inline = False, debug = False, expand_ops = False, auto_hierarchy = False):

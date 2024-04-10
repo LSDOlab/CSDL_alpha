@@ -73,22 +73,37 @@ class Variable(Node):
             raise Exception("Variable is an input variable")
         self.recorder._add_objective(self, scalar)
 
-    def set(self, slice, value:'Variable') -> 'Variable':
+    from csdl_alpha.src.operations.set_get.slice import Slice
+    def set(self, slices:Slice, value:'Variable') -> 'Variable':
+        # return set_index(self, slice, value)
         from csdl_alpha.src.operations.set_get.setindex import set_index
-        return set_index(self, slice, value)
+        from csdl_alpha.src.operations.set_get.slice import Slice
+        from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as loop_slice
+        
+        if isinstance(slices, Slice):
+            return set_index(self, slices,value)
+        else:
+            return set_index(self, loop_slice[slices], value)
+
+
     def save(self):
         """Sets variable to be saved
         """
         self._save = True
 
-    # def set(self, slice, value):
-    #     from csdl_alpha.src.operations.set import set
-    #     return set(self, slice, value)
+    def get(self, slices:Slice):
+        from csdl_alpha.src.operations.set_get.getindex import get_index
+        return get_index(self, slices)
     
     def __getitem__(self, slices) -> 'Variable':
-        from csdl_alpha.utils.slice import _slice as slice
-        from csdl_alpha.src.operations.set_get.getindex import get_index
-        return get_index(self, slice[slices])
+        from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as loop_slice
+        from csdl_alpha.src.operations.set_get.slice import Slice
+
+        if isinstance(slices, Slice):
+            return self.get(slices)
+        else:
+            return self.get(loop_slice[slices])
+
 
     def __add__(self, other):
         from csdl_alpha.src.operations.add import add

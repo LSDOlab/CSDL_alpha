@@ -30,7 +30,6 @@ def get_shape(shape, value):
     if shape is None:
         if value is not None:
             shape = value.shape
-            print(shape)
         else:
             raise ValueError("Shape or value must be provided")
     else:

@@ -4,7 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
-from csdl_alpha.utils.slice import Slice
+from csdl_alpha.src.operations.set_get.slice import Slice
 
 @set_properties(linear=True,)
 class SetIndex(Operation):
@@ -24,7 +24,7 @@ class SetIndex(Operation):
 
     def compute_inline(self, x, y):
         out = x.copy()
-        out[self.slice] = y
+        out[self.slice.evaluate()] = y
         return out
 
 class BroadcastSetIndex(SetIndex):
@@ -55,7 +55,7 @@ class SparseBroadcastSetIndex(ComposedOperation):
     def compute_inline(self, x, y):
         pass
 
-def set_index(x:Variable, s, y:Variable) -> Variable:
+def set_index(x:Variable, s:Slice, y:Variable) -> Variable:
     """
     doc strings
     """
@@ -65,7 +65,7 @@ def set_index(x:Variable, s, y:Variable) -> Variable:
     if y.size != 1:
         import numpy as np
         # TODO: index out of bounds error from csdl instead of numpy
-        slice_shape = np.zeros(x.shape)[s].shape
+        slice_shape = np.zeros(x.shape)[s.evaluate_zeros()].shape
 
         # from csdl_alpha.utils.slice import get_slice_shape
         # slice_shape_ = get_slice_shape(s, x.shape)
@@ -136,15 +136,15 @@ class TestSet(csdl_tests.CSDLTest):
 
         t = csdl.Variable(name = 't', value = 2.0*np.ones((2,)))
         # set a tensor slice at specific indices with a tensor variable
-        z6 = z.set(((0,1), (1,1)), t)
+        z6 = z.set(([0,1], [1,1]), t)
         compare_values += [csdl_tests.TestingPair(z6, t3)]
 
         # set a tensor slice at specific indices with a scalar variable
-        z7 = z.set(((0,1), (1,1)), y)
+        z7 = z.set(([0,1], [1,1]), y)
         compare_values += [csdl_tests.TestingPair(z7, t3)]
 
         # set a tensor slice at specific indices with a scalar constant
-        z8 = z.set(((0,1), (1,1)), 2.0)
+        z8 = z.set(([0,1], [1,1]), 2.0)
         compare_values += [csdl_tests.TestingPair(z8, t3)]
 
         self.run_tests(compare_values = compare_values,)

@@ -44,7 +44,7 @@ class Graph():
                 raise TypeError("subset is not a set")
 
         self.check_self()
-        print('start')
+        print('executing inline')
         sorted_nodes = rx.topological_sort(self.rxgraph)
         for node_index in sorted_nodes:
             node = self.rxgraph[node_index]

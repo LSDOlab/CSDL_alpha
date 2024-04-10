@@ -147,17 +147,79 @@ class vrange():
         return self
 
 
-# if __name__ == '__main__':
-#     import csdl_alpha as csdl
-#     recorder = csdl.Recorder(inline=True)
-#     recorder.start()
-#     a = csdl.Variable(value=2, name='a')
-#     b = csdl.Variable(value=3, name='b')
-#     for i in vrange(0, 10):
-#         b = a + b
-#         c = a*2
+if __name__ == '__main__':
+    import csdl_alpha as csdl
+    recorder = csdl.Recorder(inline=True)
+    recorder.start()
+    a = csdl.Variable(value=2, name='a')
+    b = csdl.Variable(value=3, name='b')
+    for i in csdl.vrange(0, 10):
+        b = a + b
+        c = a*2
 
-#     print(b.value) # should be 23
-#     print(c.value) # should be 4
-#     recorder.active_graph.visualize('outer_graph')
-#     recorder.stop()
+        b[0:i] = c[0:i]
+
+        if i < 3:
+            b = b + 1
+
+    a = csdl.Variable(shape = (n,m, p))
+    b = csdl.Variable(shape = (n,p))
+    c = csdl.InitializeVariable(shape = (m,p), val = 0)
+
+    # inner
+    for i in csdl.vrange(n):
+        for j in csdl.vrange(m):
+            for k in csdl.vrange(p):
+                # c[j,k] = c[j,k] + a[i,j,k]*b[i,k]
+                c[j,k] += a[i,j,k]*b[i,k]
+
+    # cartesian grid average
+    d = csdl.Variable(shape = (n,m))
+    e = csdl.InitializeVariable(shape = (n-1,m-1), val = 0)
+
+    # Option A:
+    # Pros:
+    # - less restrictive
+    # - Can check every iteration in debug mode
+    for i in csdl.vrange(n-1):
+        for j in csdl.vrange(m-1):
+            e[i,j] = e[i,j] + 1/4*(d[i,j] + d[i+1,j] + d[i,j+1] + d[i+1,j+1])
+
+    # Option B:
+    # Pros:
+    # - Avoids confusion with regular for loops
+    # - Potential for clearer and simpler rules
+    with csdl.vrange(0,n) as i:
+        with csdl.vrange(0,m) as j:
+            e[i,j] += 1/4*(d[i,j] + d[i+1,j] + d[i,j+1] + d[i+1,j+1])
+
+            e[i,j+2:2*j]
+
+    # Rules:
+    # - CSDL operations only
+    # - No conditionals
+    # - fixed slice sizes
+    # - each iteration independent from each other
+            
+
+    # for j in csdl.vrange(m):
+    #     for k in csdl.vrange(p):
+    #         sum = 0
+    #         for i in csdl.vrange(n):
+    #             sum += a[i,j,k]*b[i,k]
+    #         c[j,k] = sum
+
+    x = csdl.InitializeVariable(shape = (m,p), val = 0)
+    # a.shape = (10,10)
+    for j in csdl.vrange(m):
+        for k in csdl.vrange(p):
+            x[j] = a[j] # shape is known at compile time (10)
+            x[j,k] = a[j,k] # shape is known at compile time (1,)
+            x[[j,k],[j,k]] = a[[j, k],[j, k]] # shape is known at compile time (2,)
+            x[1:3, j:j+1] = a[1:3, j:j+1] # shape is unknown at compile time (2, ????)
+
+
+    print(b.value) # should be 23
+    print(c.value) # should be 4
+    recorder.active_graph.visualize('outer_graph')
+    recorder.stop()
