@@ -1,6 +1,8 @@
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.src.graph.variable import Variable
 
+# TODO: fix feedback checking - needs to happen on the second iteration, but creation of the loop vars and whatnot needs to happen on the final iteration
+
 class IterationVariable(Variable):
     def __init__(self, vals):
         super().__init__(value=vals[0])
@@ -236,53 +238,53 @@ if __name__ == '__main__':
     b = csdl.Variable(value=3, name='b')
     k = 0
 
-    # for i in vrange(0, 10, check=True):
-    #     b2 = a + b
-    #     c = a*2
-
-    # print(b2.value)
-    # print(c.value)
-
-    # print(recorder.active_graph)
-
-    # top_graph_node = recorder.active_graph_node
-    # outer_loop_graph_node = top_graph_node.children[0]
-
-    # top_graph = top_graph_node.value
-    # outer_loop_graph = outer_loop_graph_node.value
-
-    # top_graph.visualize('top_graph')
-    # outer_loop_graph.visualize('outer_loop_graph')
-
-
     for i in vrange(0, 10, check=True):
-        print(f'begin outer iteration {k}')
-        k += 1
-        l = 0
-        for j in vrange(0, 10, check=True):
-            print(f'inner iteration {l}')
-            l += 1
-            d = i*2
-            e = i*j
-            b2 = a + b
-            c = a*2
-        print(f'end outer iteration {k}')
+        b2 = a + b
+        c = a*2
+
+    print(b2.value)
+    print(c.value)
+
+    print(recorder.active_graph)
 
     top_graph_node = recorder.active_graph_node
     outer_loop_graph_node = top_graph_node.children[0]
-    inner_loop_graph_node = outer_loop_graph_node.children[0]
 
     top_graph = top_graph_node.value
     outer_loop_graph = outer_loop_graph_node.value
-    inner_loop_graph = inner_loop_graph_node.value
 
     top_graph.visualize('top_graph')
     outer_loop_graph.visualize('outer_loop_graph')
-    inner_loop_graph.visualize('inner_loop_graph')
 
-    print(d.value) # should be 18
-    print(e.value) # should be 81
-    print(b2.value) # should be 5
-    print(c.value) # should be 4
-    recorder.active_graph.visualize('outer_graph')
-    recorder.stop()
+
+    # for i in vrange(0, 10, check=True):
+    #     print(f'begin outer iteration {k}')
+    #     k += 1
+    #     l = 0
+    #     for j in vrange(0, 10, check=True):
+    #         print(f'inner iteration {l}')
+    #         l += 1
+    #         d = i*2
+    #         e = i*j
+    #         b2 = a + b
+    #         c = a*2
+    #     print(f'end outer iteration {k}')
+
+    # top_graph_node = recorder.active_graph_node
+    # outer_loop_graph_node = top_graph_node.children[0]
+    # inner_loop_graph_node = outer_loop_graph_node.children[0]
+
+    # top_graph = top_graph_node.value
+    # outer_loop_graph = outer_loop_graph_node.value
+    # inner_loop_graph = inner_loop_graph_node.value
+
+    # top_graph.visualize('top_graph')
+    # outer_loop_graph.visualize('outer_loop_graph')
+    # inner_loop_graph.visualize('inner_loop_graph')
+
+    # print(d.value) # should be 18
+    # print(e.value) # should be 81
+    # print(b2.value) # should be 5
+    # print(c.value) # should be 4
+    # recorder.active_graph.visualize('outer_graph')
+    # recorder.stop()
