@@ -125,7 +125,7 @@ def maximum(*args, axes=None, rho=20.):
     >>> y2.value
     array([2., 5.])
 
-    # maximum of multiple tensor variables
+    # elementwise maximum of multiple tensor variables
 
     >>> y3 = csdl.maximum(x, 2 * np.ones((2,3)), np.ones((2,3)))
     >>> y3.value

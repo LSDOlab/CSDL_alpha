@@ -76,7 +76,7 @@ def minimum(*args, axes=None, rho=20.):
     >>> y2.value
     array([-1.03057685e-10,  3.00000000e+00])
 
-    # minimum of multiple tensor variables
+    # elementwise minimum of multiple tensor variables
 
     >>> y3 = csdl.minimum(x, 2 * np.ones((2,3)), np.ones((2,3)))
     >>> y3.value
