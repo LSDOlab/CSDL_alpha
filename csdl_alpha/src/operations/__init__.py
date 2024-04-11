@@ -31,3 +31,4 @@ from .linalg.matmat import matmat
 
 # Tensor operations
 from .outer import outer
+from .inner import inner
