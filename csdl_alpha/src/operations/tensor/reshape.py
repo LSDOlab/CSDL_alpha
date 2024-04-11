@@ -22,9 +22,31 @@ class Reshape(Operation):
     def compute_inline(self, x):
         return x.reshape(self.new_shape)
 
-def reshape(x, shape: tuple[int]) -> Variable:
-    """
-    doc strings
+def reshape(x:Variable, shape: tuple[int]) -> Variable:
+    """Reshape a tensor x to a new shape.
+
+    Parameters
+    ----------
+    x : Variable
+    shape : tuple[int]
+
+    Returns
+    -------
+    out: Variable
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0, 4.0]))
+    >>> csdl.reshape(x, (2,2)).value
+    array([[1., 2.],
+           [3., 4.]])
+    >>> x.reshape((2,2)).value # same thing as above
+    array([[1., 2.],
+           [3., 4.]])
+    >>> x.flatten().value # reshapes to 1 dimension
+    array([1., 2., 3., 4.])
     """
     # Given shape must be a tuple of integers
     try:
@@ -107,6 +129,9 @@ class TestReshape(csdl_tests.CSDLTest):
 
         with pytest.raises(ValueError):
             y = csdl.reshape(x_large, (10, 100, 10))
+
+    def test_docstring(self):
+        self.docstest(reshape)
 
 if __name__ == '__main__':
     test = TestReshape()

@@ -3,6 +3,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 import numpy as np
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
+from csdl_alpha.src.graph.variable import Variable
 
 class Power(ElementwiseOperation):
     '''
@@ -17,35 +18,79 @@ class Power(ElementwiseOperation):
     def compute_inline(self, x, y):
         return x ** y
     
-class BroadcastPower(Operation):
+class LeftBroadcastPower(Operation):
     '''
     First input is broadcasted to the shape of the second input.
     '''
 
     def __init__(self,x,y):
         super().__init__(x,y)
-        self.name = 'broadcast_power'
+        self.name = 'left_broadcast_power'
         out_shapes = (y.shape,)
         self.set_dense_outputs(out_shapes)
 
     def compute_inline(self, x, y):
         return x ** y
     
-def power(x, y):
-    """
-    doc strings
-    """
+class RightBroadcastPower(Operation):
+    '''
+    Second input is broadcasted to the shape of the first input.
+    '''
+
+    def __init__(self,x,y):
+        super().__init__(x,y)
+        self.name = 'right_broadcast_power'
+        out_shapes = (x.shape,)
+        self.set_dense_outputs(out_shapes)
+
+    def compute_inline(self, x, y):
+        return x ** y
+    
+def power(x:Variable, y:Variable) -> Variable:
+    '''
+    Computes the power of the first input with exponent as the second input.
+    If one of the inputs is a scalar, it is broadcasted to the shape of the other input.
+
+    Parameters
+    ----------
+    x : Variable, np.ndarray, float or int
+        Input tensor whose power needs to be computed.
+    y : Variable, np.ndarray, float or int
+        Power to which the first input tensor needs to be raised.
+
+    Returns
+    -------
+    Variable
+        Power of the first input with exponent as the second input.
+    
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y1 = csdl.power(x, 2)
+    >>> y1.value
+    array([1., 4., 9.])
+    >>> y2 = x ** 2
+    >>> y2.value
+    array([1., 4., 9.])
+
+    # Power raised to a tensor variable exponent
+
+    >>> z = csdl.Variable(value = 3.0 * np.ones((3,)))
+    >>> y2 = x ** z
+    >>> y2.value
+    array([ 1.,  8., 27.])
+    '''
     x = variablize(x)
     y = variablize(y)
 
     if x.shape == y.shape:
         op = Power(x, y)
-    # TODO: We need a broadcast power even when the methods are exactly the same 
-    # because Broadcast should never inherit from ElementwiseOperation
-    elif y.shape == (1,):
-        op = Power(x, y)
     elif x.shape == (1,):
-        op = BroadcastPower(x, y)
+        op = LeftBroadcastPower(x, y)
+    elif y.shape == (1,):
+        op = RightBroadcastPower(x, y)
     else:
         raise ValueError('Shapes not compatible for the power operation.')
         
@@ -83,46 +128,7 @@ class TestPower(csdl_tests.CSDLTest):
         self.run_tests(compare_values = compare_values,)
 
     def test_example(self,):
-        self.prep()
-
-        # docs:entry
-        import csdl_alpha as csdl
-        import numpy as np
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-
-        x_val = np.arange(6).reshape(2,3)
-        y_val = 2.0
-        z_val = 2.0*np.ones((2,3))
-        x = csdl.Variable(name = 'x', value = x_val)
-        y = csdl.Variable(name = 'y', value = y_val)
-        z = csdl.Variable(name = 'z', value = z_val)
-        
-        compare_values = []
-        # power of a tensor variable to a scalar variable
-        s1 = csdl.power(x, y)
-        print(s1.value)
-
-        # power of a tensor variable to a tensor constant
-        s2 = csdl.power(x, z_val)
-        print(s2.value)
-
-        # power of a scalar constant to a tensor variable
-        s3 = csdl.power(3.0, x)
-        print(s3.value)
-        # docs:exit
-
-        compare_values = []
-        t1 = x_val ** y_val
-        t3 = 3.0 ** x_val
-
-        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
-        compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
-        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
-
-        self.run_tests(compare_values = compare_values,)
-
+        self.docstest(power)
 
 if __name__ == '__main__':
     test = TestPower()

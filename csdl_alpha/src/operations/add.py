@@ -1,5 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
+from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 
@@ -9,7 +10,7 @@ class Add(ElementwiseOperation):
     Elementwise addition of two tensors of the same shape.
     '''
 
-    def __init__(self,x,y):
+    def __init__(self,x:Variable,y:Variable):
         super().__init__(x,y)
         self.name = 'add'
 
@@ -81,19 +82,40 @@ class SparseBroadcastAdd(ComposedOperation):
     def compute_inline(self, x, y):
         pass
 
-def add(x,y):
-    """
-    doc strings
+def add(x:Variable,y:Variable)->Variable:
+    """Elementwise addition of two tensors x and y.
+
+    Parameters
+    ----------
+    x : Variable
+    y : Variable
+
+    Returns
+    -------
+    out: Variable
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y = csdl.Variable(value = np.array([4.0, 5.0, 6.0]))
+    >>> csdl.add(x, y).value
+    array([5., 7., 9.])
+    >>> (x + y).value # equivalent to the above
+    array([5., 7., 9.])
+    >>> (x + 2.0).value # broadcasting is also supported
+    array([3., 4., 5.])
     """
     x = variablize(x)
     y = variablize(y)
 
     if x.shape == y.shape:
         op = Add(x,y)
-    elif x.shape == (1,):
-        op = BroadcastAdd(x,y)
-    elif y.shape == (1,):
-        op = BroadcastAdd(y,x)
+    elif x.size == 1:
+        op = BroadcastAdd(x.flatten(),y)
+    elif y.size == 1:
+        op = BroadcastAdd(y.flatten(),x)
     else:
         raise ValueError('Shapes not compatible for add operation.')
     return op.finalize_and_return_outputs()
@@ -195,6 +217,9 @@ class TestAdd(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(s3, t)]
 
         self.run_tests(compare_values = compare_values,)
+
+    def test_docstring(self):
+        self.docstest(add)
 
 if __name__ == '__main__':
     test = TestAdd()

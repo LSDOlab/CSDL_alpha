@@ -32,7 +32,7 @@ def absolute(x, rho=20.):
 
     Parameters
     ----------
-    x : Variable or np.ndarray or float or int
+    x : Variable, np.ndarray, float, or int
         Input tensor to take the absolute values of.
     rho : float, default=20.
         Smoothing parameter for the absolute function.

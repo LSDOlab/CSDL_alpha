@@ -1,4 +1,5 @@
 from csdl_alpha.src.operations.operation_subclasses import ComposedOperation, check_expand_subgraphs
+from csdl_alpha.src.graph.variable import Variable
 
 class Sub(ComposedOperation):
 
@@ -10,12 +11,33 @@ class Sub(ComposedOperation):
         return evaluate_sub(x,y)
 
 
-def evaluate_sub(x, y):
+def evaluate_sub(x:Variable,y:Variable)->Variable:
     return x+(-y)
 
 def sub(x,y):
-    """
-    doc strings
+    """Elementwise subtraction of two tensors x and y.
+
+    Parameters
+    ----------
+    x : Variable
+    y : Variable
+
+    Returns
+    -------
+    out: Variable
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([4.0, 5.0, 6.0]))
+    >>> y = csdl.Variable(value = np.array([3.0, 2.0, 1.0]))
+    >>> csdl.sub(x, y).value
+    array([1., 3., 5.])
+    >>> (x - y).value # equivalent to the above
+    array([1., 3., 5.])
+    >>> (x - 2.0).value # broadcasting is also supported
+    array([2., 3., 4.])
     """
     
     if check_expand_subgraphs():
@@ -146,6 +168,8 @@ class TestSub(csdl_tests.CSDLTest):
 
         self.run_tests(compare_values = compare_values,)
 
+    def test_docstring(self):
+        self.docstest(sub)
 if __name__ == '__main__':
     
     test_instance = TestSub()

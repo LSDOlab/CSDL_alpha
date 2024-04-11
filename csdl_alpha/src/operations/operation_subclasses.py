@@ -9,6 +9,10 @@ class ElementwiseOperation(Operation):
         out_shapes = (args[0].shape,)
         self.set_dense_outputs(out_shapes)
 
+        for arg in args:
+            if arg.shape != args[0].shape:
+                raise ValueError("All inputs must have the same shape for elementwise operations")
+
 @set_properties(elementary = False, contains_subgraph = True)
 class SubgraphOperation(Operation):
 
