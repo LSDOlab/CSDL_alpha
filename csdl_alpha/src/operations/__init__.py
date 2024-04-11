@@ -8,7 +8,6 @@ from .power import power
 from .sqrt import sqrt
 from .exp import exp
 from .log import log
-from .reshape import reshape
 from .sum import sum
 from .average import average
 from .maximum import maximum
@@ -31,5 +30,6 @@ from .linalg.matvec import matvec
 from .linalg.matmat import matmat
 
 # Tensor operations
-from .outer import outer
-from .inner import inner
+from .tensor.outer import outer
+from .tensor.inner import inner
+from .tensor.reshape import reshape

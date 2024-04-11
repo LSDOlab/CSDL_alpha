@@ -206,7 +206,7 @@ class Variable(Node):
         array([[1., 2.],
                [3., 4.]])
         """
-        from csdl_alpha.src.operations.reshape import reshape
+        from csdl_alpha.src.operations.tensor.reshape import reshape
         return reshape(self, shape)
 
     def flatten(self: 'Variable')->'Variable':
@@ -228,7 +228,7 @@ class Variable(Node):
         >>> x.flatten().value # reshapes to 1 dimension
         array([1., 2., 3., 4.])
         """
-        from csdl_alpha.src.operations.reshape import reshape
+        from csdl_alpha.src.operations.tensor.reshape import reshape
         return reshape(self, (self.size,))
 
 class ImplicitVariable(Variable):
