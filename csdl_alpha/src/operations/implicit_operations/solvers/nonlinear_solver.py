@@ -9,6 +9,8 @@ class NonlinearSolver(object):
             self,
             name = 'nlsolver', 
             print_status = True,
+            tolerance=1e-10,
+            max_iter=100,
         ):
         self.name = name
         self.print_status = print_status
@@ -31,14 +33,28 @@ class NonlinearSolver(object):
         # - tolerances
         # Question: should we allow these to not be "constants"? IE, can we change the tolerance at every iteration?
         # If not, we can throw an error.
-        self.meta_variables = set()
+        self.meta_input_variables = set()
 
         # variables to build the implicit operation graph 
         self._intersection_sources = set()
         self._intersection_targets = set()
 
+        # add metadata that is common to all solvers
+        self.add_metadata('tolerance', tolerance)
+        self.add_metadata('max_iter', max_iter)
+
 
         # Dictionary to keep track of values for inline evaluations
+
+    def add_metadata(self, key, datum, is_input=True):
+        if isinstance(datum, Variable) and is_input:
+            self.meta_input_variables.add(datum)
+        self.metadata[key] = datum
+
+    def add_state_metadata(self, state:ImplicitVariable, key, datum, is_input=True):
+        if isinstance(datum, Variable) and is_input:
+            self.meta_input_variables.add(datum)
+        self.state_metadata[state][key] = datum
 
 
     def add_state_residual_pair(
@@ -122,7 +138,7 @@ class NonlinearSolver(object):
 
         # 1.d/e
         state_variables = set(self.state_to_residual_map.keys())
-        input_variables_set = self.meta_variables.union(S_inputs.symmetric_difference(state_variables))
+        input_variables_set = self.meta_input_variables.union(S_inputs.symmetric_difference(state_variables))
         output_variables_set = state_variables.union(S_outputs)
         
         operation_metadata = {'nonlinear_solver': self}
