@@ -14,7 +14,7 @@ class VectorOuter(Operation):
         import numpy as np
         return np.outer(x, y)
 
-def outer(x:Variable,y:Variable):
+def outer(x:Variable,y:Variable)->Variable:
     """Outer product of two vectors x and y. The result is a matrix of shape (x.size, y.size).
 
     Parameters

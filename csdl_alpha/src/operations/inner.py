@@ -15,7 +15,7 @@ class VectorInner(Operation):
         import numpy as np
         return np.inner(x, y)
 
-def inner(x:Variable,y:Variable):
+def inner(x:Variable,y:Variable)->Variable:
     """Inner product of two vectors x and y. The result is a scalar of shape (1,).
 
     Parameters
