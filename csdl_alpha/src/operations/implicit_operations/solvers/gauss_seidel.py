@@ -17,14 +17,13 @@ class GaussSeidel(NonlinearSolver):
         """
         A Gauss-Seidel solver!
         """
-
+        # well now this just seems redundant
         super().__init__(
             name = name,
-            print_status = print_status
+            print_status = print_status,
+            tolerance = tolerance,
+            max_iter = max_iter
         )
-
-        self.metadata['tolerance'] = tolerance
-        self.metadata['max_iter'] = max_iter
 
     def add_state(
             self,
@@ -55,27 +54,27 @@ class GaussSeidel(NonlinearSolver):
         if state_update is not None:
             if not isinstance(state_update, Variable):
                 raise ValueError("State update must be a Variable")
-        self.state_metadata[state]['state_update'] = state_update
+        self.add_state_metadata(state, 'state_update', state_update, is_input=False)
 
         if isinstance(state_update, Variable):
             self.add_intersection_target(state_update)
 
         # Check if user provided an initial value
         if initial_value is None:
-            self.state_metadata[state]['initial_value'] = state.value
+            self.add_state_metadata(state, 'initial_value', state.value)
         else:
-            self.state_metadata[state]['initial_value'] =  initial_value
+            self.add_state_metadata(state, 'initial_value', initial_value)
 
         # Check if user provided a tolerance
         if tolerance is None:
-            self.state_metadata[state]['tolerance'] = self.metadata['tolerance']
+            self.add_state_metadata(state, 'tolerance', self.metadata['tolerance'])
         else:
             if isinstance(tolerance, Variable):
                 if tolerance.value.size != 1:
                     raise ValueError(f"Tolerance must be a scalar. {tolerance.shape} given")
             else:
-                tolerance = scalarize(tolerance)    
-            self.state_metadata[state]['tolerance'] = tolerance
+                tolerance = scalarize(tolerance)
+            self.add_state_metadata(state, 'tolerance', tolerance)
 
 
     def _inline_solve_(self):
