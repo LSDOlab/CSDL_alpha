@@ -53,9 +53,48 @@ class BroadcastLog(Operation):
     
 # TODO: Do we need a broadcast log?
 def log(x, base=None):
-    """
-    doc strings
-    """
+    '''
+    Computes the natural logarithm of all entries in the input tensor 
+    if `base` argument is not provided.
+    Otherwise, computes the logarithm of all entries in the input tensor
+    with respect to the specified base.
+    If one of the inputs is a scalar, it is broadcasted to the shape of the other input.
+
+    Parameters
+    ----------
+    x : Variable, np.ndarray, float or int
+        Input tensor whose logarithm needs to be computed.
+    base : Variable, np.ndarray, float or int, default=np.e
+        Base of the logarithm. If not provided, natural logarithm is computed.
+
+    Returns
+    -------
+    Variable
+        Logarithm of the first input with base as the second input.
+    
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y1 = csdl.log(x)
+    >>> y1.value
+    array([0.        , 0.69314718, 1.09861229])
+
+    # Logarithm with a specified base
+
+    >>> y2 = csdl.log(x, 2)
+    >>> y2.value
+    array([0.       , 1.       , 1.5849625])
+
+    # Logarithm with a specified tensor variable base
+
+    >>> b = csdl.Variable(value = 2.0 * np.ones((3,)))
+    >>> y3 = csdl.log(x, b)
+    >>> y3.value
+    array([0.       , 1.       , 1.5849625])
+    '''
+
     x = variablize(x)
     if base is None:
         y = variablize(np.e)
@@ -130,53 +169,7 @@ class TestLog(csdl_tests.CSDLTest):
         self.run_tests(compare_values = compare_values,)
 
     def test_example(self,):
-        self.prep()
-
-        # docs:entry
-        import csdl_alpha as csdl
-        import numpy as np
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-
-        # log of a scalar constant wrt a scalar constant base
-        s0 = csdl.log(3,2)
-        print(s0.value)
-
-        x = csdl.Variable(name = 'x', value = np.ones((3,2))*3.0)
-        y = csdl.Variable(name = 'y', value = 2.0)
-        z = csdl.Variable(name = 'z', value = np.ones((3,2))*2.0)
-        
-        # natural log of a tensor variable
-        s1 = csdl.log(x)
-        print(s1.value)
-
-        # log of a tensor variable wrt a scalar variable base
-        s2 = csdl.log(x,y)
-        print(s2.value)
-
-        # log of a tensor variable wrt a tensor variable base
-        s3 = csdl.log(x,z)
-        print(s2.value)
-        
-        # log of a scalar constant wrt a tensor variable base
-        s4 = csdl.log(3,z)
-        print(s4.value)
-        # docs:exit
-
-        compare_values = []
-        t0 = np.array([np.log(3)/np.log(2)])
-        t1 = np.ones((3,2)) * np.log(3.0)
-        t  = np.ones((3,2)) * t0
-
-        compare_values += [csdl_tests.TestingPair(s0, t0)]
-        compare_values += [csdl_tests.TestingPair(s1, t1)]
-        compare_values += [csdl_tests.TestingPair(s2, t)]
-        compare_values += [csdl_tests.TestingPair(s3, t)]
-        compare_values += [csdl_tests.TestingPair(s3, t)]
-
-        self.run_tests(compare_values = compare_values,)
-
+        self.docstest(log)
 
 if __name__ == '__main__':
     test = TestLog()

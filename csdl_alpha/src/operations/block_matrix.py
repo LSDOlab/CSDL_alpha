@@ -27,7 +27,42 @@ class BLockMatrix(Operation):
 
 def blockmat(l):
     """
-    doc strings
+    Assemble a block matrix from a list or list of lists of matrices.
+
+    Parameters
+    ----------
+    l : list or list of lists of Variable or np.ndarray objects
+        List or a list of lists of matrices to assemble into a block matrix.
+
+    Returns
+    -------
+    Variable
+        Block matrix assembled from the input list.
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x_val = 3.0*np.ones((2,3))
+    >>> z_val = np.ones((1,5))
+    >>> x = csdl.Variable(name = 'x', value = x_val)
+    >>> z = csdl.Variable(name = 'z', value = z_val)
+
+    # create a block row matrix
+
+    >>> b1 = csdl.blockmat([x, np.zeros((2,2))])
+    >>> b1.value
+    array([[3., 3., 3., 0., 0.],
+           [3., 3., 3., 0., 0.]])
+
+    # Create a block matrix with block rows and columns
+
+    >>> b2 = csdl.blockmat([[x, np.zeros((2,2))], [z]])
+    >>> b2.value
+    array([[3., 3., 3., 0., 0.],
+           [3., 3., 3., 0., 0.],
+           [1., 1., 1., 1., 1.]])
+
     """
     list_in_list = any(isinstance(x, list) for x in l)
     all_are_list = all(isinstance(x, list) for x in l)
@@ -92,44 +127,7 @@ class TestBlockMat(csdl_tests.CSDLTest):
 
 
     def test_example(self,):
-        self.prep()
-
-        # docs:entry
-        import csdl_alpha as csdl
-        import numpy as np
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-        x_val = 3.0*np.ones((2,3))
-        y_val = np.zeros((2,5))
-        z_val = np.ones((4,8))
-
-        x = csdl.Variable(name = 'x', value = x_val)
-        y = csdl.Variable(name = 'y', value = y_val)
-        z = csdl.Variable(name = 'z', value = z_val)
-
-        # create a block row matrix
-        b1 = csdl.blockmat([x,y])
-        print(b1.value)
-
-        # Create a block matrix with block rows and columns
-        b2 = csdl.blockmat([[x,y], [z]])
-        print(b2.value)
-
-        # Create a block matrix with block rows and columns using constant blocks
-        b3 = csdl.blockmat([[x,y_val], [z]])
-        print(b3.value)
-        # docs:exit
-
-        compare_values = []
-        t1 = np.block([x_val, y_val])
-        t2 = np.block([[x_val, y_val], [z_val]])
-
-        compare_values += [csdl_tests.TestingPair(b1, t1)]
-        compare_values += [csdl_tests.TestingPair(b2, t2)]
-        compare_values += [csdl_tests.TestingPair(b3, t2)]
-
-        self.run_tests(compare_values = compare_values,)
+        self.docstest(blockmat)
 
 
 if __name__ == '__main__':
