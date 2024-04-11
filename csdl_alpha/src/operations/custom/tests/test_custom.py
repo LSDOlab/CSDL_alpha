@@ -16,7 +16,7 @@ class Paraboloid(csdl.CustomExplicitOperation):
         self.return_g = self.parameters.declare('return_g', default=False)
 
     def evaluate(self, x, y, z):
-        # assign method inputs to input dictionary
+        # assign method _dict to input dictionary
 
         self.declare_input('x', x)
         self.declare_input('y', y)
@@ -87,7 +87,7 @@ class TestCustom(csdl_tests.CSDLTest):
     #     self.prep()
     #     model = BasicCustomExplicitOperation()
     #     model.outputs = {'y1': csdl.Variable(value=1), 'y2': csdl.Variable(value=2)}
-    #     model.inputs = {'x1': csdl.Variable(value=1), 'x2': csdl.Variable(value=2)}
+    #     model._dict = {'x1': csdl.Variable(value=1), 'x2': csdl.Variable(value=2)}
 
     #     with pytest.raises(TypeError) as e_info:
     #         model.declare_derivative_parameters(0, 'x1')
@@ -104,8 +104,8 @@ class TestCustom(csdl_tests.CSDLTest):
         self.prep()
         
         model = BasicCustomExplicitOperation()
-        model.inputs = {'x': csdl.Variable(value=1), 'y': csdl.Variable(value=2)}
-        model.outputs = {'f': csdl.Variable(value=3), 'g': csdl.Variable(value=4)}
+        model.input_dict = {'x': csdl.Variable(value=1), 'y': csdl.Variable(value=2)}
+        model.output_dict = {'f': csdl.Variable(value=3), 'g': csdl.Variable(value=4)}
 
         # Test case 1: Single derivative declaration
         model.declare_derivative_parameters('f', 'x')

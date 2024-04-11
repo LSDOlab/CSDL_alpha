@@ -97,10 +97,10 @@ class Operation(Node):
             output_values = self.compute_inline(*[x.value for x in self.inputs])
 
         if self.num_outputs == 1:
-            self.outputs[0].value = output_values.reshape(self.outputs[0].shape)
+            self.outputs[0].set_value(output_values.reshape(self.outputs[0].shape))
         else:
             for output, value in zip(self.outputs, output_values):
-                output.value = value.reshape(output.shape)
+                output.set_value(value.reshape(output.shape))
 
     def finalize_and_return_outputs(self, skip_inline = False):
         """
