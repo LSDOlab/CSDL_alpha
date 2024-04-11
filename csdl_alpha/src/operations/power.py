@@ -18,15 +18,29 @@ class Power(ElementwiseOperation):
     def compute_inline(self, x, y):
         return x ** y
     
-class BroadcastPower(Operation):
+class LeftBroadcastPower(Operation):
     '''
     First input is broadcasted to the shape of the second input.
     '''
 
     def __init__(self,x,y):
         super().__init__(x,y)
-        self.name = 'broadcast_power'
+        self.name = 'left_broadcast_power'
         out_shapes = (y.shape,)
+        self.set_dense_outputs(out_shapes)
+
+    def compute_inline(self, x, y):
+        return x ** y
+    
+class RightBroadcastPower(Operation):
+    '''
+    Second input is broadcasted to the shape of the first input.
+    '''
+
+    def __init__(self,x,y):
+        super().__init__(x,y)
+        self.name = 'right_broadcast_power'
+        out_shapes = (x.shape,)
         self.set_dense_outputs(out_shapes)
 
     def compute_inline(self, x, y):
@@ -73,12 +87,10 @@ def power(x:Variable, y:Variable) -> Variable:
 
     if x.shape == y.shape:
         op = Power(x, y)
-    # TODO: We need a broadcast power even when the methods are exactly the same 
-    # because Broadcast should never inherit from ElementwiseOperation
-    elif y.shape == (1,):
-        op = Power(x, y)
     elif x.shape == (1,):
-        op = BroadcastPower(x, y)
+        op = LeftBroadcastPower(x, y)
+    elif y.shape == (1,):
+        op = RightBroadcastPower(x, y)
     else:
         raise ValueError('Shapes not compatible for the power operation.')
         

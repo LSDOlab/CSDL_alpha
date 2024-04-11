@@ -24,7 +24,8 @@ from .set_get.loop_slice import _loop_slice as slice
 from .trig import sin, cos, tan
 
 # Linear algebra operations
-from .block_matrix import blockmat
+from .linalg.block_matrix import blockmat
+from .linalg.norm import norm
 from .linalg.matvec import matvec
 from .linalg.matmat import matmat
 
