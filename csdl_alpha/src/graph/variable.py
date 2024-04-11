@@ -143,6 +143,14 @@ class Variable(Node):
         from csdl_alpha.src.operations.power import power
         return power(other, self)
 
+    def __matmul__(self, other):
+        from csdl_alpha.src.operations.linalg.matmat import matmat
+        return matmat(self, other)
+
+    def __rmatmul__(self, other):
+        from csdl_alpha.src.operations.linalg.matmat import matmat
+        return matmat(other, self)
+
     def reshape(self, shape:tuple[int]):
         """
         doc strings

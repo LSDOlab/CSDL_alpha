@@ -8,7 +8,7 @@ class Node(object):
     Attributes:
         namespace (Namespace): The namespace of the node.
     """
-    __slots__ = "recorder", "namespace", "trace", "hierarchy", "is_input", "is_implicit", "save", "names", "name", "value", "shape", "size", "tags"
+    # __slots__ = "recorder", "namespace", "trace", "hierarchy", "is_input", "is_implicit", "save", "names", "name", "value", "shape", "size", "tags"
 
     def __init__(self) -> None:
         from csdl_alpha.src.recorder import Namespace

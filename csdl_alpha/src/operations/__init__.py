@@ -28,5 +28,6 @@ from .trig import sin, cos, tan
 # Linear algebra operations
 from .block_matrix import blockmat
 from .linalg.matvec import matvec
+from .linalg.matmat import matmat
 
 # Tensor operations

@@ -92,6 +92,18 @@ class TestMatVec(csdl_tests.CSDLTest):
         C = csdl.matvec(A,B)
         compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
 
+        C = csdl.matvec(A_val,B)
+        compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
+        C = csdl.matvec(A,B_val)
+        compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
+
+        B_shape = (4,)
+        B_val = np.arange(np.prod(B_shape)).reshape(B_shape)
+        C = csdl.matvec(A,B_val)
+        compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
+        C = csdl.matvec(A_val,B)
+        compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
+
         self.run_tests(compare_values = compare_values,)
 
     def test_errors(self):
