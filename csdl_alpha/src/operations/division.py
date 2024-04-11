@@ -2,6 +2,7 @@ from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation,
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
+from csdl_alpha.src.graph.variable import Variable
 
 @set_properties()
 class Div(ElementwiseOperation):
@@ -44,9 +45,30 @@ class BroadcastDiv2(Operation):
     def compute_inline(self, x, y):
         return x/y
 
-def div(x,y):
-    """
-    doc strings
+def div(x:Variable,y:Variable)->Variable:
+    """Elementwise addition of two tensors x and y.
+
+    Parameters
+    ----------
+    x : Variable
+    y : Variable
+
+    Returns
+    -------
+    out: Variable
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y = csdl.Variable(value = np.array([4.0, 5.0, 6.0]))
+    >>> csdl.div(x, y).value
+    array([0.25, 0.4 , 0.5 ])
+    >>> (x/y).value # equivalent to the above
+    array([0.25, 0.4 , 0.5 ])
+    >>> (x/2.0).value # broadcasting is also supported
+    array([0.5, 1. , 1.5])
     """
     x = variablize(x)
     y = variablize(y)
@@ -54,9 +76,9 @@ def div(x,y):
     if x.shape == y.shape:
         op = Div(x,y)
     elif x.size == 1:
-        op = BroadcastDiv1(x.reshape((1,)),y)
+        op = BroadcastDiv1(x.flatten(),y)
     elif y.size == 1:
-        op = BroadcastDiv2(x,y.reshape((1,)))
+        op = BroadcastDiv2(x,y.flatten())
     else:
         raise ValueError('Shapes do not match')
     return op.finalize_and_return_outputs()
@@ -147,6 +169,9 @@ class TestDiv(csdl_tests.CSDLTest):
 
         with pytest.raises(ValueError):
             z = csdl.div(x_val,y_val)
+    
+    def test_docstring(self):
+        self.docstest(div)
 
 if __name__ == '__main__':
     test = TestDiv()

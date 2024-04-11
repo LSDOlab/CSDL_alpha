@@ -3,6 +3,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 import numpy as np
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
+from csdl_alpha.src.graph.variable import Variable
 
 class Power(ElementwiseOperation):
     '''
@@ -31,9 +32,30 @@ class BroadcastPower(Operation):
     def compute_inline(self, x, y):
         return x ** y
     
-def power(x, y):
-    """
-    doc strings
+def power(x:Variable,y:Variable)->Variable:
+    """Elementwise x to the power of y.
+
+    Parameters
+    ----------
+    x : Variable
+    y : Variable
+
+    Returns
+    -------
+    out: Variable
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y = csdl.Variable(value = np.array([4.0, 5.0, 6.0]))
+    >>> csdl.power(x, y).value
+    array([  1.,  32., 729.])
+    >>> (x ** y).value # equivalent to the above
+    array([  1.,  32., 729.])
+    >>> (x ** 2.0).value # broadcasting is also supported
+    array([1., 4., 9.])
     """
     x = variablize(x)
     y = variablize(y)
@@ -123,6 +145,8 @@ class TestPower(csdl_tests.CSDLTest):
 
         self.run_tests(compare_values = compare_values,)
 
+    def test_docstring(self,):
+        self.docstest(power)
 
 if __name__ == '__main__':
     test = TestPower()

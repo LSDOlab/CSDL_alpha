@@ -57,6 +57,8 @@ class Variable(Node):
         shape = get_shape(shape, value)
 
         self.shape = shape
+        if len(shape) == 0:
+            raise ValueError("Shape must have at least one dimension")
         if len(shape) == 1:
             self.size = shape[0]
         else:
@@ -150,8 +152,8 @@ class Variable(Node):
         return self.__mul__(other)
 
     def __neg__(self):
-        from csdl_alpha.src.operations.neg import neg
-        return neg(self)
+        from csdl_alpha.src.operations.neg import negate
+        return negate(self)
     
     def __sub__(self, other):
         from csdl_alpha.src.operations.sub import sub
@@ -182,15 +184,49 @@ class Variable(Node):
         return matmat(other, self)
 
     def reshape(self, shape:tuple[int]):
-        """
-        doc strings
+        """Returns a reshaped version of the variable.
+
+        Parameters
+        ----------
+        self : Variable
+
+        Returns
+        -------
+        out: Variable
+
+        Examples
+        --------
+        >>> recorder = csdl.Recorder(inline = True)
+        >>> recorder.start()
+        >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> csdl.reshape(x, (2,2)).value
+        array([[1., 2.],
+               [3., 4.]])
+        >>> x.reshape((2,2)).value # same thing as above
+        array([[1., 2.],
+               [3., 4.]])
         """
         from csdl_alpha.src.operations.reshape import reshape
         return reshape(self, shape)
 
-    def flatten(self):
-        """
-        doc strings
+    def flatten(self: 'Variable')->'Variable':
+        """Returns a 1D version of the variable.
+
+        Parameters
+        ----------
+        self : Variable
+
+        Returns
+        -------
+        out: Variable
+
+        Examples
+        --------
+        >>> recorder = csdl.Recorder(inline = True)
+        >>> recorder.start()
+        >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> x.flatten().value # reshapes to 1 dimension
+        array([1., 2., 3., 4.])
         """
         from csdl_alpha.src.operations.reshape import reshape
         return reshape(self, (self.size,))

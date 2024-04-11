@@ -1,5 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 from csdl_alpha.src.graph.operation import set_properties 
+import csdl_alpha.utils.test_utils as csdl_tests
 
 @set_properties(linear=True)
 class Neg(ElementwiseOperation):
@@ -20,8 +21,43 @@ class Neg(ElementwiseOperation):
     def evaluate_vjp(self, x, vout):
         return -vout
 
-def neg(x):
-    """
-    doc strings
+def negate(x):
+    """Compute -1*x of a variable x
+
+    Parameters
+    ----------
+    x : Variable
+
+    Returns
+    -------
+    out: Variable
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0, 4.0]))
+    >>> (csdl.negate(x)).value
+    array([-1., -2., -3., -4.])
+    >>> (-x).value # equivalent to the above
+    array([-1., -2., -3., -4.])
     """
     return Neg(x).finalize_and_return_outputs()
+
+class TestPower(csdl_tests.CSDLTest):
+    
+    def test_functionality(self,):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+        x_val = np.arange(6).reshape(2,3)
+        x = csdl.Variable(name = 'x', value = x_val)
+        y = csdl.negate(x)
+
+        compare_values = []
+        compare_values += [csdl_tests.TestingPair(y, -x_val)]
+        self.run_tests(compare_values = compare_values,)
+
+    def test_docstring(self):
+        self.docstest(negate)
