@@ -11,8 +11,8 @@ class CustomOperation(Operation):
         self.initialize()
         self.parameters.check(kwargs)
 
-        self.inputs = {}
-        self.outputs = {}
+        self.input_dict = {}
+        self.output_dict = {}
         self.derivative_parameters = {}
 
 # TODO: update this to new operation format
@@ -38,32 +38,37 @@ class CustomExplicitOperation(CustomOperation):
 
     def _wrap_evaluate(self, evaluate):
         def new_evaluate(*args, **kwargs):
-            Node.__init__(self)
-            self.name = self.__class__.__name__
+            # Node.__init__(self)
+            # self.name = self.__class__.__name__
 
-            self.recorder._add_node(self)
+            # self.recorder._add_node(self)
             eval_outputs = evaluate(*args, **kwargs)
+            Operation.__init__(self, *list(self.input_dict.values()))
 
-            for input_var in self.inputs.values():
-                self.recorder._add_edge(input_var, self)
+            self.set_outputs(list(self.output_dict.values()))
 
-            for output_var in self.outputs.values():
-                self.recorder._add_edge(self, output_var)
-
-            if self.recorder.inline:
-                self.set_inline_values()
+            self.finalize_and_return_outputs()
 
             return eval_outputs
         return new_evaluate
 
-    def set_inline_values(self):
-        inputs = {key: input.value for key, input in self.inputs.items()}
+    def compute_inline(self, *args):
+        inputs = {key:input for key, input in zip(self.input_dict.keys(), args)}
         comp_outputs = {}
-
         self.compute(inputs, comp_outputs)
+        output = [comp_outputs[key] for key in self.output_dict.keys()]
+        if len(output) == 1:
+            output = output[0]
+        return output
 
-        for key, output in self.outputs.items():
-            output.set_value(comp_outputs[key])
+    # def set_inline_values(self):
+    #     inputs = {key: input.value for key, input in self.input_dict.items()}
+    #     comp_outputs = {}
+
+    #     self.compute(inputs, comp_outputs)
+
+    #     for key, output in self.output_dict.items():
+    #         output.set_value(comp_outputs[key])
 
     def create_output(self, name:str, shape:tuple):
             """Create and store an output variable.
@@ -84,10 +89,10 @@ class CustomExplicitOperation(CustomOperation):
                 The created output variable.
             """
             output = Variable(shape)
-            self.outputs[name] = output
+            self.output_dict[name] = output
             return output
     
-    def declare_input(self, key, variable):
+    def declare_input(self, key:str, variable):
         """Declares a variable as an input.
 
         This method stores the given input variable in the inputs dictionary under the given key.
@@ -99,7 +104,7 @@ class CustomExplicitOperation(CustomOperation):
         variable : csdl.Variable
             The input variable.
         """
-        self.inputs[key] = variablize(variable)
+        self.input_dict[key] = variablize(variable)
     
     def declare_derivative_parameters(
         self,
@@ -158,18 +163,18 @@ class CustomExplicitOperation(CustomOperation):
         wrt_list = []
         if isinstance(of, str):
             if of == '*':
-                of_list = list(self.outputs.keys())
+                of_list = list(self.output_dict.keys())
         elif isinstance(of, list):
             if any(x == '*' for x in of):
-                of_list = list(self.outputs.keys())
+                of_list = list(self.output_dict.keys())
             else:
                 of_list = of
         if isinstance(wrt, str):
             if wrt == '*':
-                wrt_list = list(self.inputs.keys())
+                wrt_list = list(self.input_dict.keys())
         elif isinstance(wrt, list):
             if any(x == '*' for x in wrt):
-                wrt_list = list(self.inputs.keys())
+                wrt_list = list(self.input_dict.keys())
             else:
                 wrt_list = wrt
 
