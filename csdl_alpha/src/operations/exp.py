@@ -9,7 +9,7 @@ import numpy as np
 
 class Exp(ComposedOperation):
     '''
-    Exponential of the input tensor or scalar.
+    Elementwise exponential of the input tensor or scalar.
     '''
     def __init__(self, x):
         super().__init__(x)
@@ -19,14 +19,33 @@ class Exp(ComposedOperation):
         return evaluate_exp(x)
     
 def evaluate_exp(x):
-    out = csdl.power(np.e, x)
-    return out
+    return csdl.power(np.e, x)
+    # return np.e ** x
 
 def exp(x):
-    """
-    doc strings
-    """
-    op = Exp(x)
+    '''
+    Elementwise exponential of the input tensor or scalar.
+
+    Parameters
+    ----------
+    x : Variable or np.ndarray or float or int
+        Input tensor to take the exponential of.
+
+    Returns
+    -------
+    Variable
+        Elementwise exponential of the input tensor.
+    
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y = csdl.exp(x)
+    >>> y.value
+    array([ 2.71828183,  7.3890561 , 20.08553692])
+    '''
+    op = Exp(variablize(x))
     return op.finalize_and_return_outputs()
 
 class TestExp(csdl_tests.CSDLTest):
@@ -57,35 +76,7 @@ class TestExp(csdl_tests.CSDLTest):
 
 
     def test_example(self,):
-        self.prep()
-
-        # docs:entry
-        import csdl_alpha as csdl
-        import numpy as np
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-
-        x_val = np.arange(6).reshape(2,3)
-        x = csdl.Variable(name = 'x', value = x_val)
-        
-        # exponential of a tensor variable
-        s1 = csdl.exp(x)
-        print(s1.value)
-
-        # exponential of a scalar constant
-        s2 = csdl.exp(3.0)
-        print(s2.value)
-
-        # docs:exit
-        compare_values = []
-        t1 = np.exp(x_val)
-        t2 = np.array([np.exp(3.0)])
-        
-        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
-        compare_values += [csdl_tests.TestingPair(s2, t2, tag = 's2')]
-
-        self.run_tests(compare_values = compare_values,)
+        self.docstest(exp)
 
 if __name__ == '__main__':
     test = TestExp()

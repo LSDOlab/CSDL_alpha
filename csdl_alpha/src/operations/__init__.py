@@ -5,6 +5,7 @@ from .sub import sub
 from .square import square
 from .division import div
 from .power import power
+from .sqrt import sqrt
 from .exp import exp
 from .log import log
 from .reshape import reshape

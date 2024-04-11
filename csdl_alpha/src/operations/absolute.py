@@ -9,7 +9,7 @@ import numpy as np
 
 class Absolute(ComposedOperation):
     '''
-    Absolute values of the entries in the input tensor.
+    Elementwise absolute values of the input tensor.
     '''
     def __init__(self, x, rho=20.):
         super().__init__(x)
@@ -28,7 +28,40 @@ def evaluate_absolute(x, rho):
 
 def absolute(x, rho=20.):
     """
-    doc strings
+    Elementwise absolute values of the input tensor.
+
+    Parameters
+    ----------
+    x : Variable or np.ndarray or float or int
+        Input tensor to take the absolute values of.
+    rho : float, default=20.
+        Smoothing parameter for the absolute function.
+
+    Returns
+    -------
+    Variable
+        Elementwise absolute of the input tensor.
+    
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([-1.0, 2.0, -3.0]))
+    >>> y = csdl.absolute(x)
+    >>> y.value
+    array([1., 2., 3.])
+    >>> y = csdl.absolute(0.0)
+    >>> y.value
+    array([0.03465736])
+
+    # Note that the value of y is not exactly 0.0 due to the smoothing term.
+    # The value of y can be made closer to 0.0 by increasing the value of 
+    # the smoothing parameter rho.
+    
+    >>> y = csdl.absolute(0.0, rho=200)
+    >>> y.value
+    array([0.00346574])
+
     """
     op = Absolute(variablize(x), rho=rho)  
     return op.finalize_and_return_outputs()
@@ -70,40 +103,7 @@ class TestAbsolute(csdl_tests.CSDLTest):
 
 
     def test_example(self,):
-        self.prep()
-
-        # docs:entry
-        import csdl_alpha as csdl
-        import numpy as np
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-
-        x_val = 3.0*np.arange(-3,3).reshape(2,3)
-        x = csdl.Variable(name = 'x', value = x_val)
-
-        # absolute of a single tensor variable with specified rho
-        s1 = csdl.absolute(x, rho=200)
-        print(s1.value)
-
-        # absolute of a single tensor constant with specified rho
-        s2 = csdl.absolute(x_val, rho=200)
-        print(s2.value)
-
-        # absolute of a single scalar constant
-        s3 = csdl.absolute(-5.0)
-        print(s3.value)
-        # docs:exit
-
-        compare_values = []
-        t1 = np.abs(x_val)
-        t3 = np.array([5.])
-
-        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1', decimal=2)]
-        compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2', decimal=2)]
-        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
-        
-        self.run_tests(compare_values = compare_values,)
+        self.docstest(absolute)
 
 if __name__ == '__main__':
     test = TestAbsolute()
