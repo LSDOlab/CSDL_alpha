@@ -27,7 +27,7 @@ def sqrt(x:Union[Variable, np.ndarray]) -> Variable:
 
     Parameters
     ----------
-    x : Variable or np.ndarray or float or int
+    x : Variable, np.ndarray, float, or int
         Input tensor to take the square root of.
 
     Returns
