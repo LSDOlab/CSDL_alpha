@@ -4,7 +4,7 @@ def test_subgraphs():
     from csdl_alpha.src.graph.variable import Variable
     import csdl_alpha as csdl
 
-    recorder = csdl.build_new_recorder()
+    recorder = csdl.Recorder()
     recorder.start()
     a = Variable((1,), name='a')
     assert len(recorder.active_graph.node_table) == 1
@@ -23,8 +23,12 @@ def test_namespacing():
     import csdl_alpha as csdl
     from csdl_alpha.src.graph.variable import Variable
 
-    recorder = csdl.build_new_recorder()
+    recorder = csdl.Recorder()
     recorder.start()
+    with pytest.raises(Exception):
+        csdl.exit_namespace()
+    with pytest.raises(TypeError):
+        csdl.enter_namespace(1)
     a = Variable((1,), name='a')
     csdl.enter_namespace('test1')
     assert recorder.active_namespace.name == 'test1'
@@ -48,11 +52,31 @@ def test_duplicate_namespace_error():
     import csdl_alpha as csdl
     from csdl_alpha.src.graph.variable import Variable
 
-    recorder = csdl.build_new_recorder()
+    recorder = csdl.Recorder()
     recorder.start()
     csdl.enter_namespace('test1')
     csdl.exit_namespace()
     with pytest.raises(Exception) as e_info:
         csdl.enter_namespace('test1')
 
-test_namespacing()
+def test_auto_hierarchy():
+    import csdl_alpha as csdl
+    from csdl_alpha.src.graph.variable import Variable
+
+    recorder = csdl.Recorder(auto_hierarchy=True)
+    recorder.start()
+    a = Variable((1,), name='a')
+    assert a.hierarchy == 0
+    csdl.enter_namespace('test1')
+    b = Variable((1,), name='b')
+    assert b.hierarchy == 1
+    csdl.enter_namespace('test2')
+    c = Variable((1,), name='c')
+    assert c.hierarchy == 2
+    csdl.exit_namespace()
+    d = Variable((1,), name='d')
+    assert d.hierarchy == 1
+    csdl.exit_namespace()
+    e = Variable((1,), name='e')
+    assert e.hierarchy == 0
+    recorder.stop()

@@ -16,7 +16,7 @@ def test_model_correct():
     import csdl_alpha as csdl
     MyModel = define_my_model()
 
-    recorder = csdl.build_new_recorder()
+    recorder = csdl.Recorder()
     recorder.start()
     model = MyModel(a=3.)
     b = model.evaluate(name='test')
@@ -31,7 +31,7 @@ def test_wrong_inputs():
     import csdl_alpha as csdl
     MyModel = define_my_model()
 
-    recorder = csdl.build_new_recorder()
+    recorder = csdl.Recorder()
     recorder.start()
     with pytest.raises(Exception) as e_info:
         model = MyModel(a=3., b=3.)

@@ -27,6 +27,26 @@ class TestVRange(csdl_tests.CSDLTest):
             ]
         )
 
+    def test_setitem(self):
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import vrange
+        import numpy as np
+
+        a = csdl.Variable(shape=(3,3), value=12*np.ones((3,3)))
+        
+        for i in vrange(0, 3):
+            for j in vrange(0, 3):
+                b = a.set((i, j), i+j)
+
+        self.run_tests(
+            compare_values=[
+                csdl_tests.TestingPair(b, np.array([[12, 12, 12], [12, 12, 12], [12, 12, 4]]))
+            ]
+        )
+
+
+
     def test_range_inputs(self):
         self.prep()
         import csdl_alpha as csdl

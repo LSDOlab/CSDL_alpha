@@ -20,7 +20,7 @@ if __name__ == '__main__':
             f.add_name('f') # This gives f the name 'paraboloid.f'
             return f
 
-    recorder = csdl.build_new_recorder(inline=True, debug=True, auto_hierarchy=True)
+    recorder = csdl.Recorder(inline=True, debug=True, auto_hierarchy=True)
     recorder.start()
 
 

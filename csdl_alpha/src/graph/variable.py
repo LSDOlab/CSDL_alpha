@@ -6,20 +6,49 @@ from csdl_alpha.utils.inputs import ingest_value, get_shape
 class Variable(Node):
     __array_priority__ = 1000
     def __init__(
-            self,
-            shape: tuple = None, 
-            name: str = None, 
-            value: Union[np.ndarray, float, int] = None,  
-            tags: list[str] = None, 
-            hierarchy: int = None,
-        ):
+        self,
+        shape: tuple = None, 
+        name: str = None, 
+        value: Union[np.ndarray, float, int] = None,  
+        tags: list[str] = None, 
+        hierarchy: int = None,
+    ):
+        """
+        Initialize a Variable object.
+
+        Parameters
+        ----------
+        shape : tuple, optional
+            The shape of the variable. If not provided, it will be inferred from the value.
+        name : str, optional
+            The name of the variable.
+        value : Union[np.ndarray, float, int], optional
+            The initial value of the variable.
+        tags : list[str], optional
+            A list of tags associated with the variable.
+        hierarchy : int, optional
+            The hierarchy level of the variable.
+
+        Attributes
+        ----------
+        hierarchy : int
+            The hierarchy level of the variable.
+        shape : tuple
+            The shape of the variable.
+        size : int
+            The size of the variable.
+        names : list[str]
+            A list of names associated with the variable.
+        value : Union[np.ndarray, float, int]
+            The value of the variable.
+        tags : list[str]
+            A list of tags associated with the variable.
+        """
         
         self.hierarchy = hierarchy
         super().__init__()
         self.recorder._add_node(self)
 
-        self.is_input = True
-        self.is_implicit = False
         self._save = False
         self.names = []
         self.name = None
@@ -58,19 +87,20 @@ class Variable(Node):
         self.value = ingest_value(value)
         self.shape = get_shape(self.shape, self.value)
 
+    # TODO: add checks for parents
     def set_as_design_variable(self, upper: float = None, lower: float = None, scalar: float = None):
-        if not self.is_input:
-            raise Exception("Variable is not an input variable")
+        # if not self.is_input:
+        #     raise Exception("Variable is not an input variable")
         self.recorder._add_design_variable(self, upper, lower, scalar)
 
     def set_as_constraint(self, upper: float = None, lower: float = None, scalar: float = None):
-        if self.is_input:
-            raise Exception("Variable is an input variable")
+        # if self.is_input:
+        #     raise Exception("Variable is an input variable")
         self.recorder._add_constraint(self, upper, lower, scalar)
 
     def set_as_objective(self, scalar: float = None):
-        if self.is_input:
-            raise Exception("Variable is an input variable")
+        # if self.is_input:
+        #     raise Exception("Variable is an input variable")
         self.recorder._add_objective(self, scalar)
 
     from csdl_alpha.src.operations.set_get.slice import Slice

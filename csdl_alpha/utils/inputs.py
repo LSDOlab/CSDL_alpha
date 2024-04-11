@@ -1,4 +1,5 @@
 import numpy as np
+from .error_utils.error_utils import check_if_valid_shape
 
 def ingest_value(value):
     if isinstance(value, (float, int)):
@@ -33,8 +34,7 @@ def get_shape(shape, value):
         else:
             raise ValueError("Shape or value must be provided")
     else:
-        if not isinstance(shape, tuple):
-            raise ValueError("Shape must be a tuple")
+        check_if_valid_shape(shape)
         if value is not None:
             if shape != value.shape:
                 raise ValueError("Shape and value shape must match")
