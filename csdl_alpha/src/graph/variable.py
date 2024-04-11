@@ -134,6 +134,14 @@ class Variable(Node):
     def __rtruediv__(self, other):
         from csdl_alpha.src.operations.division import div
         return div(other, self)
+    
+    def __pow__(self, other):
+        from csdl_alpha.src.operations.power import power
+        return power(self, other)
+    
+    def __rpow__(self, other):
+        from csdl_alpha.src.operations.power import power
+        return power(other, self)
 
     def reshape(self, shape:tuple[int]):
         """
