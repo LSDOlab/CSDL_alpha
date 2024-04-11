@@ -1,5 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
+from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 
@@ -9,7 +10,7 @@ class Add(ElementwiseOperation):
     Elementwise addition of two tensors of the same shape.
     '''
 
-    def __init__(self,x,y):
+    def __init__(self,x:Variable,y:Variable):
         super().__init__(x,y)
         self.name = 'add'
 
@@ -81,7 +82,7 @@ class SparseBroadcastAdd(ComposedOperation):
     def compute_inline(self, x, y):
         pass
 
-def add(x,y):
+def add(x:Variable,y:Variable):
     """
     doc strings
     """

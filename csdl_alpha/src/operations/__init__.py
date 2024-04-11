@@ -24,10 +24,10 @@ from .set_get.loop_slice import _loop_slice as slice
 # Trigonometric operations
 from .trig import sin, cos, tan
 
-
 # Linear algebra operations
 from .block_matrix import blockmat
 from .linalg.matvec import matvec
 from .linalg.matmat import matmat
 
 # Tensor operations
+from .outer import outer
