@@ -32,7 +32,7 @@ class BroadcastPower(Operation):
     def compute_inline(self, x, y):
         return x ** y
     
-def power(x, y):
+def power(x:Variable, y:Variable) -> Variable:
     '''
     Computes the power of the first input with exponent as the second input.
     If one of the inputs is a scalar, it is broadcasted to the shape of the other input.
