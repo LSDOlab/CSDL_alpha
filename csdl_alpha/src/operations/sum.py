@@ -41,9 +41,52 @@ def evaluate_elementwise_sum(*args):
     return out
 
 def sum(*args, axes=None):
-    """
-    doc strings
-    """
+    '''
+    Computes the sum of all entries in the input tensor if a single argument is provided.
+    Computes the sum of all entries along the specified axes if `axes` argument is given.
+    Computes the elementwise sum of multiple variables of the same shape, 
+    if multiple arguments are provided. Axes argument is not allowed in this case.
+
+    Parameters
+    ----------
+    *args : tuple of Variable or np.ndarray objects
+        Input tensor/s whose sum/s needs to be computed.
+    axes : tuple of int, default=None
+        Axes along which to compute the sum of the input tensor,
+        if there's only one input tensor.
+
+    Returns
+    -------
+    Variable
+        Sum of all entries in the input tensor if a single argument is provided.
+        Sum of entries along the specified axes if `axes` argument is given.
+        Elementwise sum of multiple variables of the same shape, 
+        if multiple arguments are provided.
+    
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y1 = csdl.sum(x)
+    >>> y1.value
+    array([6.])
+
+    # sum of a single tensor variable along a specified axis
+
+    >>> x_val = np.arange(6).reshape(2,3)
+    >>> x = csdl.Variable(value = x_val)
+    >>> y2 = csdl.sum(x, axes=(1,))
+    >>> y2.value
+    array([ 3, 12])
+
+    # elementwise sum of multiple tensor variables
+
+    >>> y3 = csdl.sum(x, 2 * np.ones((2,3)), np.ones((2,3)))
+    >>> y3.value
+    array([[3., 4., 5.],
+           [6., 7., 8.]])
+    '''
     # Multiple Variables to sum
     if axes is not None and len(args) > 1:
         raise ValueError('Cannot sum multiple Variables along specified axes. \
@@ -117,55 +160,7 @@ class TestSum(csdl_tests.CSDLTest):
 
 
     def test_example(self,):
-        self.prep()
-
-        # docs:entry
-        import csdl_alpha as csdl
-        import numpy as np
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-        x_val = 3.0*np.ones((2,3))
-        y_val = 2.0*np.ones((2,3))
-        z_val = np.ones((2,3))
-
-        x = csdl.Variable(name = 'x', value = x_val)
-        y = csdl.Variable(name = 'y', value = y_val)
-        z = csdl.Variable(name = 'z', value = z_val)
-
-        # sum of a single tensor variable
-        s1 = csdl.sum(x)
-        print(s1.value)
-
-        # sum of a single tensor constant
-        s2 = csdl.sum(x_val)
-        print(s2.value)
-
-        # sum of a single tensor variable along specified axes
-        s3 = csdl.sum(x, axes=(1,))
-        print(s3.value)
-
-        # elementwise sum of multiple tensor variables
-        s4 = csdl.sum(x, y, z)
-        print(s4.value)
-
-        # elementwise sum of multiple tensor constants and variables
-        s5 = csdl.sum(x_val, y_val, z)
-        print(s5.value)
-        # docs:exit
-
-        compare_values = []
-        t1 = np.array([18.0])
-        t3 = np.array([9,9])
-        t4 = 6.0*np.ones((2,3))
-
-        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
-        compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
-        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
-        compare_values += [csdl_tests.TestingPair(s4, t4, tag = 's4')]
-        compare_values += [csdl_tests.TestingPair(s5, t4, tag = 's5')]
-        
-        self.run_tests(compare_values = compare_values,)
+        self.docstest(sum)
 
 if __name__ == '__main__':
     test = TestSum()
