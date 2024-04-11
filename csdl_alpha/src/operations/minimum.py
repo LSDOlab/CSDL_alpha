@@ -10,7 +10,8 @@ import numpy as np
 class Minimum(ComposedOperation):
     '''
     Minimum entries in the input tensor along the specified axes.
-    Or elementwise minimum of multiple variables of the same shape.
+    Or elementwise minimum if multiple variables of the same shape
+    are provided.
     '''
     def __init__(self, *args, axes=None, rho=20.):
         super().__init__(*args)
@@ -27,9 +28,62 @@ def evaluate_minimum(args, axes, rho):
     return -out
 
 def minimum(*args, axes=None, rho=20.):
-    """
-    doc strings
-    """
+    '''
+    Computes the minimum entry in the input tensor if a single argument is provided.
+    Computes the minimum entries along the specified axes if `axes` argument is given.
+    Computes the elementwise minimum of multiple variables of the same shape, 
+    if multiple arguments are provided. Axes argument is not allowed in this case.
+
+    Parameters
+    ----------
+    *args : tuple of Variable or np.ndarray objects
+        Input tensor/s whose minimum needs to be computed.
+    axes : tuple of int, default=None
+        Axes along which to compute the minimum of the input tensor,
+        if there's only one input tensor.
+    rho : float, default=20.
+        Smoothing parameter for the minimum function.
+
+    Returns
+    -------
+    Variable
+        Minimum entry in the input tensor if a single argument is provided.
+        Minimum entries along the specified axes if `axes` argument is given.
+        Elementwise minimum of multiple variables of the same shape, 
+        if multiple arguments are provided.
+    
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x_val = np.arange(6).reshape(2,3)
+    >>> x = csdl.Variable(value = x_val)
+    >>> y1 = csdl.minimum(x)
+    >>> y1.value
+    array([-1.03057685e-10])
+
+    # Note that the value of y1 is not exactly 0.0 due to the smoothing term.
+    # The value of y1 can be made closer to 0.0 by increasing the value of 
+    # the smoothing parameter rho as shown below.
+    
+    >>> y = csdl.minimum(x, rho=200)
+    >>> y.value
+    array([-0.])
+
+    # minimum of a single tensor variable along a specified axis
+
+    >>> y2 = csdl.minimum(x, axes=(1,))
+    >>> y2.value
+    array([-1.03057685e-10,  3.00000000e+00])
+
+    # minimum of multiple tensor variables
+
+    >>> y3 = csdl.minimum(x, 2 * np.ones((2,3)), np.ones((2,3)))
+    >>> y3.value
+    array([[-1.03057685e-10,  9.65342641e-01,  1.00000000e+00],
+           [ 1.00000000e+00,  1.00000000e+00,  1.00000000e+00]])
+    '''
+    
     # Multiple Variables to find minimum
     if axes is not None and len(args) > 1:
         raise ValueError('Cannot find minimum of multiple variables along specified axes. \
@@ -110,64 +164,7 @@ class TestMinimum(csdl_tests.CSDLTest):
 
 
     def test_example(self,):
-        self.prep()
-
-        # docs:entry
-        import csdl_alpha as csdl
-        import numpy as np
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-        x_val = 3.0*np.arange(6).reshape(2,3)
-        y_val = 2.0*np.ones((2,3))
-        z_val = np.ones((2,3))
-        d_val = np.arange(12).reshape(2,3,2)
-
-        x = csdl.Variable(name = 'x', value = x_val)
-        y = csdl.Variable(name = 'y', value = y_val)
-        z = csdl.Variable(name = 'z', value = z_val)
-        d = csdl.Variable(name = 'd', value = d_val)
-
-        # minimum of a single tensor variable
-        s1 = csdl.minimum(x)
-        print(s1.value)
-
-        # minimum of a single tensor constant
-        s2 = csdl.minimum(x_val)
-        print(s2.value)
-
-        # minimum of a single tensor variable along a specified axis
-        s3 = csdl.minimum(x, axes=(1,))
-        print(s3.value)
-
-        # minimum of a single tensor variable along 2 specified axes
-        s4 = csdl.minimum(d, axes=(0,2))
-        print(s4.value)
-
-        # minimum of multiple tensor variables
-        s5 = csdl.minimum(x, y, z)
-        print(s5.value)
-
-        # minimum of multiple tensor constants and variables
-        s6 = csdl.minimum(x_val, y_val, z)
-        print(s6.value)
-        # docs:exit
-
-        compare_values = []
-        t1 = np.array([0.])
-        t3 = np.min(x_val, axis=1)
-        t4 = np.min(d_val, axis=(0,2))
-        t5 = np.minimum(x_val, y_val)
-        t5 = np.minimum(t5, z_val)
-
-        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
-        compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
-        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
-        compare_values += [csdl_tests.TestingPair(s4, t4, tag = 's4', decimal=8)]
-        compare_values += [csdl_tests.TestingPair(s5, t5, tag = 's5', decimal=8)]
-        compare_values += [csdl_tests.TestingPair(s6, t5, tag = 's6', decimal=8)]
-        
-        self.run_tests(compare_values = compare_values,)
+        self.docstest(minimum)
 
 if __name__ == '__main__':
     test = TestMinimum()
