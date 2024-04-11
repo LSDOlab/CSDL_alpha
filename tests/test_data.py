@@ -6,12 +6,14 @@ class TestData(CSDLTest):
         self.prep()
         import csdl_alpha as csdl
         from csdl_alpha.src.graph.variable import Variable
-        import numpy as np
 
         a = Variable(value=2, name='a')
         a.add_tag('test')
         a.hierarchy = 1
         b = Variable(value=3)
+        csdl.enter_namespace('test1')
+        c = Variable(value=4)
+        csdl.exit_namespace()
         csdl.save_all_variables()
 
         dv = Variable(value=4)

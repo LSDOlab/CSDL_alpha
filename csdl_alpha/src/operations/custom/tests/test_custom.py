@@ -3,12 +3,12 @@ import csdl_alpha.utils.test_utils as csdl_tests
 import pytest
 
 # basic custom explicit
-class BasicCustomExplicitModel(csdl.CustomExplicitModel):
+class BasicCustomExplicitOperation(csdl.CustomExplicitOperation):
     def initialize(self):
         pass
 
 # custom paraboloid model
-class Paraboloid(csdl.CustomExplicitModel):
+class Paraboloid(csdl.CustomExplicitOperation):
     def initialize(self):
         self.a = self.parameters.declare('a')
         self.b = self.parameters.declare('b')
@@ -66,9 +66,9 @@ class TestCustom(csdl_tests.CSDLTest):
         self.prep()
 
         with pytest.raises(NotImplementedError) as e_info:
-            csdl.CustomExplicitModel()
+            csdl.CustomExplicitOperation()
 
-        custom_model = BasicCustomExplicitModel()
+        custom_model = BasicCustomExplicitOperation()
 
         methods = [
             ("evaluate", {}),
@@ -85,7 +85,7 @@ class TestCustom(csdl_tests.CSDLTest):
 
     # def test_derivative_parameters(self):
     #     self.prep()
-    #     model = BasicCustomExplicitModel()
+    #     model = BasicCustomExplicitOperation()
     #     model.outputs = {'y1': csdl.Variable(value=1), 'y2': csdl.Variable(value=2)}
     #     model.inputs = {'x1': csdl.Variable(value=1), 'x2': csdl.Variable(value=2)}
 
@@ -103,7 +103,7 @@ class TestCustom(csdl_tests.CSDLTest):
     def test_declare_derivative_parameters(self):
         self.prep()
         
-        model = BasicCustomExplicitModel()
+        model = BasicCustomExplicitOperation()
         model.inputs = {'x': csdl.Variable(value=1), 'y': csdl.Variable(value=2)}
         model.outputs = {'f': csdl.Variable(value=3), 'g': csdl.Variable(value=4)}
 

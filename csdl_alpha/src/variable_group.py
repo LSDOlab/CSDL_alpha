@@ -2,17 +2,22 @@ from typing import Union
 import warnings
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
-from dataclasses import dataclass, is_dataclass
 
-# TODO: add freeze and whatnot
-@dataclass
 class VariableGroup:
+    """
+    Represents a group of variables.
+
+    This class provides a way to organize and manage a group of variables. It allows for defining checks
+    on the variables, adding tags to the variables, and saving the variables.
+    """
+    def __init__(self):
+        if not type(self) == VariableGroup:
+            raise TypeError("Subclasses of VariableGroup should be decorated with @dataclass.")
+        self.__post_init__()
 
     def __post_init__(self):
-        if not is_dataclass(self):
-            raise ValueError("VariableGroup must be a dataclass.")
         self._metadata = {}
-        self.define()
+        self.define_checks()
         self.check()
 
     def __setattr__(self, name, value):
@@ -33,19 +38,21 @@ class VariableGroup:
         return value
 
     def check(self):
+        """Applies all checks to the variables in the group.
+        """
         for key in self._metadata.keys():
             if not hasattr(self, key):
                 raise ValueError(f"Variable {key} not found in the group.")
             val = getattr(self, key)
             setattr(self, key, self._check_pamaeters(key, val))
 
-    def define(self):
+    def define_checks(self):
         pass
     
-    def declare_parameters(self, name, type=None, shape=None, variablize=False):
-        """Declare parameters for a variable in the group.
+    def add_check(self, name:str, type=None, shape:tuple=None, variablize:bool=False):
+        """Declare parameters to be checked for a variable in the group.
 
-        This method is used to declare parameters for a variable in the group. The parameters
+        This method is used to define checks for a variable in the group. The parameters that can be checked
         include the name, type, shape, and whether the variable should be variablized.
 
         Parameters
@@ -69,11 +76,11 @@ class VariableGroup:
         if not name in self.__annotations__:
             raise ValueError(f"Variable {name} not found in the group.")
         if name in self._metadata:
-            raise ValueError(f"Parameters for variable {name} already declared.")
+            raise ValueError(f"Checks for variable {name} already declared.")
         
         self._metadata[name] = {'type': type, 'shape': shape, 'variablize': variablize}
 
-    def add_tag(self, tag):
+    def add_tag(self, tag:str):
         """Adds a tag to all Variables in the group or subgroups.
 
         Parameters
@@ -94,61 +101,23 @@ class VariableGroup:
 
     # def print_all(self):
 
+# if __name__ == '__main__':
+#     import csdl_alpha as csdl
 
-# NOTE: change name of declare_parameters to declare_variable? - deconflict with model parameters dictionary
+#     recroder = csdl.Recorder()
+#     recroder.start()
 
-if __name__ == '__main__':
-    import csdl_alpha as csdl
-
-    
-    # @dataclass
-    # class MassProperties(VariableGroup):
-    #     cg : Union[Variable, int, float]
-    #     mass : Variable
-    #     inertia_tensor: Variable
-
-    #     def define(self):
-    #         self.declare_parameters('cg', shape=(3,), variablize=True)
-    #         self.declare_parameters('mass', type=Variable, shape=(1,))
-    #         self.declare_parameters('inertia_tensor', type=Variable, shape=(3,3))
-
-
-    # my_vg  = VariableGroup()
-    # my_vg.a = 1
-    # my_vg.b = csdl.Variable(shape=(1,), value=1)
-    # my_vg.save()
-
-
-    # class MyVG(VariableGroup):
-
-    #     @args2atts
-    #     def __init__(self, a:Union[Variable, int, float], b:Variable):
-    #         self.check_shape(a, (1,))
-    #         self.check_shape(b, (1,))
-
-
-    # vast = VAST(parameters)
-    # vast.evaluate(mesh, velocities, ...)
-
-    # vast = VAST(parameters)
-    # vast_inputs = VASTInputs(mesh, velocities, ...)
-    # vast.evaluate(vast_inputs)
-
-
+#     vg = csdl.VariableGroup()
+#     vg.a = 1
+#     vg.b = csdl.Variable(shape=(1,), value=1)
 
     # @dataclass
-    # class MyVG(VariableGroup):
+    # class VG(VariableGroup):
     #     a : Union[Variable, int, float]
     #     b : Variable
 
-    #     # NOTE: change to self.add_check and define_checks
     #     def define_checks(self):
     #         self.add_check('a', shape=(1,), variablize=True)
-    #         self.add_check('b', shape=(1,))
+    #         self.add_check('b', type=Variable, shape=(1,))
 
-    # recorder = csdl.Recorder()
-    # recorder.start()
-
-    # my_vg = MyVG(a=1, b=csdl.Variable(shape=(1,), value=1))
-
-    # b = my_vg.b
+    # vg = VG(a=1, b=csdl.Variable(shape=(1,), value=1))

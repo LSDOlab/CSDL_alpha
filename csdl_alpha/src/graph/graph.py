@@ -369,8 +369,6 @@ class Graph():
 
         return dot
 
-
-
     def name_node(self, node):
         attr_dict = {}
         if node.name is None:

@@ -12,7 +12,7 @@ if __name__ == '__main__':
     profiler.enable()
 
     start = time.time()
-    recorder = csdl.build_new_recorder(inline = True, debug=False)
+    recorder = csdl.Recorder(inline = True, debug=False)
     recorder.start()
     x = csdl.Variable(name = 'x', value = 3.0)
     z = csdl.Variable(name = 'z', value = 2.0)
