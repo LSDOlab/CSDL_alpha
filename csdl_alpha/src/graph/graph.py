@@ -307,7 +307,7 @@ class Graph():
 
 
         dot = self.to_dot(node_attr_fn=self.name_node)
-        dot.write_png(f'{filename}.png')
+        dot.write_svg(f'{filename}.svg')
 
 
         # graphviz_draw(self, node_attr_fn = self.name_node, filename= 'graph.png')
