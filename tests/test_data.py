@@ -6,12 +6,14 @@ class TestData(CSDLTest):
         self.prep()
         import csdl_alpha as csdl
         from csdl_alpha.src.graph.variable import Variable
-        import numpy as np
 
         a = Variable(value=2, name='a')
         a.add_tag('test')
         a.hierarchy = 1
         b = Variable(value=3)
+        csdl.enter_namespace('test1')
+        c = Variable(value=4)
+        csdl.exit_namespace()
         csdl.save_all_variables()
 
         dv = Variable(value=4)
@@ -33,7 +35,12 @@ class TestData(CSDLTest):
         assert variables['a'].hierarchy == a.hierarchy
         assert variables['a'].name == a.name
 
-
+# if __name__ == '__main__':
+#     import csdl_alpha as csdl
+#     recorder = csdl.Recorder()
+#     recorder.start()
+#     vars = csdl.import_h5py('test_data.hdf5', 'inline')
+#     print(vars)
 
 
         

@@ -102,6 +102,8 @@ class Recorder:
         """
         Exits the current namespace.
         """
+        if self.active_namespace.parent is None:
+            raise Exception("Attempting to exit root namespace")
         self.hierarchy -= 1
         self.active_namespace = self.active_namespace.parent
         self.active_namespace = self.active_namespace

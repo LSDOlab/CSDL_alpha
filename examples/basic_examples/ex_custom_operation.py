@@ -6,7 +6,7 @@ if __name__ == '__main__':
     import csdl_alpha as csdl
 
     # custom paraboloid model
-    class Paraboloid(csdl.CustomExplicitModel):
+    class Paraboloid(csdl.CustomExplicitOperation):
         def initialize(self):
             self.a = self.parameters.declare('a')
             self.b = self.parameters.declare('b')
@@ -31,11 +31,11 @@ if __name__ == '__main__':
 
             # construct output of the model
             output = csdl.VariableGroup()
-            output['f'] = f
+            output.f = f
 
             if self.return_g:
                 g = self.create_output('g', x.shape)
-                output['g'] = g
+                output.g = g
 
             return output
         
@@ -73,8 +73,8 @@ if __name__ == '__main__':
     paraboloid = Paraboloid(a=2, b=4, c=12, return_g=True)
     outputs = paraboloid.evaluate(x, y, z)
 
-    f = outputs['f']
-    g = outputs['g']
+    f = outputs.f
+    g = outputs.g
 
     print(f.value) # should be 8
     print(g.value) # should be 0 

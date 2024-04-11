@@ -15,9 +15,9 @@ class TestVariableGroup(CSDLTest):
         class CustomVariableGroup(VariableGroup):
             a : Union[Variable, int, float]
             b : Variable
-            def define(self):
-                self.declare_parameters('a', shape=(1,), variablize=True)
-                self.declare_parameters('b', type=Variable, shape=(1,))
+            def define_checks(self):
+                self.add_check('a', shape=(1,), variablize=True)
+                self.add_check('b', type=Variable, shape=(1,))
 
         # test basics
         a = 1
@@ -39,11 +39,11 @@ class TestVariableGroup(CSDLTest):
 
         # test error for declaring parameters twice
         with pytest.raises(ValueError):
-            vg.declare_parameters('a', shape=(1,), variablize=True)
+            vg.add_check('a', shape=(1,), variablize=True)
 
         # test error for declaring parameters that don't exist
         with pytest.raises(ValueError):
-            vg.declare_parameters('c', shape=(1,), variablize=True)
+            vg.add_check('c', shape=(1,), variablize=True)
 
         # test error for setting variable of wrong type
         with pytest.raises(ValueError):
@@ -58,9 +58,15 @@ class TestVariableGroup(CSDLTest):
             del vg.b
             vg.check()
 
+    def test_non_dataclass_vg(self):
+        self.prep()
 
-# if __name__ == '__main__':
-#     test = TestVariableGroup()
-#     test.test_custom_variable_group()
+        class CustomVariableGroup(VariableGroup):
+            a : Union[Variable, int, float]
+            b : Variable
+            def define_checks(self):
+                self.add_check('a', shape=(1,), variablize=True)
+                self.add_check('b', type=Variable, shape=(1,))
 
-        
+        with pytest.raises(TypeError):
+            CustomVariableGroup()        

@@ -1,9 +1,10 @@
 from csdl_alpha.utils.parameters import Parameters
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.operation import Operation
+from csdl_alpha.utils.inputs import variablize
 from csdl_alpha.src.graph.node import Node
 
-class CustomModel(Operation):
+class CustomOperation(Operation):
     def __init__(self, *args, **kwargs):
         self.parameters = Parameters()
         self.parameters.hold(kwargs)
@@ -14,7 +15,9 @@ class CustomModel(Operation):
         self.outputs = {}
         self.derivative_parameters = {}
 
-class CustomExplicitModel(CustomModel):
+# TODO: update this to new operation format
+
+class CustomExplicitOperation(CustomOperation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -60,9 +63,9 @@ class CustomExplicitModel(CustomModel):
         self.compute(inputs, comp_outputs)
 
         for key, output in self.outputs.items():
-            output.value = comp_outputs[key]
+            output.set_value(comp_outputs[key])
 
-    def create_output(self, name, shape):
+    def create_output(self, name:str, shape:tuple):
             """Create and store an output variable.
 
             This method creates a new output variable with the given name and shape,
@@ -96,7 +99,7 @@ class CustomExplicitModel(CustomModel):
         variable : csdl.Variable
             The input variable.
         """
-        self.inputs[key] = variable
+        self.inputs[key] = variablize(variable)
     
     def declare_derivative_parameters(
         self,

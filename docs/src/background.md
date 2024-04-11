@@ -2,18 +2,30 @@
 title: Background
 ---
 
-This page is intended to provide the reader with any theoretical
-knowledge or other concepts that form the basis of your package.
-This page can include equations, figures, flowcharts, etc. for a better understanding of the theory behind
-the package along with any code snippets necessary to explain the software design.
+-> Abstract grounding of CSDL
+    - it's a modeling language
+    - 3-stage compilation process? (graph transformations at least)
+    - the idea of a backend
 
-## Referencing using bib files
 
-You can add references in the `references.bib` file and cite them 
-in the page like this {cite:p}`perez2011python`. 
-You can also include a list of references cited at the end as shown below.
 
-## Bibliography
+Main classes
+- Node
+  - Variable
+  - Operation
+    - CustomOperation
+      - Explicit
+      - *Implicit*
+    - Solver
+- Recorder
+- Manager**
+- Graph
+- VariableGroup: They're sets of variables
+- Model
+- Namespace*
 
-```{bibliography} references.bib
-```
+
+
+
+
+
