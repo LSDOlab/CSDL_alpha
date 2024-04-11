@@ -14,7 +14,6 @@ from .average import average
 from .maximum import maximum
 from .minimum import minimum
 from .absolute import absolute
-from .trig import sin, cos, tan
 
 # getting and setting
 from .set_get.setindex import set_index
@@ -23,9 +22,11 @@ from .set_get.loop_slice import _loop_slice as slice
 
 
 # Trigonometric operations
+from .trig import sin, cos, tan
 
 
 # Linear algebra operations
 from .block_matrix import blockmat
+from .linalg.matvec import matvec
 
 # Tensor operations
