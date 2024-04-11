@@ -14,9 +14,9 @@ class Maximum(Operation):
         super().__init__(x)
         self.name  = 'maximum'
         out_shapes = (out_shape,)
+        self.set_dense_outputs(out_shapes)
         self.axes  = axes
         self.rho   = rho
-        self.set_dense_outputs(out_shapes)
         in_shape = x.shape
 
         if axes is not None:
@@ -85,9 +85,63 @@ class ElementwiseMaximum(Operation):
         return smooth_ew_max
 
 def maximum(*args, axes=None, rho=20.):
-    """
-    doc strings
-    """
+    '''
+    Computes the maximum entry in the input tensor if a single argument is provided.
+    Computes the maximum entries along the specified axes if `axes` argument is given.
+    Computes the elementwise maximum of multiple variables of the same shape, 
+    if multiple arguments are provided. Axes argument is not allowed in this case.
+
+    Parameters
+    ----------
+    *args : tuple of Variable or np.ndarray objects
+        Input tensor/s whose maximum needs to be computed.
+    axes : tuple of int, default=None
+        Axes along which to compute the maximum of the input tensor,
+        if there's only one input tensor.
+    rho : float, default=20.
+        Smoothing parameter for the maximum function.
+
+    Returns
+    -------
+    Variable
+        Maximum entry in the input tensor if a single argument is provided.
+        Maximum entries along the specified axes if `axes` argument is given.
+        Elementwise maximum of multiple variables of the same shape, 
+        if multiple arguments are provided.
+    
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x_val = np.arange(6).reshape(2,3)
+    >>> x = csdl.Variable(value = x_val)
+    >>> y1 = csdl.maximum(x)
+    >>> y1.value
+    array([5.])
+
+    # maximum of a single tensor variable along a specified axis
+
+    >>> y2 = csdl.maximum(x, axes=(1,))
+    >>> y2.value
+    array([2., 5.])
+
+    # maximum of multiple tensor variables
+
+    >>> y3 = csdl.maximum(x, 2 * np.ones((2,3)), np.ones((2,3)))
+    >>> y3.value
+    array([[2.        , 2.        , 2.03465736],
+           [3.        , 4.        , 5.        ]])
+
+    # Note that y3.value[0,2] is not exactly 2.0 due to the smoothing term.
+    # It can be made closer to 2.0 by increasing the value of 
+    # the smoothing parameter rho as shown below.
+    
+    >>> y = csdl.maximum(x, 2 * np.ones((2,3)), np.ones((2,3)), rho=200)
+    >>> y.value
+    array([[2.        , 2.        , 2.00346574],
+           [3.        , 4.        , 5.        ]])
+    '''
+
     # Multiple Variables to find maximum
     if axes is not None and len(args) > 1:
         raise ValueError('Cannot find maximum of multiple Variables along specified axes. \
@@ -180,62 +234,7 @@ class TestMaximum(csdl_tests.CSDLTest):
 
 
     def test_example(self,):
-        self.prep()
-
-        # docs:entry
-        import csdl_alpha as csdl
-        import numpy as np
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-        x_val = 3.0*np.arange(6).reshape(2,3)
-        y_val = 2.0*np.ones((2,3))
-        z_val = np.ones((2,3))
-        d_val = np.arange(12).reshape(2,3,2)
-
-        x = csdl.Variable(name = 'x', value = x_val)
-        y = csdl.Variable(name = 'y', value = y_val)
-        z = csdl.Variable(name = 'z', value = z_val)
-        d = csdl.Variable(name = 'd', value = d_val)
-
-        # maximum of a single tensor variable
-        s1 = csdl.maximum(x)
-        print(s1.value)
-
-        # maximum of a single tensor constant
-        s2 = csdl.maximum(x_val)
-        print(s2.value)
-
-        # maximum of a single tensor variable along a specified axis
-        s3 = csdl.maximum(x, axes=(1,))
-        print(s3.value)
-
-        # maximum of a single tensor variable along 2 specified axes
-        s4 = csdl.maximum(d, axes=(0,2))
-
-        # maximum of multiple tensor variables
-        s5 = csdl.maximum(x, y, z)
-        print(s5.value)
-
-        # maximum of multiple tensor constants and variables
-        s6 = csdl.maximum(x_val, y_val, z)
-        print(s6.value)
-        # docs:exit
-
-        compare_values = []
-        t1 = np.array([15.])
-        t3 = np.max(x_val, axis=1)
-        t4 = np.max(d_val, axis=(0,2))
-        t5 = np.maximum(x_val, y_val)
-
-        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
-        compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
-        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
-        compare_values += [csdl_tests.TestingPair(s4, t4, tag = 's4', decimal=8)]
-        compare_values += [csdl_tests.TestingPair(s5, t5, tag = 's5', decimal=8)]
-        compare_values += [csdl_tests.TestingPair(s6, t5, tag = 's6', decimal=8)]
-        
-        self.run_tests(compare_values = compare_values,)
+        self.docstest(maximum)
 
 if __name__ == '__main__':
     test = TestMaximum()
