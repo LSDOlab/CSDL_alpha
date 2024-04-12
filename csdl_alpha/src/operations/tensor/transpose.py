@@ -11,7 +11,7 @@ import numpy as np
 @set_properties(linear=True, diagonal_jacobian = True)
 class Transpose(Operation):
     '''
-    Elementwise addition of two tensors of the same shape.
+    Transpose of a tensor.
     '''
 
     def __init__(self,x:Variable) -> Variable:
@@ -23,7 +23,8 @@ class Transpose(Operation):
         return np.transpose(x)
 
 def transpose(x:VariableLike) -> Variable:
-    """ Invert the axes of a tensor. The shape of the output is the reverse of the input shape.
+    """ 
+    Invert the axes of a tensor. The shape of the output is the reverse of the input shape.
 
     Parameters
     ----------
