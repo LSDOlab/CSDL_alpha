@@ -13,18 +13,14 @@ if __name__ == '__main__':
             self.c = self.parameters.declare('c')
             self.return_g = self.parameters.declare('return_g', default=False)
 
-        def evaluate(self, x, y, z):
+        def evaluate(self, inputs: csdl.VariableGroup):
             # assign method inputs to input dictionary
-            # self.inputs['x'] = x
-            # self.inputs['y'] = y
-            # self.inputs['z'] = z
-
-            self.declare_input('x', x)
-            self.declare_input('y', y)
-            self.declare_input('z', z)
+            self.declare_input('x', inputs.x)
+            self.declare_input('y', inputs.y)
+            self.declare_input('z', inputs.z)
 
             # declare output variables
-            f = self.create_output('f', x.shape)
+            f = self.create_output('f', inputs.x.shape)
 
             # declare any derivative parameters
             self.declare_derivative_parameters('f', 'z', dependent=False)
@@ -34,7 +30,7 @@ if __name__ == '__main__':
             output.f = f
 
             if self.return_g:
-                g = self.create_output('g', x.shape)
+                g = self.create_output('g', inputs.x.shape)
                 output.g = g
 
             return output
@@ -63,15 +59,17 @@ if __name__ == '__main__':
                 derivatives['g', 'z'] = outputs_vals['f']
 
 
-    recroder = csdl.Recorder(inline=True)
-    recroder.start()
+    recorder = csdl.Recorder(inline=True)
+    recorder.start()
 
-    x = csdl.Variable(value=0.0, name='x')
-    y = csdl.Variable(value=0.0, name='y')
-    z = csdl.Variable(value=0.0, name='z')
+    inputs = csdl.VariableGroup()
+
+    inputs.x = csdl.Variable(value=0.0, name='x')
+    inputs.y = csdl.Variable(value=0.0, name='y')
+    inputs.z = csdl.Variable(value=0.0, name='z')
 
     paraboloid = Paraboloid(a=2, b=4, c=12, return_g=True)
-    outputs = paraboloid.evaluate(x, y, z)
+    outputs = paraboloid.evaluate(inputs)
 
     f = outputs.f
     g = outputs.g
@@ -79,4 +77,4 @@ if __name__ == '__main__':
     print(f.value) # should be 8
     print(g.value) # should be 0 
 
-    recroder.stop()
+    recorder.stop()

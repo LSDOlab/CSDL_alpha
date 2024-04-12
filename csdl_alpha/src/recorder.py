@@ -211,6 +211,18 @@ class Recorder:
         
         self.active_graph_node = parent_graph_node
         self.active_graph = parent_graph_node.value
+
+    def visualize_graph(self):
+        """
+        Visualizes the graph.
+        """
+        self.active_graph.visualize()
+
+    def visualize_adjacency_matrix(self):
+        """
+        Visualizes the adjacency matrix of the graph.
+        """
+        self.active_graph.visualize_n2()
         
 
 

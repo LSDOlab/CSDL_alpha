@@ -17,8 +17,8 @@
 # -- Project information -----------------------------------------------------
 
 project = 'csdl_alpha'
-copyright = '2023, Anugrah'
-author = 'Anugrah'
+copyright = '2024, LSDO Lab'
+author = 'LSDO Lab'
 version = '0.1'
 # release = 0.1.0rtc
 

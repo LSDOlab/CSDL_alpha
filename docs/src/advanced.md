@@ -11,6 +11,7 @@ Here we highlight the important features of CSDL.
 
 advanced/nl_solvers
 advanced/loops
+advanced/sparse_mtx
 advanced/custom_model
 advanced/optimization
 ```
