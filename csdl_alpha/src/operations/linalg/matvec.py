@@ -3,6 +3,7 @@ import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
 from csdl_alpha.src.operations.linalg.utils import process_matA_vecb
+from csdl_alpha.utils.typing import VariableLike
 
 import pytest
 
@@ -17,7 +18,7 @@ class MatVec(Operation):
     def compute_inline(self, A, x):
         return A @ x
 
-def matvec(A:Variable, x:Variable) -> Variable:
+def matvec(A:VariableLike, x:VariableLike) -> Variable:
     """matrix-vector multiplication A*x. The number of columns of A must be equal to the number of rows of x.
     If x is 1D, reshaped to 2D. 
     

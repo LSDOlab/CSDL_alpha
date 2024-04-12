@@ -3,6 +3,7 @@ from csdl_alpha.src.graph.variable import Variable
 
 class TestVariable(csdl_tests.CSDLTest):
     def test_docstrings(self):
-        self.docstest(Variable.flatten)
+        self.docstest(Variable.flatten) 
         self.docstest(Variable.reshape)
+        self.docstest(Variable.T)
     
