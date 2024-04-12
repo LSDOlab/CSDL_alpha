@@ -36,6 +36,7 @@ from .tensor.inner import inner
 from .tensor.reshape import reshape
 from .tensor.transpose import transpose
 from .tensor.expand import expand
+from .tensor.reorder_axes import reorder_axes
 
 # Special operations
 from .special.bessel import bessel
