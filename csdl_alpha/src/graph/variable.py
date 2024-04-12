@@ -231,5 +231,33 @@ class Variable(Node):
         from csdl_alpha.src.operations.tensor.reshape import reshape
         return reshape(self, (self.size,))
 
+    def T(self: 'Variable')->'Variable':
+        """ Invert the axes of a tensor. The shape of the output is the reverse of the input shape.
+
+        Parameters
+        ----------
+        x : VariableLike
+            
+        Returns
+        -------
+        out: Variable
+
+        Examples
+        --------
+        >>> recorder = csdl.Recorder(inline = True)
+        >>> recorder.start()
+        >>> x = csdl.Variable(value = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]))
+        >>> csdl.transpose(x).value
+        array([[1., 4.],
+               [2., 5.],
+               [3., 6.]])
+        >>> x.T().value # equivalent to the above
+        array([[1., 4.],
+               [2., 5.],
+               [3., 6.]])
+        """
+        from csdl_alpha.src.operations.tensor.transpose import transpose
+        return transpose(self)
+
 class ImplicitVariable(Variable):
     pass

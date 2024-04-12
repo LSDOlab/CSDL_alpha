@@ -34,3 +34,8 @@ from .linalg.linear_solve import solve_linear
 from .tensor.outer import outer
 from .tensor.inner import inner
 from .tensor.reshape import reshape
+from .tensor.transpose import transpose
+from .tensor.expand import expand
+
+# Special operations
+from .special.bessel import bessel

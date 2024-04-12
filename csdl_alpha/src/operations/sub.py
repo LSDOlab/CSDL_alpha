@@ -41,7 +41,6 @@ def sub(x,y):
     """
     
     if check_expand_subgraphs():
-        print("expanding")
         return evaluate_sub(x,y)
     else:
         op = Sub(x,y)

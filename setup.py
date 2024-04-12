@@ -37,6 +37,7 @@ setup(
     install_requires=[
         'numpy',
         'pytest',
+        'scipy',
         'rustworkx',
         'h5py',
         'pydot',
