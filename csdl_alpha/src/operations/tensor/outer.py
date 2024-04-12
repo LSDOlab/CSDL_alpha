@@ -4,6 +4,8 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 import pytest
+from csdl_alpha.utils.typing import VariableLike
+
 class VectorOuter(Operation):
     def __init__(self,x,y):
         super().__init__(x,y)
@@ -14,7 +16,7 @@ class VectorOuter(Operation):
         import numpy as np
         return np.outer(x, y)
 
-def outer(x:Variable,y:Variable)->Variable:
+def outer(x:VariableLike,y:VariableLike)->Variable:
     """Outer product of two vectors x and y. The result is a matrix of shape (x.size, y.size).
 
     Parameters

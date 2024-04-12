@@ -1,5 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ComposedOperation, check_expand_subgraphs
 from csdl_alpha.src.graph.variable import Variable
+from csdl_alpha.utils.typing import VariableLike
 
 class Sub(ComposedOperation):
 
@@ -14,7 +15,7 @@ class Sub(ComposedOperation):
 def evaluate_sub(x:Variable,y:Variable)->Variable:
     return x+(-y)
 
-def sub(x,y):
+def sub(x:VariableLike,y:VariableLike)->Variable:
     """Elementwise subtraction of two tensors x and y.
 
     Parameters

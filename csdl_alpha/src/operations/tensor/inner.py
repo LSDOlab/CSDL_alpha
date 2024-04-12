@@ -4,6 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 import pytest
+from csdl_alpha.utils.typing import VariableLike
 
 class VectorInner(Operation):
     def __init__(self,x,y):
@@ -15,7 +16,7 @@ class VectorInner(Operation):
         import numpy as np
         return np.inner(x, y)
 
-def inner(x:Variable,y:Variable)->Variable:
+def inner(x:VariableLike,y:VariableLike)->Variable:
     """Inner product of two vectors x and y. The result is a scalar of shape (1,).
 
     Parameters

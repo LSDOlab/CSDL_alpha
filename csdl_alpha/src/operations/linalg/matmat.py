@@ -3,6 +3,7 @@ import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
 import pytest
+from csdl_alpha.utils.typing import VariableLike
 
 @set_properties()
 class MatMat(Operation):
@@ -15,7 +16,7 @@ class MatMat(Operation):
     def compute_inline(self, A, B):
         return A @ B
 
-def matmat(A:Variable, B:Variable) -> Variable:
+def matmat(A:VariableLike, B:VariableLike) -> Variable:
     """matrix-matrix multiplication A*B. The number of columns of A must be equal to the number of rows of x.
     
     Parameters

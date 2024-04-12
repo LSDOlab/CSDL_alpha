@@ -6,4 +6,6 @@ class TestVariable(csdl_tests.CSDLTest):
         self.docstest(Variable.flatten) 
         self.docstest(Variable.reshape)
         self.docstest(Variable.T)
+        self.docstest(Variable.__getitem__)
+        self.docstest(Variable.set)
     
