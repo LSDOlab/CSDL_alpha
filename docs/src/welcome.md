@@ -29,4 +29,5 @@ src/basics
 src/advanced
 src/examples
 src/api
+src/tutorials
 ```
