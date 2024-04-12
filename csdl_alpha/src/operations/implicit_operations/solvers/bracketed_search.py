@@ -1,6 +1,6 @@
 from csdl_alpha.src.operations.implicit_operations.solvers.nonlinear_solver import NonlinearSolver
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import scalarize, ingest_value
+from csdl_alpha.utils.typing import VariableLike
 import numpy as np
 import math
 
@@ -9,32 +9,42 @@ from typing import Union
 class BracketedSearch(NonlinearSolver):
     
     def __init__(
-            self,
-            name = 'bracketed_search',
-            print_status = True,
-            tolerance=1e-10,
-            max_iter=100,
-        ):
-        """
-        A Bracketed Search solver!
-        """
+                self,
+                name:str = 'bracketed_search',
+                print_status:bool = True,
+                tolerance:VariableLike=1e-10,
+                max_iter:int=100,
+            ):
+            """Initialize the BracketedSearch solver.
 
-        super().__init__(
-            name = name,
-            print_status = print_status,
-            tolerance = tolerance,
-            max_iter = max_iter
-        )
+            Parameters
+            ----------
+            name : str, optional
+                The name of the solver. Defaults to 'bracketed_search'.
+            print_status : bool, optional
+                Whether to print the solver status during execution. Defaults to True.
+            tolerance : VariableLike, optional
+                The tolerance value used to determine convergence. Defaults to 1e-10.
+            max_iter : int, optional
+                The maximum number of iterations allowed. Defaults to 100.
+            """
 
-        self.metadata['tolerance'] = tolerance
-        self.metadata['max_iter'] = max_iter
+            super().__init__(
+                name = name,
+                print_status = print_status,
+                tolerance = tolerance,
+                max_iter = max_iter
+            )
+
+            self.add_metadata('tolerance', tolerance)
+            self.add_metadata('max_iter', max_iter)
 
     def add_state(
             self,
             state: Variable,
             residual: Variable,
-            bracket: tuple[Union[Variable, np.ndarray, float, int], Union[Variable, np.ndarray, float, int]],
-            tolerance: Union[Variable, np.ndarray, float] = None
+            bracket: tuple[VariableLike, VariableLike],
+            tolerance: VariableLike = None
         ):
         """Add a state to the solver.
 

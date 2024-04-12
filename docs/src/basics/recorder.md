@@ -1,4 +1,6 @@
-# Understanding CSDL: Working with Recorder, Graphs, and Nodes
+# Understanding CSDL
+
+This section will briefly overview how CSDL works, and introduce the Recorder, Graph, and Node classes.
 
 ## Building Graphs
 
@@ -26,7 +28,7 @@ becomes the following graph represented in the `Recorder`:
 
 <!-- <img src="../images/basic_graph.svg" alt="directed graph with variables and operations" width="200"/> -->
 
-Creating a variable via `csdl.Variable()` simultaniously creates a node in the graph, and performing operations on variables creates `Operation` nodes, in addition to creating nodes for output variables and any non-variable inputs. Additionally, edges are created between nodes to represent the flow of data through the graph. Note that the variable objects that exist in code you write and the variable nodes in the graph are on in the same.
+Creating a variable via `csdl.Variable()` simultaneously creates a node in the graph, and performing operations on variables creates `Operation` nodes, in addition to creating nodes for output variables and any non-variable inputs. Additionally, edges are created between nodes to represent the flow of data through the graph. Note that the variable objects that exist in code you write and the variable nodes in the graph are on in the same.
 
 CSDL graphs are directed acyclic graphs (DAGs), meaning that they have no cycles and data flows in one direction. This allows for efficient optimization and execution of the graph. Additionally, the graph is bipartite, meaning that nodes can be divided into two sets, variables and operations, and edges only connect nodes from different sets. While implicit relationships may exist within your model, they must be resolved into explicit relationships in the graph.
 
@@ -44,6 +46,10 @@ To simplify the graph, CSDL collapses parts of the graph into single operation n
 ## Variables
 
 Variables represent values in CSDL, and are generally n-dimensional arrays. While a variable may not have a specific value until the graph is executed, they always have a fixed shape. Additionally, variables are immutable, meaning they can be the output of at most one operation.
+
+## Operations
+
+Operations represent mathematical operations in CSDL, and are generally functions that take one or more variables as input and return one or more variables as output. While operation objects are added to the graph just like variables, you do not generally interact with the operation objects directly. Instead, CSDL provides functions that create operation objects and add them to the graph, returning the Variable outputs. CSDL provides a wide range of operations, including basic arithmetic operations, linear algebra operations, and activation functions. Additionally, users can define custom operations if needed.
 
 
 

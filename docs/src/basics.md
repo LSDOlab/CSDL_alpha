@@ -10,6 +10,7 @@ Here we highlight the important features of CSDL.
 :includehidden:
 
 basics/recorder
+basics/simple
 basics/functional
 basics/namspacing
 basics/variablegroup
