@@ -2,6 +2,8 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.src.operations.linalg.utils import process_matA_vecb
+
 import pytest
 
 @set_properties()
@@ -40,27 +42,10 @@ def matvec(A:Variable, x:Variable) -> Variable:
     >>> csdl.matvec(A, x).value
     array([ 5, 11, 17])
     """
-
     A_mat = variablize(A)
     x_vec = variablize(x)
 
-    # checks:
-    # - A must be 2D
-    # - x must be 2D (if 1D, reshaped to 2D)
-    # - A.shape[1] == x.shape[0]
-    if len(A_mat.shape) != 2:
-        raise ValueError(f"Matrix A must be 2D, but has shape {A_mat.shape}")
-    if len(x.shape) == 1:
-        x_vec = x_vec.reshape((x_vec.size, 1))
-    elif len(x.shape) == 2:
-        if x_vec.shape[1] != 1:
-            raise ValueError(f"x must have one column, but has shape {x_vec.shape}")
-    elif len(x_vec.shape) != 2:
-        raise ValueError(f"Vector x must be 1D or 2D, but has shape {x_vec.shape}")
-    if A_mat.shape[1] != x_vec.shape[0]:
-        raise ValueError(f"Number of columns of A must be equal to the number of rows of x. {A_mat.shape[1]} != {x_vec.shape[0]}")
-
-    output = MatVec(A_mat, x_vec).finalize_and_return_outputs()
+    output = MatVec(*process_matA_vecb(A_mat, x_vec)).finalize_and_return_outputs()
 
     if len(x.shape) == 2:
         return output

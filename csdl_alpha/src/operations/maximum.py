@@ -119,8 +119,8 @@ def maximum(*args, axes=None, rho=20.):
     >>> y1.value
     array([5.])
 
-    # maximum of a single tensor variable along a specified axis
-
+    Maximum of a single tensor variable along a specified axis
+    
     >>> y2 = csdl.maximum(x, axes=(1,))
     >>> y2.value
     array([2., 5.])

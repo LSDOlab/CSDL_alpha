@@ -3,6 +3,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 import numpy as np
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
+from csdl_alpha.utils.typing import VariableLike
 from csdl_alpha.src.graph.variable import Variable
 
 class Power(ElementwiseOperation):
@@ -32,7 +33,7 @@ class BroadcastPower(Operation):
     def compute_inline(self, x, y):
         return x ** y
     
-def power(x:Variable, y:Variable) -> Variable:
+def power(x:VariableLike, y:VariableLike) -> Variable:
     '''
     Computes the power of the first input with exponent as the second input.
     If one of the inputs is a scalar, it is broadcasted to the shape of the other input.

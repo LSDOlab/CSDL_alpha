@@ -2,6 +2,7 @@ from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.utils.inputs import variablize
 from csdl_alpha.src.graph.operation import Operation, set_properties 
+from csdl_alpha.utils.typing import VariableLike
 
 class Mult(ElementwiseOperation):
 

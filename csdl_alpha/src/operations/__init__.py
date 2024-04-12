@@ -27,6 +27,7 @@ from .trig import sin, cos, tan
 from .block_matrix import blockmat
 from .linalg.matvec import matvec
 from .linalg.matmat import matmat
+from .linalg.linear_solve import solve_linear
 
 # Tensor operations
 from .tensor.outer import outer
