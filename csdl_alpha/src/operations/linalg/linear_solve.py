@@ -67,7 +67,7 @@ def solve_linear(
         raise ValueError(f"Matrix A must be square, but has shape {A.shape}")
 
     if not isinstance(solver, LinearSolver):
-        raise TypeError(f"Solver must be an instance of LinearSolver. Got {type(solver)}.")
+        raise TypeError(f"Solver must be a LinearSolver. Got {type(solver)}.")
 
     output = LinearSolve(A_mat, b_vec, solver).finalize_and_return_outputs()
 
@@ -155,6 +155,10 @@ class TestLinear(csdl_tests.CSDLTest):
         with pytest.raises(ValueError):
             x = csdl.solve_linear(A,b)
 
+        A = csdl.Variable(value = np.ones((2,2)))
+        b = csdl.Variable(value = np.ones((2,)))
+        with pytest.raises(TypeError):
+            x = csdl.solve_linear(A,b, 's')
 
     def test_docstrings(self):
         self.docstest(solve_linear)

@@ -3,7 +3,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
-import csdl_alpha as csdl
+from csdl_alpha.utils.typing import VariableLike
 
 import numpy as np
 
@@ -19,16 +19,17 @@ class Exp(ComposedOperation):
         return evaluate_exp(x)
     
 def evaluate_exp(x):
+    import csdl_alpha as csdl
     return csdl.power(np.e, x)
     # return np.e ** x
 
-def exp(x):
+def exp(x:VariableLike) -> Variable:
     '''
     Elementwise exponential of the input tensor or scalar.
 
     Parameters
     ----------
-    x : Variable or np.ndarray or float or int
+    x : VariableLike
         Input tensor to take the exponential of.
 
     Returns
