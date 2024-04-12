@@ -19,6 +19,26 @@ def test_subgraphs():
     recorder.stop()
 
 
+def test_with_namespacing():
+    import csdl_alpha as csdl
+
+    recorder = csdl.Recorder()
+    recorder.start()
+    a = csdl.Variable((1,), name='a')
+    with csdl.Namespace('test1'):
+        b = csdl.Variable((1,), name='b')
+        with csdl.Namespace('test2'):
+            c = csdl.Variable((1,), name='c')
+        d = csdl.Variable((1,), name='d')
+    e = csdl.Variable((1,), name='e')
+    recorder.stop()
+    assert a.namespace.name is None
+    assert b.namespace.name == 'test1'
+    assert c.namespace.name == 'test2'
+    assert c.namespace.prepend == 'test1.test2'
+    assert d.namespace.name == 'test1'
+    assert e.namespace.name is None
+
 def test_namespacing():
     import csdl_alpha as csdl
     from csdl_alpha.src.graph.variable import Variable

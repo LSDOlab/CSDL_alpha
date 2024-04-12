@@ -17,6 +17,17 @@ def build_new_recorder(inline = False, debug = False, expand_ops = False, auto_h
     from .src.recorder import Recorder
     return Recorder(inline = inline, debug=debug, expand_ops=expand_ops, auto_hierarchy=auto_hierarchy)
 
+class Namespace:
+    def __init__(self, namespace: str):
+        self.namespace = namespace
+        self.recorder = get_current_recorder()
+
+    def __enter__(self):
+        enter_namespace(self.namespace)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        exit_namespace()
+
 def enter_namespace(namespace: str):
     """
     Enters a new namespace.

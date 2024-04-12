@@ -75,7 +75,7 @@ class Variable(Node):
         if self.name is None:
             self.name = name
         if self.recorder.active_namespace.prepend is not None:
-            self.names.append(f'{self.namespace.prepend}.{name}')
+            self.names.append(f'{self.recorder.active_namespace.prepend}.{name}')
         else:
             self.names.append(name)
     

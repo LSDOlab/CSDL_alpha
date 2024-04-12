@@ -5,19 +5,44 @@ if __name__ == '__main__':
     import csdl_alpha as csdl
     import numpy as np
 
-    class ParaboloidModel(csdl.Model):
+    class ParaboloidModel:
 
-        def initialize(self):
-            self.a = self.parameters.declare('a')
-            self.b = self.parameters.declare('b')
-            self.c = self.parameters.declare('c')
+        def __init__(self, a: float, b: float, c: float):
+            """
+            Initializes a Paraboloid object with the given coefficients.
 
-        def evaluate(self, x, y):
-            # x and y are the same python objects as used in line 19
-            f = csdl.square(x-self.a) + x*y + csdl.square(y+self.b) - self.c
+            Parameters
+            ----------
+            a : float
+                The coefficient of the x^2 term in the paraboloid equation.
+            b : float
+                The coefficient of the y^2 term in the paraboloid equation.
+            c : float
+                The coefficient of the xy term in the paraboloid equation.
+            """
+            self.a = a
+            self.b = b
+            self.c = c
 
-            # Optionally set a variable name
-            f.add_name('f') # This gives f the name 'paraboloid.f'
+        def evaluate(self, x: csdl.Variable, y: csdl.Variable, name: str = 'paraboloid'):
+            """
+            Evaluate the paraboloid function at the given values of x and y.
+
+            Parameters
+            ----------
+            x : csdl.Variable
+                The value of x.
+            y : csdl.Variable
+                The value of y.
+
+            Returns
+            -------
+            csdl.Variable
+                The result of evaluating the paraboloid function at the given values of x and y.
+            """
+            with csdl.Namespace(name):
+                f = csdl.square(x - self.a) + x * y + csdl.square(y + self.b) - self.c
+                f.add_name('f')  # This gives f the name '...paraboloid.f'
             return f
 
     recorder = csdl.Recorder(inline=True, debug=True, auto_hierarchy=True)
@@ -36,10 +61,10 @@ if __name__ == '__main__':
     b = 5
     c = 30
     # Add a sub-model to the current model
-    parabolid_model = ParaboloidModel(a=a, b=b, c=c)
+    paraboloid_model = ParaboloidModel(a, b, c)
 
     # Call the evaluate method of the model functionally.
-    f = parabolid_model.evaluate(x, y, name = 'paraboloid_submodel')
+    f = paraboloid_model.evaluate(x, y)
     f.save()
 
     recorder.active_graph.visualize()
