@@ -5,7 +5,7 @@
 CSDL is a domain-specific language for building large-scale MDO models.
 
 
-# Cite us
+<!-- # Cite us
 ```none
 @article{lsdo2023,
         Author = { Author 1, Author 2, and Author 3},
@@ -16,7 +16,7 @@ CSDL is a domain-specific language for building large-scale MDO models.
         issn = {0123-4567},
         doi = {https://doi.org/}
         }
-```
+``` -->
 
 <!-- Remove/add custom pages from/to toc as per your package's requirement -->
 
@@ -25,11 +25,8 @@ CSDL is a domain-specific language for building large-scale MDO models.
 :hidden:
 
 src/getting_started
-src/background
 src/basics
 src/advanced
-src/sparse_mtx
-src/custom_2
 src/examples
 src/api
 ```
