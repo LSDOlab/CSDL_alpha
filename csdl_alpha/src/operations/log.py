@@ -28,14 +28,14 @@ class Log(ElementwiseOperation):
     
 # We need a broadcast log even when the methods are exactly the same because Broadcast cannot inherit from ElementwiseOperation
 # TODO: Avoid code duplication
-class BroadcastLog(Operation):
+class LeftBroadcastLog(Operation):
     '''
     Logarithm after the first input is broadcasted to the shape of the second input.
     '''
 
     def __init__(self,x,y):
         super().__init__(x,y)
-        self.name = 'broadcast_log'
+        self.name = 'left_broadcast_log'
         out_shapes = (y.shape,)
         self.set_dense_outputs(out_shapes)
 
@@ -51,7 +51,29 @@ class BroadcastLog(Operation):
     def evaluate_vjp(self, x, y, vout):
         return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
     
-# TODO: Do we need a broadcast log?
+class RightBroadcastLog(Operation):
+    '''
+    Logarithm after the second input is broadcasted to the shape of the first input.
+    '''
+
+    def __init__(self,x,y):
+        super().__init__(x,y)
+        self.name = 'right_broadcast_log'
+        out_shapes = (x.shape,)
+        self.set_dense_outputs(out_shapes)
+
+    def compute_inline(self, x, y):
+        return np.log(x) / np.log(y)
+
+    def evaluate_jacobian(self, x, y):
+        return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
+
+    def evaluate_jvp(self, x, y, vx, vy):
+        return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
+
+    def evaluate_vjp(self, x, y, vout):
+        return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
+    
 def log(x, base=None):
     '''
     Computes the natural logarithm of all entries in the input tensor 
@@ -103,12 +125,10 @@ def log(x, base=None):
 
     if x.shape == y.shape:
         op = Log(x, y)
-    # TODO: Need another Broadcast log for the case below for more efficiency?
-    # NOTE: When the base is a scalar, we can't just use the "Elementwise" log
-    elif y.shape == (1,):
-        op = Log(x, y)
     elif x.shape == (1,):
-        op = BroadcastLog(x, y)
+        op = LeftBroadcastLog(x, y)
+    elif y.shape == (1,):
+        op = RightBroadcastLog(x, y)
     else:
         raise ValueError('Shapes not compatible for log operation.')
         

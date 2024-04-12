@@ -1,5 +1,40 @@
 import csdl_alpha.utils.test_utils as csdl_tests
 import pytest
+import csdl_alpha as csdl
+import numpy as np
+
+def nl_model():
+    a = csdl.Variable(value=1.5)
+    b = csdl.Variable(value=2)
+    c = csdl.Variable(value=-1)
+    x = csdl.ImplicitVariable((1,), value=0.34)
+
+    ax2 = a*x**2
+    y = x - (-ax2 - c)/b
+    return x, y
+
+
+class TestSimpleImplicit(csdl_tests.CSDLTest):
+    solvers = [(csdl.GaussSeidel, []), (csdl.BracketedSearch, [(0, 4)])]
+    def test_solvers_simple(self):
+        for solver, args in self.solvers:
+            self.prep()
+
+            x, y = nl_model()
+
+            # apply coupling:
+            solver = solver()
+            solver.add_state(x, y, *args)
+            solver.run()
+
+            self.run_tests(
+                compare_values = [
+                    csdl_tests.TestingPair(x, np.array([0.38742589]), tag = 'residual', decimal = 5),
+                ],
+            )
+
+
+
 
 class TestImplicit(csdl_tests.CSDLTest):
     def test_values(self,):
@@ -276,13 +311,26 @@ class TestImplicit(csdl_tests.CSDLTest):
         with pytest.raises(ValueError) as e_info:
             solver.run()
 
-if __name__ == '__main__':
-    t = TestImplicit()
-    # t.test_values()
-    # t.test_arg_errors()
-    # t.test_insufficient_res_state_dependence_1()
-    # t.test_insufficient_res_state_dependence_2()
-    # t.test_double_state_nest1()
-    # t.test_double_state_nest2()
-    t.test_double_state()
+# if __name__ == '__main__':
+#     t = TestImplicit()
+#     # t.test_values()
+#     # t.test_arg_errors()
+#     # t.test_insufficient_res_state_dependence_1()
+#     # t.test_insufficient_res_state_dependence_2()
+#     # t.test_double_state_nest1()
+#     # t.test_double_state_nest2()
+#     t.test_double_state()
+
+
+# if __name__ == '__main__':
+#     recorder = csdl.Recorder(inline=True)
+#     recorder.start()
+#     x, y = nl_model()
+
+#     # apply coupling:
+#     solver = csdl.BracketedSearch('gs_x_simpler')
+#     solver.add_state(x, y, (0, 4))
+#     solver.run()
+
+#     print(x.value)
 
