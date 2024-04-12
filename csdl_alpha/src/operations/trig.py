@@ -3,6 +3,7 @@ from csdl_alpha.src.graph.operation import set_properties
 from csdl_alpha.src.graph.variable import Variable
 import csdl_alpha.utils.test_utils as csdl_tests
 import numpy as np
+from csdl_alpha.utils.typing import VariableLike
 
 @set_properties(linear=False)
 class Sin(ElementwiseOperation):
@@ -32,7 +33,7 @@ class Tan(ElementwiseOperation):
     def compute_inline(self, x):
         return np.tan(x)
 
-def sin(x:Variable) -> Variable:
+def sin(x:VariableLike) -> Variable:
     """Elementwise sine of a CSDL Variable
 
     Parameters
@@ -58,7 +59,7 @@ def sin(x:Variable) -> Variable:
     return Sin(x).finalize_and_return_outputs()
 
 
-def cos(x:Variable) -> Variable:
+def cos(x:VariableLike) -> Variable:
     """Elementwise cosine of a CSDL Variable
 
     Parameters
@@ -84,7 +85,7 @@ def cos(x:Variable) -> Variable:
     return Cos(x).finalize_and_return_outputs()
 
 
-def tan(x:Variable) -> Variable:
+def tan(x:VariableLike) -> Variable:
     """Elementwise tangent of a CSDL Variable
 
     Parameters

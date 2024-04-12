@@ -106,8 +106,68 @@ class Variable(Node):
         self.recorder._add_objective(self, scalar)
 
     from csdl_alpha.src.operations.set_get.slice import Slice
-    def set(self, slices:Slice, value:'Variable') -> 'Variable':
-        # return set_index(self, slice, value)
+    def set(self, slices:Slice, value:'VariableLike') -> 'Variable':
+        """Sets a sliced selection of the variable to a new value. The slicing must be specified by a csdl Slice object.
+        See examples for more information.
+
+        Parameters
+        ----------
+        indices : Slice
+            The indices to slice the variable by. See examples for more information.
+        value : VariableLike
+            The value to set the sliced selection of the variable to.
+
+        Returns
+        -------
+        out: Variable
+            A new variable that represents the original variable with the sliced selection set to the new value.
+
+        Examples
+        --------
+
+        The set method creates a new variable with the sliced selection set to the new value. The original variable is not modified.
+
+        >>> recorder = csdl.Recorder(inline = True)
+        >>> recorder.start()
+        >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+        >>> x1 = x.set(0, 0.0)
+        >>> x1.value
+        array([0., 2., 3.])
+
+        Use the csdl.slice slicer object when using slices.
+
+        >>> x1 = x.set(csdl.slice[1:3], csdl.Variable(value = np.array([4.0, 5.0])))
+        >>> x1.value
+        array([1., 4., 5.])
+        >>> x = csdl.Variable(value = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]))
+        >>> x1 = x.set(csdl.slice[1, 1:3], csdl.Variable(value = np.array([10.0, 11.0])))
+        >>> x1.value
+        array([[ 1.,  2.,  3.],
+               [ 4., 10., 11.]])
+
+        The slicing conventions are identical to those in the __getitem__ method and broadcasting from a scalar is also supported.
+
+        >>> x1 = x.set(csdl.slice[[0,1], [1,2]], csdl.Variable(value = np.array([10.0, 11.0])))
+        >>> x1.value
+        array([[ 1., 10.,  3.],
+               [ 4.,  5., 11.]])
+        >>> x1 = x.set(csdl.slice[0, 1:], 10.0)
+        >>> x1.value
+        array([[ 1., 10., 10.],
+               [ 4.,  5.,  6.]])
+        >>> x1 = x.set(csdl.slice[:, [0, 2]], 11.0)
+        >>> x1.value
+        array([[11.,  2., 11.],
+               [11.,  5., 11.]])
+
+        Get the same behaviour of in-place modification by returning the same variable (it is recommended to combine slices to one .set call when possible to reduce the number of operations).
+        >>> x = x.set(csdl.slice[0,0], 10.0)
+        >>> x = x.set(csdl.slice[1,0], 11.0)
+        >>> x = x.set(csdl.slice[1,2], 12.0)
+        >>> x.value
+        array([[10.,  2.,  3.],
+               [11.,  5., 12.]])
+        """
         from csdl_alpha.src.operations.set_get.setindex import set_index
         from csdl_alpha.src.operations.set_get.slice import Slice
         from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as loop_slice
@@ -123,18 +183,105 @@ class Variable(Node):
         """
         self._save = True
 
-    def get(self, slices:Slice):
+    def get(self, slices:Slice) -> 'Variable':
+        """Similar to __getitem__ but only accepts a Slice object.
+
+        Parameters
+        ----------
+        slices : Slice
+
+        Returns
+        -------
+        out: Variable
+        """
         from csdl_alpha.src.operations.set_get.getindex import get_index
         return get_index(self, slices)
     
-    def __getitem__(self, slices) -> 'Variable':
+    def __getitem__(self, indices:Union[Slice, tuple[list[int], int, slice]]) -> 'Variable':
+        """Returns a sliced selection of the variable as a new variable. The slicing can be specified by a csdl Slice object or a tuple of lists of integers, integers, and slices.
+        The slicing rules are similar to Numpy's tensor indexing rules with some restrictions. See examples for more information.
+
+        Parameters
+        ----------
+        indices : Union[Slice, tuple[list[int], int, slice]]
+            The indices to slice the variable by. See examples for more information.
+
+        Returns
+        -------
+        out: Variable
+            a new variable that is a indexed selection of the original variable.
+
+        Examples
+        --------
+
+        Integer indexing allows a selection of a single element in a dimension and removes that dimension in the output.
+        
+        >>> recorder = csdl.Recorder(inline = True)
+        >>> recorder.start()
+        >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+        >>> x[0].shape
+        (1,)
+        >>> x[0].value
+        array([1.])
+        >>> x = csdl.Variable(value = np.arange(6).reshape(2,3))
+        >>> x[0].shape # removes the first dimension in the output
+        (3,)
+        >>> x[0].value
+        array([0, 1, 2])
+        >>> x[1,2].shape # returns a single element
+        (1,)
+        >>> x[1,2].value
+        array([5])
+
+        Slicing allows a selection of a range of elements in a dimension using slice notation and keeps that dimension in the output.
+
+        >>> x[1:2].shape # keeps the first dimension in the output
+        (1, 3)
+        >>> x[1:2].value
+        array([[3, 4, 5]])
+        >>> x[:].shape
+        (2, 3)
+        >>> np.all(x[:].value == x.value)
+        True
+        >>> x[1:2,:-1].shape
+        (1, 2)
+        >>> x[1:2,:-1].value
+        array([[3, 4]])
+
+        Integer lists allows for selecting a coordinate of elements across multiple dimensions and compresses them to one one dimension.
+        
+        >>> x[[0,1]].shape
+        (2, 3)
+        >>> x[[0,1]].value
+        array([[0, 1, 2],
+               [3, 4, 5]])
+        >>> x[[0,1],[0,1]].shape # outputs x[0,0] and x[1,1] in a 1D array
+        (2,)
+        >>> x[[0,1],[0,1]].value # outputs x[0,0] and x[1,1] in a 1D array
+        array([0, 4])
+
+        All three types of indexing can be combined.
+
+        >>> x = csdl.Variable(value = np.arange(24).reshape(4,2,3))
+        >>> x[[0,1],1:].shape
+        (2, 1, 3)
+        >>> x[[0,1],1:].value
+        array([[[ 3,  4,  5]],
+        <BLANKLINE>
+               [[ 9, 10, 11]]])
+        >>> x[0,[0,1],[1,0]].shape
+        (2,)
+        >>> x[0,[0,1],[1,0]].value
+        array([1, 3])
+        """
+
         from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as loop_slice
         from csdl_alpha.src.operations.set_get.slice import Slice
 
-        if isinstance(slices, Slice):
-            return self.get(slices)
+        if isinstance(indices, Slice):
+            return self.get(indices)
         else:
-            return self.get(loop_slice[slices])
+            return self.get(loop_slice[indices])
 
 
     def __add__(self, other):

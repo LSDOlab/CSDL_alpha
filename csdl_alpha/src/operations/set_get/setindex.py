@@ -7,6 +7,7 @@ import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.operations.set_get.slice import Slice
 from csdl_alpha.src.operations.set_get.loop_slice import VarSlice
 import pytest
+from csdl_alpha.utils.typing import VariableLike
 
 @set_properties(linear=True,)
 class SetVarIndex(Operation):
@@ -60,7 +61,7 @@ class BroadcastSetIndex(SetVarIndex):
 #     def compute_inline(self, x, y):
 #         pass
 
-def set_index(x:Variable, s:Slice, y:Variable) -> Variable:
+def set_index(x:Variable, s:Slice, y:VariableLike) -> Variable:
     x = variablize(x)
     y = variablize(y)
 

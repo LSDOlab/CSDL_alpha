@@ -3,6 +3,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
+from csdl_alpha.utils.typing import VariableLike
 
 @set_properties(linear=True)
 class Add(ElementwiseOperation):
@@ -82,7 +83,7 @@ class SparseBroadcastAdd(ComposedOperation):
     def compute_inline(self, x, y):
         pass
 
-def add(x:Variable,y:Variable)->Variable:
+def add(x:VariableLike,y:VariableLike)->Variable:
     """Elementwise addition of two tensors x and y.
 
     Parameters
