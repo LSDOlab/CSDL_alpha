@@ -42,13 +42,17 @@ class TensorExpand(Operation):
         self.set_dense_outputs(out_shapes)
 
     def compute_inline(self, x):
+        # NOTE : if csdl.einsum is implemented using csdl.[sum, expand, reorder_axes, mult] later,
+        # then the line below should never call csdl.einsum since it just creates recursive calls.
         return np.einsum(self.einsum_str, x, np.ones(self.ones_shape))
     
     def evaluate_jacobian(self, x):
+        # NOTE : if csdl.einsum is implemented using csdl.[sum, expand, reorder_axes, mult] later,
+        # then the line below should never call csdl.einsum since it just creates recursive calls.
         rows = np.arange(np.prod(self.out_shape)).reshape(self.out_shape)
-        cols = np.einsum(self.einsum_str, np.prod(x.shape).reshape(x.shape), np.ones(self.ones_shape))
+        cols = np.einsum(self.einsum_str, np.arange(x.size).reshape(x.shape), np.ones(self.ones_shape))
 
-        return csdl.Constant(rows=rows, cols=cols, val = 1.)
+        return csdl.Constant(rows=rows.flatten(), cols=cols.flatten(), val = 1.)
         
 def expand(x, out_shape, action=None):
     '''
@@ -115,10 +119,15 @@ def expand(x, out_shape, action=None):
 
     x = variablize(x)
 
+    if not isinstance(out_shape, tuple):
+        raise ValueError('"out_shape" must be a tuple.')
+
     if x.shape != (1,):
         if action is None:
             raise ValueError('Cannot expand a tensor without "action" specified.')
         else:
+            if not isinstance(action, str):
+                raise ValueError('"action" must be a string.')
             in_str, out_str = action.split('->')
             in_shape = x.shape
             if len(in_str) != len(in_shape):
