@@ -1,6 +1,14 @@
 # Understanding CSDL
 
-This section will briefly overview how CSDL works, and introduce the Recorder, Graph, and Node classes.
+This section will overview how CSDL works, and introduce the Recorder, Graph, and Node classes. CSDL is a domain-specific language embedded in Python for building computational models. 
+
+```{figure} /src/images/class_diagram.svg
+:figwidth: 80 %
+:align: center
+:alt: dag
+ 
+```
+
 
 ## Building Graphs
 

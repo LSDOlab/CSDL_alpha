@@ -20,17 +20,7 @@ def inline_save(filename:str):
     for key in recorder.node_graph_map.keys():
         if isinstance(key, Variable):
             if key._save:
-                if not key.names:
-                    if not key.namespace.prepend in name_counter_dict:
-                        name_counter_dict[key.namespace.prepend] = 0
-                    name_count = name_counter_dict[key.namespace.prepend]
-                    name_counter_dict[key.namespace.prepend] += 1
-                    if key.namespace.prepend is None:
-                        savename = f'variable_{name_count}'
-                    else:
-                        savename = f'{key.namespace.prepend}.variable_{name_count}'
-                else:
-                    savename = key.names[0]
+                savename = _get_savename(key, name_counter_dict)
                 dset = inline_grp.create_dataset(savename, data=key.value)
                 # The shape is already stored in the value
                 # dset.attrs['shape'] = key.shape
@@ -42,6 +32,19 @@ def inline_save(filename:str):
                     dset.attrs['names'] = key.names
     f.close()
 
+def _get_savename(key, name_counter_dict):
+    if not key.names:
+        if not key.namespace.prepend in name_counter_dict:
+            name_counter_dict[key.namespace.prepend] = 0
+        name_count = name_counter_dict[key.namespace.prepend]
+        name_counter_dict[key.namespace.prepend] += 1
+        if key.namespace.prepend is None:
+            savename = f'variable_{name_count}'
+        else:
+            savename = f'{key.namespace.prepend}.variable_{name_count}'
+    else:
+        savename = key.names[0]
+    return savename
 
 def import_h5py(filename:str, group:str):
     """
@@ -95,6 +98,38 @@ def import_h5py(filename:str, group:str):
     # Return the dictionary of variables
     return variables
     
+def inline_csv_save(filename:str):
+    """Save the name, min, max, and mean of variables from the current recorder's node graph to a CSV file.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the CSV file to save the variables to.
+    """
+    import csv
+    from ..api import get_current_recorder
+    from ..src.graph.variable import Variable
+    import numpy as np
+
+    if not filename.endswith('.csv'):
+        filename = f'{filename}.csv'
+
+    recorder = get_current_recorder()
+    name_counter_dict = {}
+    with open(filename, mode='w', newline='') as f:
+        csv_writer = csv.writer(f)
+        for key in recorder.node_graph_map.keys():
+            if isinstance(key, Variable):
+                if key._save:
+                    savename = _get_savename(key, name_counter_dict)
+                    if key.value is not None:
+                        value = key.value
+                        csv_writer.writerow([savename, np.min(value), np.max(value), np.mean(value)])
+                    else:
+                        csv_writer.writerow([savename, None, None, None])
+
+
+
 def save_optimization_variables():
     """Save optimization variables.
 

@@ -1,4 +1,4 @@
-from .src.data import inline_save, import_h5py, save_optimization_variables, save_all_variables
+from .src.data import inline_save, import_h5py, save_optimization_variables, save_all_variables, inline_csv_save
 from .src.graph.variable import Variable, ImplicitVariable
 from .src.model import Model
 from .src.recorder import Recorder
