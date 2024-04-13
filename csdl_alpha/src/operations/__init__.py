@@ -15,6 +15,7 @@ from .maximum import maximum
 from .minimum import minimum
 from .absolute import absolute
 from .neg import negate
+from .copyvar import copyvar
 
 # getting and setting
 from .set_get.setindex import set_index
