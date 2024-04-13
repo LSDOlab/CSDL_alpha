@@ -162,8 +162,8 @@ def maximum(*args, axes=None, rho=20.):
         else:
             out_shape = tuple([x for i, x in enumerate(args[0].shape) if i not in axes])
             if len(out_shape) == 0:
-                raise ValueError('Cannot find maximum of a scalar Variable along all axes. \
-                                 Use maximum(A) to find the maximum of a tensor Variable.')
+                raise ValueError('It is inefficient to find the maximum of a tensor Variable along all axes. \
+                                 Use maximum(A) to find the maximum of all tensor entries.')
         
         op = Maximum(variablize(args[0]), axes=axes, out_shape=out_shape, rho=rho)
     else:

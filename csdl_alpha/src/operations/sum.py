@@ -106,6 +106,9 @@ def sum(*args, axes=None):
             out_shape = (1,)
         else:
             out_shape = tuple([x for i, x in enumerate(args[0].shape) if i not in axes])
+            if len(out_shape) == 0:
+                raise ValueError('It is inefficient to sum a tensor Variable along all axes. \
+                                 Use sum(A) to find the sum of all tensor entries.')
         
         op = Sum(variablize(args[0]), axes=axes, out_shape=out_shape)
     else:

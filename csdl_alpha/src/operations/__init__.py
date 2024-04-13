@@ -9,6 +9,7 @@ from .sqrt import sqrt
 from .exp import exp
 from .log import log
 from .sum import sum
+from .product import product
 from .average import average
 from .maximum import maximum
 from .minimum import minimum
