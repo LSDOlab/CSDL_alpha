@@ -3,7 +3,7 @@ import pytest
 def test_loop_slice():
     from csdl_alpha.utils.hard_reload import hard_reload
     hard_reload()
-    from loop_slice import _loop_slice, VarSlice
+    from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice, VarSlice
     from csdl_alpha.utils.inputs import variablize
 
     import csdl_alpha as csdl
@@ -134,7 +134,7 @@ def test_slices():
     """
     tests to make sure that slices are correct
     """
-    from slice import _slice
+    from csdl_alpha.src.operations.set_get.slice import _slice
 
     assert _slice[0] == (0,)
     assert _slice[[0,1,2]] == ([0,1,2],)
@@ -195,8 +195,8 @@ def test_valid_indexing_integers():
     """
     tests to make sure that index checking is valid
     """
-    from utils import check_and_process_out_of_bound_slice
-    from slice import _slice
+    from csdl_alpha.src.operations.set_get.utils import check_and_process_out_of_bound_slice
+    from csdl_alpha.src.operations.set_get.slice import _slice
 
     three_d_shape = (10,9,8)
     one_d_shape = (1,)
@@ -223,8 +223,8 @@ def test_valid_indexing_slices():
     """
     tests to make sure that index checking is valid
     """
-    from utils import check_and_process_out_of_bound_slice
-    from slice import _slice
+    from csdl_alpha.src.operations.set_get.utils import check_and_process_out_of_bound_slice
+    from csdl_alpha.src.operations.set_get.slice import _slice
     import numpy as np
 
     three_d_shape = (10,9,8)
@@ -256,8 +256,8 @@ def test_valid_indexing_slices():
 
 def test_valid_indexing_lists():
     # === test out of bounds slices ===
-    from utils import check_and_process_out_of_bound_slice
-    from slice import _slice
+    from csdl_alpha.src.operations.set_get.utils import check_and_process_out_of_bound_slice
+    from csdl_alpha.src.operations.set_get.slice import _slice
     import numpy as np
 
     three_d_shape = (10,9,8)

@@ -62,32 +62,35 @@ class TestData(CSDLTest):
 
         csdl.inline_csv_save('test_data')
 
-# if __name__ == '__main__':
-#     import csdl_alpha as csdl
-#     from csdl_alpha import Variable
-#     recorder = csdl.Recorder(inline=True)
-#     recorder.start()
-#     a = Variable(value=2, name='a')
-#     a.add_tag('test')
-#     a.hierarchy = 1
-#     b = Variable(value=3)
-#     csdl.enter_namespace('test1')
-#     c = Variable(value=4)
-#     csdl.exit_namespace()
-#     csdl.save_all_variables()
+if __name__ == '__main__':
+    import csdl_alpha as csdl
+    from csdl_alpha import Variable
+    recorder = csdl.Recorder(inline=True)
+    recorder.start()
+    with csdl.Namespace('test0'):
+        a = Variable(value=2, name='a')
+        a.add_tag('test')
+        a.hierarchy = 1
+        b = Variable(value=3)
 
-#     dv = Variable(value=4)
-#     constraint = dv*2
-#     constraint.is_input = False
-#     objective = dv*3
-#     objective.is_input = False
-#     dv.set_as_design_variable()
-#     constraint.set_as_constraint()
-#     objective.set_as_objective()
+        csdl.enter_namespace('test1')
+        c = Variable(value=4)
+        csdl.exit_namespace()
+        csdl.save_all_variables()
 
-#     csdl.save_optimization_variables()
+        dv = Variable(value=4)
+        constraint = dv*2
+        constraint.is_input = False
+        objective = dv*3
+        objective.is_input = False
+        dv.set_as_design_variable()
+        constraint.set_as_constraint()
+        objective.set_as_objective()
 
-#     csdl.inline_csv_save('test_data')
+    csdl.save_optimization_variables()
+
+    csdl.inline_csv_save('test_data')
+    csdl.inline_save('test_data')
 
 
         
