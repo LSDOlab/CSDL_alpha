@@ -135,6 +135,8 @@ class TestSub(csdl_tests.CSDLTest):
         # subtract scalar constant and scalar variable
         s3 = csdl.sub(3.0, y)
         compare_values += [csdl_tests.TestingPair(s3, t1, tag = 's3')]
+        s3 = 3.0-y
+        compare_values += [csdl_tests.TestingPair(s3, t1, tag = 's3')]
 
         # subtract tensor constants
         s4 = csdl.sub(3.0*np.ones((3,2)), 2.0*np.ones((3,2)))
@@ -154,16 +156,22 @@ class TestSub(csdl_tests.CSDLTest):
 
         z_val = 2.0*np.ones((3,2))
         z = csdl.Variable(name = 'z', value = z_val)
-        # add scalar variable and tensor variable
+        # subtract scalar variable and tensor variable
         s7 = csdl.sub(x, z)
         compare_values += [csdl_tests.TestingPair(s7, t2, tag = 's7')]
+        s7 = x-z
+        compare_values += [csdl_tests.TestingPair(s7, t2, tag = 's7')]
 
-        # add scalar constant and tensor variable
+        # subtract scalar constant and tensor variable
         s8 = csdl.sub(3.0, z)
         compare_values += [csdl_tests.TestingPair(s8, t2, tag = 's8')]
+        s8 = 3.0-z
+        compare_values += [csdl_tests.TestingPair(s8, t2, tag = 's8')]
 
-        # add tensor variables
-        s9 = csdl.sub(x, z)
+        # subtract tensor variables
+        s9 = csdl.sub(x, z_val)
+        compare_values += [csdl_tests.TestingPair(s9, t2, tag = 's9')]
+        s9 = x-z
         compare_values += [csdl_tests.TestingPair(s9, t2, tag = 's9')]
 
         self.run_tests(compare_values = compare_values,)

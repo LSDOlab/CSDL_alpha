@@ -35,11 +35,11 @@ residual_2 = x**2.0 + y**2.0 - a*a
 At this point in the code, we have defined the states and residuals but haven't specified any coupling between them. We can do this by using CSDL's nonlinear solvers. In this example, we initialize a GaussSeidel solver and give the solver a name 'nlsolver_x1_x2'. Finally, we can assign states to residuals using the the nonlinear solver's add_state method.
 
 ```python
-solver = csdl.GaussSeidel('nlsolver_x1_x2')
+solver = csdl.nonlinear_solvers.GaussSeidel('nlsolver_x1_x2')
 solver.add_state(x_1, residual_1) # Specify that the residual of the state x_1 is residual_1 
 solver.add_state(x_2, residual_2) # Specify that the residual of the state x_2 is residual_2
 ```
-Once the states and residual pairs have been assigned to a solver, call the run method to finalize the implicit operation. This step builds an implicit operation node in the graph by analyzing the computational graph built thus far. If ```inline = True``` was set when building the recorder, this is the point when the nonlinear solver is ran.
+Once the states and residual pairs have been assigned to a solver, call the run method to finalize the implicit operation. This step builds an implicit operation node in the graph by analyzing the computational graph built *thus far* (this is important for later). If ```inline = True``` was set when building the recorder, this is the point when the nonlinear solver is ran.
 ```Python
 solver.run()
 
@@ -52,6 +52,8 @@ print(residual_1.value)
 print(residual_2.value)
 ```
 
-It can be assumed that any implicit variables (```x_1``` and ```x_2```) represent the solved state at any point of the code. 
+It can be assumed that any implicit variables (```x_1``` and ```x_2```) represent the solved state at any point of the code and can be used like any other variable.
 
 ## Nonlinear Solver Hierarchies
+
+More complicated models often require multiple nonlinear solvers. The structure of the nonlinear solvers and the interfacing between each other  can make a significant impact on the performance of the model evaluation.

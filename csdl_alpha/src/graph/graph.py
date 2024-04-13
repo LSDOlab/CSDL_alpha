@@ -44,7 +44,7 @@ class Graph():
                 raise TypeError("subset is not a set")
 
         self.check_self()
-        print('executing inline')
+        # print('executing inline')
         sorted_nodes = rx.topological_sort(self.rxgraph)
         for node_index in sorted_nodes:
             node = self.rxgraph[node_index]
@@ -136,7 +136,7 @@ class Graph():
 
         # Checks: (temporary)
         # TODO: apply checks in debug mode?
-        if 1:
+        if 0:
             print("\nChecking extraction...")
             # all inputs and outputs should be in self
             subgraph_inputs_and_outputs = subgraph_inputs.union(subgraph_outputs)

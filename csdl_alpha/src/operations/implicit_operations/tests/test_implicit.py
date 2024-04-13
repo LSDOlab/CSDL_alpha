@@ -15,7 +15,7 @@ def nl_model():
 
 
 class TestSimpleImplicit(csdl_tests.CSDLTest):
-    solvers = [(csdl.GaussSeidel, []), (csdl.BracketedSearch, [(0, 4)])]
+    solvers = [(csdl.nonlinear_solvers.GaussSeidel, []), (csdl.nonlinear_solvers.BracketedSearch, [(0, 4)])]
     def test_solvers_simple(self):
         for solver, args in self.solvers:
             self.prep()
@@ -32,9 +32,6 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
                     csdl_tests.TestingPair(x, np.array([0.38742589]), tag = 'residual', decimal = 5),
                 ],
             )
-
-
-
 
 class TestImplicit(csdl_tests.CSDLTest):
     def test_values(self,):
@@ -58,7 +55,7 @@ class TestImplicit(csdl_tests.CSDLTest):
 
         # apply coupling:
         # ONE SOLVER COUPLING:
-        solver = csdl.GaussSeidel('gs_x_simpler')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_x_simpler')
         solver.add_state(x, y)
         solver.run()
 
@@ -102,11 +99,11 @@ class TestImplicit(csdl_tests.CSDLTest):
         y_update = y-residual_2/(2.0*y)
 
         # NESTED (x) SOLVER COUPLING:
-        solver = csdl.GaussSeidel('gs_x')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_x')
         solver.add_state(x, residual_1, state_update=x_update)
         solver.run()
 
-        solver = csdl.GaussSeidel('gs_y')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_y')
         solver.add_state(y, residual_2, state_update=y_update)
         solver.run()
 
@@ -149,11 +146,11 @@ class TestImplicit(csdl_tests.CSDLTest):
         y_update = y-residual_2/(2.0*y)
 
         # NESTED (x) SOLVER COUPLING:
-        solver = csdl.GaussSeidel('gs_y')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_y')
         solver.add_state(y, residual_2, state_update=y_update)
         solver.run()
 
-        solver = csdl.GaussSeidel('gs_x')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_x')
         solver.add_state(x, residual_1, state_update=x_update)
         solver.run()
 
@@ -195,7 +192,7 @@ class TestImplicit(csdl_tests.CSDLTest):
         y_update = y-residual_2/(2.0*y)
 
         # NESTED (x) SOLVER COUPLING:
-        solver = csdl.GaussSeidel('gs_y')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_y')
         solver.add_state(y, residual_2, state_update=y_update)
         solver.add_state(x, residual_1, state_update=x_update)
         solver.run()
@@ -231,7 +228,7 @@ class TestImplicit(csdl_tests.CSDLTest):
 
         # apply coupling:
         # ONE SOLVER COUPLING:
-        solver = csdl.GaussSeidel('gs_x_simpler')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_x_simpler')
 
         # state must be CSDL implicit variable
         with pytest.raises(TypeError) as e_info:
@@ -262,7 +259,7 @@ class TestImplicit(csdl_tests.CSDLTest):
         x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.34)
         y = csdl.Variable(name = 'y', value = 1.5)
 
-        solver = csdl.GaussSeidel('gs_x_simpler')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_x_simpler')
         # y must depend on x
         solver.add_state(x, y)
             
@@ -282,7 +279,7 @@ class TestImplicit(csdl_tests.CSDLTest):
         y1 = x2*2
         y2 = x2*3
 
-        solver = csdl.GaussSeidel('gs_x_simpler')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_x_simpler')
         solver.add_state(x1, y1)
         solver.add_state(x2, y2)
 
@@ -303,7 +300,7 @@ class TestImplicit(csdl_tests.CSDLTest):
         y1 = x1*2+x2
         y2 = a*3
 
-        solver = csdl.GaussSeidel('gs_x_simpler')
+        solver = csdl.nonlinear_solvers.GaussSeidel('gs_x_simpler')
         solver.add_state(x1, y1)
         solver.add_state(x2, y2)
 

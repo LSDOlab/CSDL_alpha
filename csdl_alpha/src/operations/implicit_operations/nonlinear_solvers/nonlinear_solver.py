@@ -43,7 +43,6 @@ class NonlinearSolver(object):
         self.add_metadata('tolerance', tolerance)
         self.add_metadata('max_iter', max_iter)
 
-
         # Dictionary to keep track of values for inline evaluations
 
     def add_metadata(self, key, datum, is_input=True):
@@ -55,7 +54,6 @@ class NonlinearSolver(object):
         if isinstance(datum, Variable) and is_input:
             self.meta_input_variables.add(datum)
         self.state_metadata[state][key] = datum
-
 
     def add_state_residual_pair(
             self, 

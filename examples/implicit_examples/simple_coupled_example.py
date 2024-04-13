@@ -48,11 +48,11 @@ if __name__ == '__main__':
     # solver.run()
 
     # NESTED (y) SOLVER COUPLING:
-    solver = csdl.GaussSeidel('gs_y')
+    solver = csdl.nonlinear_solvers.GaussSeidel('gs_y')
     solver.add_state(y, residual_2, state_update=y_update)
     solver.run()
 
-    solver = csdl.GaussSeidel('gs_x')
+    solver = csdl.nonlinear_solvers.GaussSeidel('gs_x')
     solver.add_state(x, residual_1, state_update=x_update)
     solver.run()
 

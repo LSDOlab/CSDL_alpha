@@ -1,4 +1,4 @@
-from csdl_alpha.src.operations.implicit_operations.solvers.nonlinear_solver import NonlinearSolver
+from csdl_alpha.src.operations.implicit_operations.nonlinear_solvers.nonlinear_solver import NonlinearSolver
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
 import numpy as np
