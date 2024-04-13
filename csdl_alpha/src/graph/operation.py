@@ -108,7 +108,7 @@ class Operation(Node):
                 if output.size == 1:
                     output.set_value(value.reshape(output.shape))
                 else:
-                    output.set_value(value.reshape(output.shape))
+                    output.set_value(value)
 
     def finalize_and_return_outputs(self, skip_inline = False):
         """
