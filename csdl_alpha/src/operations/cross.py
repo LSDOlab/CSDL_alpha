@@ -18,7 +18,9 @@ class Cross(Operation):
             out_shape = x.shape
         elif x.shape[axis] == 2:
             out_shape = x.shape[:axis] + x.shape[axis+1:]
+            # Uncomment the line below to debug the blanket reshaping in set_inline_values in operation
             # out_shape = x.shape[:axis] + (1,) + x.shape[axis+1:]
+            # Or uncomment the 2 lines below to debug the blanket reshaping in set_inline_values in operation
             if x.size == 2:
                 out_shape = (1,)
         out_shapes = (out_shape,)
