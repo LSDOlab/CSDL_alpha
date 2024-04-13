@@ -5,7 +5,7 @@ __version__ = '0.0.0'
 
 from csdl_alpha.src.operations import *
 
-from csdl_alpha.src.operations.implicit_operations.solvers import *
+from csdl_alpha.src.operations.implicit_operations import nonlinear_solvers as nonlinear_solvers
 from csdl_alpha.src.operations.linalg import linear_solvers as linear_solvers
 
 from .api import *

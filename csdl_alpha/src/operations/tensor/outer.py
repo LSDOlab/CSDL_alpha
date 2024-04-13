@@ -5,58 +5,74 @@ from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 import pytest
 from csdl_alpha.utils.typing import VariableLike
+from csdl_alpha.src.operations.tensor.expand import expand as csdl_expand
 
-class VectorOuter(Operation):
-    def __init__(self,x,y):
-        super().__init__(x,y)
-        self.name = 'vec_outer'
-        self.set_dense_outputs(((x.shape[0], y.shape[0]),))
+class Outer(ComposedOperation):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.name = 'outer'
+        self.out_shape = x.shape + y.shape
+        alphabet = 'abcdefghijklmnopqrstuvwxyz'
+        rank1 = len(x.shape)
+        rank2 = len(y.shape)
+        out_rank = rank1 + rank2
+        self.action1 = f'{alphabet[:rank1]}->{alphabet[:out_rank]}'
+        self.action2 = f'{alphabet[rank1:out_rank]}->{alphabet[:out_rank]}'
 
-    def compute_inline(self, x, y):
-        import numpy as np
-        return np.outer(x, y)
+    def evaluate_composed(self, x, y):
+        return evaluate_outer(x, y, self.out_shape, self.action1, self.action2)
+    
+def evaluate_outer(x, y, out_shape, action1, action2):
+    expand1 = csdl_expand(x, out_shape, action=action1)
+    expand2 = csdl_expand(y, out_shape, action=action2)
+    out = expand1 * expand2
+    return out
 
-def outer(x:VariableLike,y:VariableLike)->Variable:
-    """Outer product of two vectors x and y. The result is a matrix of shape (x.size, y.size).
+def outer(x:VariableLike, y:VariableLike)->Variable:
+    """
+    Outer product of two tensors x and y. 
+    The result is a tensor with shape (x.shape + y.shape).
+    For example, if x has shape (3,2) and y has shape (4,5),
+    the output will have shape (3,2,4,5).
 
     Parameters
     ----------
-    x : Variable
-        1D vector
-    y : Variable
-        1D vector
+    x : VariableLike
+        First input tensor.
+    y : VariableLike
+        Second input tensor.
 
     Returns
     -------
     out: Variable
-        2D matrix
+        Outer product of x and y.
 
     Examples
     --------
     >>> recorder = csdl.Recorder(inline = True)
     >>> recorder.start()
     >>> x = csdl.Variable(value = np.array([1, 2, 3]))
-    >>> y = csdl.Variable(value = np.array([4, 5, 6]))
+    >>> y = csdl.Variable(value = np.array([4, 5]))
     >>> csdl.outer(x, y).value
-    array([[ 4,  5,  6],
-           [ 8, 10, 12],
-           [12, 15, 18]])
+    array([[ 4.,  5.],
+           [ 8., 10.],
+           [12., 15.]])
+    >>> z = csdl.Variable(value = np.array([[1, 2], [3, 4]]))
+    >>> csdl.outer(x, z).value
+    array([[[ 1.,  2.],
+            [ 3.,  4.]],
+    <BLANKLINE>
+           [[ 2.,  4.],
+            [ 6.,  8.]],
+    <BLANKLINE>
+           [[ 3.,  6.],
+            [ 9., 12.]]])
     """
     x = variablize(x)
     y = variablize(y)
+    op = Outer(x, y)
 
-    # checks:
-    # - x must be 1D
-    # - y must be 1D
-    # - x and y must have the same size
-    if len(x.shape) != 1:
-        raise ValueError(f"Vector x must be 1D, but has shape {x.shape}")
-    if len(y.shape) != 1:
-        raise ValueError(f"Vector y must be 1D, but has shape {y.shape}")
-    if x.size != y.size:
-        raise ValueError(f"Vectors x and y must have the same size. {x.size} != {y.size}")
-    
-    return VectorOuter(x, y).finalize_and_return_outputs()
+    return op.finalize_and_return_outputs()
 
 class TestOuter(csdl_tests.CSDLTest):
     
@@ -67,56 +83,23 @@ class TestOuter(csdl_tests.CSDLTest):
         import numpy as np
         x_val = np.arange(10)
         y_val = np.arange(10)+2.0
+        z_val = np.arange(10).reshape(2,5)
         x = csdl.Variable(value = x_val)
         y = csdl.Variable(value = y_val)
+        z = csdl.Variable(value = z_val)
 
         compare_values = []
-        compare_values += [csdl_tests.TestingPair(csdl.outer(x,y), np.outer(x_val, y_val))]
-        compare_values += [csdl_tests.TestingPair(csdl.outer(x_val,y), np.outer(x_val, y_val))]
-        compare_values += [csdl_tests.TestingPair(csdl.outer(x,y_val), np.outer(x_val, y_val))]
+        t1 = np.outer(x_val, y_val)
+        compare_values += [csdl_tests.TestingPair(csdl.outer(x,y), t1)]
+        compare_values += [csdl_tests.TestingPair(csdl.outer(x_val,y), t1)]
+
+        t2 = np.tensordot(x_val, z_val, axes=0)
+        compare_values += [csdl_tests.TestingPair(csdl.outer(x,z), t2)]
+        compare_values += [csdl_tests.TestingPair(csdl.outer(x_val,z), t2)]
         self.run_tests(compare_values = compare_values,)
 
     def test_errors(self,):
-        self.prep()
-
-        import csdl_alpha as csdl
-        import numpy as np
-
-        x_val = np.arange(10)
-        y_val = np.arange(9)+2.0
-        x = csdl.Variable(value = x_val)
-        y = csdl.Variable(value = y_val)
-        with pytest.raises(ValueError):
-            csdl.outer(x,y)
-        with pytest.raises(ValueError):
-            csdl.outer(x_val,y)
-        with pytest.raises(ValueError):
-            csdl.outer(x,y_val)
-
-        with pytest.raises(ValueError):
-            csdl.outer(y,x)
-        with pytest.raises(ValueError):
-            csdl.outer(y_val,x)     
-        with pytest.raises(ValueError):
-            csdl.outer(y,x_val)
-
-        x_val = (np.arange(10)).reshape(2,5)
-        y_val = (np.arange(2)+2.0).reshape(2)
-        x = csdl.Variable(value = x_val)
-        y = csdl.Variable(value = y_val)
-        with pytest.raises(ValueError):
-            csdl.outer(x,y)
-        with pytest.raises(ValueError):
-            csdl.outer(x_val,y)
-        with pytest.raises(ValueError):
-            csdl.outer(x,y_val)
-
-        with pytest.raises(ValueError):
-            csdl.outer(y,x)
-        with pytest.raises(ValueError):
-            csdl.outer(y_val,x)
-        with pytest.raises(ValueError):
-            csdl.outer(x_val,y_val)
+        pass
 
     def test_docstring(self):
         self.docstest(outer)

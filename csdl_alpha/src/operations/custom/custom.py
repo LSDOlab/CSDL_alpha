@@ -15,8 +15,6 @@ class CustomOperation(Operation):
         self.output_dict = {}
         self.derivative_parameters = {}
 
-# TODO: update this to new operation format
-
 class CustomExplicitOperation(CustomOperation):
 
     def __init__(self, *args, **kwargs):

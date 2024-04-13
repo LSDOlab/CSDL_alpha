@@ -161,6 +161,7 @@ class Variable(Node):
                [11.,  5., 11.]])
 
         Get the same behaviour of in-place modification by returning the same variable (it is recommended to combine slices to one .set call when possible to reduce the number of operations).
+        
         >>> x = x.set(csdl.slice[0,0], 10.0)
         >>> x = x.set(csdl.slice[1,0], 11.0)
         >>> x = x.set(csdl.slice[1,2], 12.0)
@@ -284,49 +285,53 @@ class Variable(Node):
             return self.get(loop_slice[indices])
 
 
-    def __add__(self, other):
+    def __add__(self, other:'VariableLike') -> 'Variable':
         from csdl_alpha.src.operations.add import add
         return add(self,other)
     
-    def __radd__(self, other):
+    def __radd__(self, other:'VariableLike') -> 'Variable':
         return self.__add__(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other:'VariableLike') -> 'Variable':
         from csdl_alpha.src.operations.mult import mult
         return mult(self,other)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other:'VariableLike') -> 'Variable':
         return self.__mul__(other)
 
     def __neg__(self):
         from csdl_alpha.src.operations.neg import negate
         return negate(self)
     
-    def __sub__(self, other):
+    def __sub__(self, other:'VariableLike') -> 'Variable':
         from csdl_alpha.src.operations.sub import sub
         return sub(self, other)
     
-    def __truediv__(self, other):
+    def __rsub__(self, other:'VariableLike') -> 'Variable':
+        from csdl_alpha.src.operations.sub import sub
+        return sub(other, self)
+
+    def __truediv__(self, other:'VariableLike') -> 'Variable':
         from csdl_alpha.src.operations.division import div
         return div(self, other)
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other:'VariableLike') -> 'Variable':
         from csdl_alpha.src.operations.division import div
         return div(other, self)
     
-    def __pow__(self, other):
+    def __pow__(self, other:'VariableLike') -> 'Variable':
         from csdl_alpha.src.operations.power import power
         return power(self, other)
     
-    def __rpow__(self, other):
+    def __rpow__(self, other:'VariableLike') -> 'Variable':
         from csdl_alpha.src.operations.power import power
         return power(other, self)
 
-    def __matmul__(self, other):
+    def __matmul__(self, other:'VariableLike') -> 'Variable':
         from csdl_alpha.src.operations.linalg.matmat import matmat
         return matmat(self, other)
 
-    def __rmatmul__(self, other):
+    def __rmatmul__(self, other:'VariableLike') -> 'Variable':
         from csdl_alpha.src.operations.linalg.matmat import matmat
         return matmat(other, self)
 

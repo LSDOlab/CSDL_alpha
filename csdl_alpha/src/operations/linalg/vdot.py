@@ -5,37 +5,32 @@ from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 import pytest
 from csdl_alpha.utils.typing import VariableLike
-from csdl_alpha.src.operations.sum import sum as csdl_sum
 
-class Inner(ComposedOperation):
+class VectorDot(Operation):
     def __init__(self,x,y):
         super().__init__(x,y)
-        self.name = 'inner'
+        self.name = 'vdot'
+        self.set_dense_outputs(((1,),))
 
-    def evaluate_composed(self, x, y):
-        return evaluate_inner(x, y)
-    
-def evaluate_inner(x, y):
-    out = csdl_sum(x*y)
-    return out
+    def compute_inline(self, x, y):
+        import numpy as np
+        return np.vdot(x, y)
 
-def inner(x:VariableLike,y:VariableLike)->Variable:
+def vdot(x:VariableLike,y:VariableLike)->Variable:
     """
-    Inner product of two tensors x and y. 
-    The result is a scalar of shape (1,).
-    The input tensors must have the same shape.
+    Dot product of two vectors x and y. The result is a scalar of shape (1,).
 
     Parameters
     ----------
-    x : VariableLike
-        First input tensor.
-    y : VariableLike
-        Second input tensor.
+    x : Variable
+        1D vector.
+    y : Variable
+        1D vector.
 
     Returns
     -------
     out: Variable
-        Scalar inner product of x and y.
+        Scalar dot product of x and y.
 
     Examples
     --------
@@ -43,24 +38,26 @@ def inner(x:VariableLike,y:VariableLike)->Variable:
     >>> recorder.start()
     >>> x = csdl.Variable(value = np.array([1, 2, 3]))
     >>> y = csdl.Variable(value = np.array([4, 5, 6]))
-    >>> csdl.inner(x, y).value
+    >>> csdl.vdot(x, y).value
     array([32])
-    >>> a = csdl.Variable(value = np.array([[1, 2], [3, 4]]))
-    >>> b = csdl.Variable(value = np.array([[5, 6], [7, 8]]))
-    >>> csdl.inner(a, b).value
-    array([70])
     """
     x = variablize(x)
     y = variablize(y)
 
     # checks:
-    # - x and y must have the same shape
-    if x.shape != y.shape:
-        raise ValueError(f"Tesors x and y must have the same shape. {x.shape} != {y.shape}")
+    # - x must be 1D
+    # - y must be 1D
+    # - x and y must have the same size
+    if len(x.shape) != 1:
+        raise ValueError(f"Vector x must be 1D, but has shape {x.shape}")
+    if len(y.shape) != 1:
+        raise ValueError(f"Vector y must be 1D, but has shape {y.shape}")
+    if x.size != y.size:
+        raise ValueError(f"Vectors x and y must have the same size. {x.size} != {y.size}")
     
-    return Inner(x, y).finalize_and_return_outputs()
+    return VectorDot(x, y).finalize_and_return_outputs()
 
-class TestInner(csdl_tests.CSDLTest):
+class TestVDot(csdl_tests.CSDLTest):
     
     def test_functionality(self,):
         self.prep()
@@ -71,17 +68,11 @@ class TestInner(csdl_tests.CSDLTest):
         y_val = np.arange(10)+2.0
         x = csdl.Variable(value = x_val)
         y = csdl.Variable(value = y_val)
-        a_val = np.array([[1, 2], [3, 4]])
-        b_val = np.array([[5, 6], [7, 8]])
-        a = csdl.Variable(value = a_val)
-        b = csdl.Variable(value = b_val)
 
         compare_values = []
-        compare_values += [csdl_tests.TestingPair(csdl.inner(x,y), np.inner(x_val, y_val).flatten())]
-        compare_values += [csdl_tests.TestingPair(csdl.inner(x_val,y), np.inner(x_val, y_val).flatten())]
-        compare_values += [csdl_tests.TestingPair(csdl.inner(x,y_val), np.inner(x_val, y_val).flatten())]
-        compare_values += [csdl_tests.TestingPair(csdl.inner(a,b), np.sum(a_val * b_val).flatten())]
-
+        compare_values += [csdl_tests.TestingPair(csdl.vdot(x,y), np.vdot(x_val, y_val).flatten())]
+        compare_values += [csdl_tests.TestingPair(csdl.vdot(x_val,y), np.vdot(x_val, y_val).flatten())]
+        compare_values += [csdl_tests.TestingPair(csdl.vdot(x,y_val), np.vdot(x_val, y_val).flatten())]
         self.run_tests(compare_values = compare_values,)
 
     def test_errors(self,):
@@ -95,42 +86,42 @@ class TestInner(csdl_tests.CSDLTest):
         x = csdl.Variable(value = x_val)
         y = csdl.Variable(value = y_val)
         with pytest.raises(ValueError):
-            csdl.inner(x,y)
+            csdl.vdot(x,y)
         with pytest.raises(ValueError):
-            csdl.inner(x_val,y)
+            csdl.vdot(x_val,y)
         with pytest.raises(ValueError):
-            csdl.inner(x,y_val)
+            csdl.vdot(x,y_val)
 
         with pytest.raises(ValueError):
-            csdl.inner(y,x)
+            csdl.vdot(y,x)
         with pytest.raises(ValueError):
-            csdl.inner(y_val,x)     
+            csdl.vdot(y_val,x)     
         with pytest.raises(ValueError):
-            csdl.inner(y,x_val)
+            csdl.vdot(y,x_val)
 
         x_val = (np.arange(10)).reshape(2,5)
         y_val = (np.arange(2)+2.0).reshape(2)
         x = csdl.Variable(value = x_val)
         y = csdl.Variable(value = y_val)
         with pytest.raises(ValueError):
-            csdl.inner(x,y)
+            csdl.vdot(x,y)
         with pytest.raises(ValueError):
-            csdl.inner(x_val,y)
+            csdl.vdot(x_val,y)
         with pytest.raises(ValueError):
-            csdl.inner(x,y_val)
+            csdl.vdot(x,y_val)
 
         with pytest.raises(ValueError):
-            csdl.inner(y,x)
+            csdl.vdot(y,x)
         with pytest.raises(ValueError):
-            csdl.inner(y_val,x)
+            csdl.vdot(y_val,x)
         with pytest.raises(ValueError):
-            csdl.inner(x_val,y_val)
+            csdl.vdot(x_val,y_val)
 
     def test_docstring(self):
-        self.docstest(inner)
+        self.docstest(vdot)
 
 if __name__ == '__main__':
-    test = TestInner()
+    test = TestVDot()
     test.test_functionality()
     test.test_errors()
     test.test_docstring()

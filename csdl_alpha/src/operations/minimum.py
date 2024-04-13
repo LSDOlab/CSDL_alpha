@@ -24,8 +24,8 @@ class Minimum(ComposedOperation):
     
 def evaluate_minimum(args, axes, rho):
     neg_args = [-arg for arg in args]
-    out = csdl.maximum(*neg_args, axes=axes, rho=rho)
-    return -out
+    out = -csdl.maximum(*neg_args, axes=axes, rho=rho)
+    return out
 
 def minimum(*args, axes=None, rho=20.):
     '''
@@ -102,8 +102,8 @@ def minimum(*args, axes=None, rho=20.):
         if axes is not None:
             out_shape = tuple([x for i, x in enumerate(args[0].shape) if i not in axes])
             if len(out_shape) == 0:
-                raise ValueError('Cannot find minimum of a scalar variable along all axes. \
-                                 Use minimum(A) to find the minimum of a tensor Variable.')
+                raise ValueError('It is inefficient to find the minimum of a tensor Variable along all axes. \
+                                 Use minimum(A) to find the minimum of all tensor entries.')
         
     args = [variablize(x) for x in args]
     op = Minimum(*args, axes=axes, rho=rho)
