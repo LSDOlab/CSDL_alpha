@@ -26,6 +26,7 @@ from .trig import sin, cos, tan
 # Linear algebra operations
 from .linalg.block_matrix import blockmat
 from .linalg.norm import norm
+from .linalg.vdot import vdot
 from .linalg.matvec import matvec
 from .linalg.matmat import matmat
 from .linalg.linear_solve import solve_linear

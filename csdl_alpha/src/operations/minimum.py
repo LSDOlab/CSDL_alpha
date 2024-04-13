@@ -24,8 +24,8 @@ class Minimum(ComposedOperation):
     
 def evaluate_minimum(args, axes, rho):
     neg_args = [-arg for arg in args]
-    out = csdl.maximum(*neg_args, axes=axes, rho=rho)
-    return -out
+    out = -csdl.maximum(*neg_args, axes=axes, rho=rho)
+    return out
 
 def minimum(*args, axes=None, rho=20.):
     '''
