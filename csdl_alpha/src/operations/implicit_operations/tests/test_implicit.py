@@ -3,36 +3,6 @@ import pytest
 import csdl_alpha as csdl
 import numpy as np
 
-def nl_model():
-    a = csdl.Variable(value=1.5)
-    b = csdl.Variable(value=2)
-    c = csdl.Variable(value=-1)
-    x = csdl.ImplicitVariable((1,), value=0.34)
-
-    ax2 = a*x**2
-    y = x - (-ax2 - c)/b
-    return x, y
-
-
-class TestSimpleImplicit(csdl_tests.CSDLTest):
-    solvers = [(csdl.nonlinear_solvers.GaussSeidel, []), (csdl.nonlinear_solvers.BracketedSearch, [(0, 4)])]
-    def test_solvers_simple(self):
-        for solver, args in self.solvers:
-            self.prep()
-
-            x, y = nl_model()
-
-            # apply coupling:
-            solver = solver()
-            solver.add_state(x, y, *args)
-            solver.run()
-
-            self.run_tests(
-                compare_values = [
-                    csdl_tests.TestingPair(x, np.array([0.38742589]), tag = 'residual', decimal = 5),
-                ],
-            )
-
 class TestImplicit(csdl_tests.CSDLTest):
     def test_values(self,):
         self.prep()

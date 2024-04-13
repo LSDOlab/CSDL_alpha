@@ -78,20 +78,20 @@ class BracketedSearch(NonlinearSolver):
 
         # check if bracket is valid and store it
         if not isinstance(bracket, tuple):
-            raise ValueError("Bracket must be a tuple")
+            raise ValueError(f"Bracket must be a tuple. Got {type(bracket)}")
         if len(bracket) != 2:    
-            raise ValueError("Bracket must have two elements")
+            raise ValueError(f"Bracket must have two elements. Got {len(bracket)}")
         for element in bracket:
             if isinstance(element, (Variable, np.ndarray)):
                 if not (element.shape == (1,) or element.shape == state.shape):
-                    raise ValueError("Bracket shape must match state shape")
+                    raise ValueError(f"Bracket shape must match state shape. {element.shape} given")
             elif not isinstance(element, (float, int)):
                 raise ValueError(f"Invalid bracket element type, got {type(element)}")
         self.add_state_metadata(state, 'bracket', bracket)
 
         # check if tolerance is valid and store it
         if tolerance is not None:
-            if isinstance(tolerance, Variable, np.ndarray):
+            if isinstance(tolerance, (Variable, np.ndarray)):
                 if not (tolerance.shape == (1,) or tolerance.shape == state.shape):
                     raise ValueError(f"Tolerance shape must be scalar or match state shape. {tolerance.shape} given")
             elif not isinstance(tolerance, (float, int)):

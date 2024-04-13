@@ -15,7 +15,7 @@ class GaussSeidel(NonlinearSolver):
             max_iter=100,
         ):
         """
-        A Gauss-Seidel solver!
+        A Gauss-Seidel solver
         """
         # well now this just seems redundant
         super().__init__(

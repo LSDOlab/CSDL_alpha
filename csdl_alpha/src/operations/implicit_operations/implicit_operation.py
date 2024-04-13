@@ -11,7 +11,7 @@ class ImplicitOperation(SubgraphOperation):
 
     def compute_inline(self, *args):
 
-        print(f'COMPUTING NLSOLVER INLINE: {self.nonlinear_solver.name}')
+        # print(f'COMPUTING NLSOLVER INLINE: {self.nonlinear_solver.name}')
         self.nonlinear_solver.solve_implicit_inline(*args)
         
         return [output.value for output in self.outputs]

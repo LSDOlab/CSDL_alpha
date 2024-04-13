@@ -152,11 +152,10 @@ class NonlinearSolver(object):
         state_keys = set(self.state_to_residual_map.keys())
         if state_keys.symmetric_difference(set(self.state_metadata.keys())):
             raise ValueError("State variables do not match metadate state keys")
-        
 
         implicit_operation.finalize_and_return_outputs()
 
-        print(f'UPDATING DOWNSTREAM:  {self.name}')
+        # print(f'UPDATING DOWNSTREAM:  {self.name}')
         G.update_downstream(implicit_operation)
 
         # recorder.active_graph.visualize(f'top_level_{self.name}_after')
@@ -171,8 +170,11 @@ class NonlinearSolver(object):
         'initial_value' must be a metadata key where value is a number or variable
         """
         for state in self.state_metadata:
-            state.value = ingest_value(self.state_metadata[state]['initial_value'])
-
+            if not isinstance(self.state_metadata[state]['initial_value'], Variable):
+                state.value = ingest_value(self.state_metadata[state]['initial_value'])
+            else:
+                state.value = self.state_metadata[state]['initial_value'].value
+                
     def _inline_print_nl_status(self, iter_num, did_converge):
         """
         Print the status of the nonlinear solver.
