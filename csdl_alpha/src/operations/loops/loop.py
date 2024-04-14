@@ -1,8 +1,6 @@
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.src.graph.variable import Variable
 
-# TODO: fix feedback checking - needs to happen on the second iteration, but creation of the loop vars and whatnot needs to happen on the final iteration
-
 class IterationVariable(Variable):
     def __init__(self, vals):
         super().__init__(value=vals[0])
@@ -65,256 +63,69 @@ class Loop(Operation):
             if i == 0:
                 for loop_var in self.loop_vars:
                     loop_var[0].value = loop_var[1].value
-            self.iter_var.value = self.vals[i]
+            self.iter_var.set_value(self.vals[i])
             self.graph.execute_inline()
             for loop_var in self.loop_vars:
                 loop_var[0].value = loop_var[2].value
         return [output.value for output in self.outputs]
 
 
+class frange():
+    def __init__(self, arg1:int=None, arg2:int=None, increment:int=1, *, vals:list[int] = None):
+            """Initialize the Loop object.
 
+            Parameters
+            ----------
+            arg1 : int, optional
+                The lower bound of the loop. If `arg2` is not provided, `arg1` represents the upper bound of the loop.
+            arg2 : int, optional
+                The upper bound of the loop. If provided, `arg1` represents the lower bound of the loop.
+            increment : int, optional
+                The increment value for each iteration of the loop. By default, it is set to 1.
+            vals : list[int], optional
+                A list of values to iterate over. If provided, the loop will iterate over the values in the list instead of using the range defined by `arg1` and `arg2`.
 
-    # def compute_inline(self, *args):
-    #     # print(self.graph)
-    #     self.in_loop = self.recorder._in_loop
-    #     self.recorder._in_loop = True 
-    #     for i in range(len(self.vals)):
-    #         if i == 0:
-    #             if not self.in_loop:
-    #                 print('=============Resetting loop vars=============')
-    #                 self.recorder._reset_loops = True
-    #                 for loop_var in self.loop_vars:
-    #                     loop_var.reset()
-    #                 self.has_reset = True
-    #             else:
-    #                 if self.recorder._reset_loops and not self.has_reset:
-    #                     for loop_var in self.loop_vars:
-    #                         loop_var.reset()
-    #                     self.has_reset = True
+            Raises
+            ------
+            ValueError
+                If the lower bound of the loop is greater than the upper bound.
+            ValueError
+                If any value in the `vals` list is not an integer.
+            """
 
-    #         self.iter_var.set_value(self.vals[i])
-    #         for loop_var in self.loop_vars:
-    #             loop_var.update_value()
-    #         self.graph.execute_inline()
-    #         if i == 0 and not self.in_loop:
-    #             self.recorder._reset_loops = False
-    #     self.recorder._in_loop = self.in_loop
-    #     return [output.value for output in self.outputs]
+            if arg2 is None:
+                if arg1 is None:
+                    if vals is None:
+                        raise ValueError(f'No arguments provided for the for loop')
+                else:
+                    lower = 0
+                    upper = arg1
+            else:
+                lower = arg1
+                upper = arg2
 
+            # process runtime iterations
+            if vals is None:
+                if upper < lower:
+                    raise ValueError(f'The lower bound of the for loop, {lower}, is above the upper bound of the for loop, {upper}')
+                self.vals = list(range(lower, upper, increment))
+            else:
+                if not all(isinstance(val, int) for val in vals):
+                    raise ValueError(f'All values in the list of values must be integers')
+                self.vals = vals
 
-class vrange():
-    def __init__(self, lower:int=0, upper:int = 100, increment:int=1, *, vals:list[int] = None, check:bool=False):
-        
-        self.check = check
-        self.disallow_feedback = True # turning off feedback for now
-
-        # process runtime iterations
-        if vals is None:
-            if upper < lower:
-                raise ValueError(f'The lower bound of the for loop, {lower}, is above the upper bound of the for loop, {upper}')
-            self.vals = list(range(lower, upper, increment))
-        else:
-            if not all(isinstance(val, int) for val in vals):
-                raise ValueError(f'All values in the list of values must be integers')
-            self.vals = vals
-
-        self.curr_index = 0
-        if self.check:
-            self.max_index = len(self.vals)
-        else:
+            self.curr_index = 0
             self.max_index = 2
 
-        # enter new graph
-        from csdl_alpha.api import manager
-        self._recorder = manager.active_recorder
-        self._recorder._enter_subgraph(add_missing_variables=True)
-        self._graph = self._recorder.active_graph
-        self._graph_node = self._recorder.active_graph_node
+            # enter new graph
+            from csdl_alpha.api import manager
+            self._recorder = manager.active_recorder
+            self._recorder._enter_subgraph(add_missing_variables=True)
+            self._graph = self._recorder.active_graph
+            self._graph_node = self._recorder.active_graph_node
 
-        # initialize iteration variable:
-        self.iteration_variable = IterationVariable(self.vals)
-
-    def get_ops_and_shapes(self, graph=None):
-        ops = []
-        shapes = []
-        if graph is None:
-            graph = self._recorder.active_graph
-        for node in graph.node_table.keys():
-            if isinstance(node, Operation):
-                ops.append(type(node))
-            elif isinstance(node, Variable):
-                shapes.append(node.shape)
-        return ops, shapes
-
-    def post_iteration_one(self):
-        # self._graph.visualize('graph_loop_iter_1')
-        self.iter1_inputs = [] # list of inputs to the first iteration
-        self.iter1_outputs = [] # list of outputs to the first iteration
-        # NOTE: variables that are created inside the loop but not used in the loop aren't going to show up in either of these lists, but that *should* be okay?
-        ops = []
-        self.iter1_non_inputs = set() # list of all other variables in first iteration (will be removed later)
-        for node in self._graph.node_table.keys():
-            if isinstance(node, Operation):
-                ops.append(node)
-                for input in node.inputs:
-                    if self._graph.in_degree(input)==0:
-                        self.iter1_inputs.append(input)
-                for output in node.outputs:
-                    self.iter1_outputs.append(output)
-            else:
-                self.iter1_non_inputs.add(node)
-
-        for input in self.iter1_inputs:
-            self.iter1_non_inputs.discard(input)
-
-        # don't want iteration variable to be removed, even if it's not used
-        self.iter1_non_inputs.discard(self.iteration_variable)
-
-        # deleting the operations so we cana find inputs to the second iteration in the same way
-        self._graph._delete_nodes(ops)
-
-    def post_iteration_two(self):
-        self.iter2_inputs = [] # list of inputs to the second iteration (same order as first)
-        self.iter2_outputs = [] # list of outputs to the second iteration (same order as first)
-        for node in self._graph.node_table.keys():
-            if isinstance(node, Operation):
-                for input in node.inputs:
-                    if self._graph.in_degree(input)==0:
-                        self.iter2_inputs.append(input)
-                for output in node.outputs:
-                    self.iter2_outputs.append(output)
-
-        # any input that's changed represents an internal loop, so we need to replace it with a special variable
-        loop_vars = []
-        strike_set = set() # set of inputs that are only used in the first iteration (feedback)
-        for input1, input2 in zip(self.iter1_inputs, self.iter2_inputs):
-            if not input1 is input2: 
-                if input2 in self.iter1_outputs:
-                    # this implies input 1 comes from outside the loop and input 2 comes from the first iteration
-                    if self.disallow_feedback:
-                        raise ValueError(f'Feedback from variable {input1} found')
-                    else:
-                        # we want to go from input2 to the corresponding output of the 2nd iteration
-                        output2 = self.iter2_outputs[self.iter1_outputs.index(input2)]
-                        loop_var = LoopVariable(input1, output2)
-                        loop_vars.append(loop_var)
-                        self._graph._delete_nodes([input1])
-                        self.iter1_non_inputs.remove(input2)
-                        self._graph._replace_node(input2, loop_var)
-                else:
-                    # this implies input 1 and input 2 are both made in the loop, so we can just keep input 2
-                    self._graph._delete_nodes([input1])
-                    pass
-        # remove any inputs that are no longer used
-        self._graph._delete_nodes(list(strike_set))
-
-        # delete any remnanats of the first iteration
-        self._graph._delete_nodes(self.iter1_non_inputs)
-
-        external_inputs = self._graph.inputs
-        non_feedback_inputs = external_inputs - strike_set # external inputs that are used for things other than feedback (and maybe feedback too)
-
-        # Stop the graph
-        # self._graph.visualize('graph_loop_final')
-        self._recorder._exit_subgraph()
-
-
-        # add the loop operation to the graph
-        #NOTE: this only exposes outputs of operations, not variables created within the loop
-        self.op = Loop(
-            list(external_inputs), 
-            self.iter2_outputs, 
-            self._graph, 
-            self.vals, 
-            self.iteration_variable, 
-            loop_vars
-            )
-
-    def _check_ops_and_shapes(self, ops, shapes):
-        if ops != self.ops:
-            raise ValueError(f'Operations changed between iterations')
-        if shapes != self.shapes:
-            raise ValueError(f'Shapes changed between iterations')
-
-
-    def __next__(self):
-        final = False
-        # no processing for zeroith iteration
-        # first iteration - get ops and shapes, figure out inputs
-        if self.curr_index==1:
-            if self.check:
-                self.ops, self.shapes = self.get_ops_and_shapes()
-            self.post_iteration_one()
-            if self.check:
-                self._recorder._enter_subgraph(add_missing_variables=True)
-                self._recorder._add_node(self.iteration_variable)
-        # last iteration - check feedback, check ops and shapes, end loop
-        elif self.curr_index == self.max_index:
-            final = True
-            self.post_iteration_two()
-            if self.check:
-                # need to pass in graph here because we exited it in post_iteration_two
-                ops, shapes = self.get_ops_and_shapes(self._graph)
-                self._check_ops_and_shapes(ops, shapes)
-        # second to last iteration - need to re-enter main graph
-        elif self.curr_index == self.max_index-1:
-            if self.check:
-                ops, shapes = self.get_ops_and_shapes()
-                self._check_ops_and_shapes(ops, shapes)
-                self._recorder._delete_current_graph()
-        # all other iterations - enter/exit dummy graph, check ops and shapes
-        elif self.curr_index > 1:
-            if self.check:
-                ops, shapes = self.get_ops_and_shapes()
-                self._check_ops_and_shapes(ops, shapes)
-                self._recorder._delete_current_graph()
-                self._recorder._enter_subgraph(add_missing_variables=True)
-                self._recorder._add_node(self.iteration_variable)
-
-        if final:
-            if self._recorder.inline:
-                self.op.compute_inline()
-            raise StopIteration
-
-        self.curr_index+=1
-        return self.iteration_variable
-        
-    def __iter__(self):
-        return self
-
-
-class frange():
-    def __init__(self, arg1:int, arg2:int=None, increment:int=1, *, vals:list[int] = None):
-
-        if arg2 is None:
-            lower = 0
-            upper = arg1
-        else:
-            lower = arg1
-            upper = arg2
-
-        # process runtime iterations
-        if vals is None:
-            if upper < lower:
-                raise ValueError(f'The lower bound of the for loop, {lower}, is above the upper bound of the for loop, {upper}')
-            self.vals = list(range(lower, upper, increment))
-        else:
-            if not all(isinstance(val, int) for val in vals):
-                raise ValueError(f'All values in the list of values must be integers')
-            self.vals = vals
-
-        self.curr_index = 0
-        self.max_index = 2
-
-        # enter new graph
-        from csdl_alpha.api import manager
-        self._recorder = manager.active_recorder
-        self._recorder._enter_subgraph(add_missing_variables=True)
-        self._graph = self._recorder.active_graph
-        self._graph_node = self._recorder.active_graph_node
-
-        # initialize iteration variable:
-        self.iteration_variable = IterationVariable(self.vals)
+            # initialize iteration variable:
+            self.iteration_variable = IterationVariable(self.vals)
 
     def get_ops_and_shapes(self, graph=None):
         ops = []
@@ -329,7 +140,6 @@ class frange():
         return ops, shapes
 
     def post_iteration_one(self):
-        from csdl_alpha.src.operations.set_get.setindex import SetVarIndex
         self._graph.visualize('graph_loop_iter_1')
         self.iter1_inputs = [] # list of inputs to the first iteration
         self.iter1_outputs = [] # list of outputs to the first iteration
@@ -357,7 +167,6 @@ class frange():
         self._graph._delete_nodes(ops)
 
     def post_iteration_two(self):
-        from csdl_alpha.src.operations.set_get.setindex import SetVarIndex
         self._graph.visualize('graph_loop_iter_2')
         self.iter2_inputs = [] # list of inputs to the second iteration (same order as first)
         self.iter2_outputs = [] # list of outputs to the second iteration (same order as first)
@@ -447,37 +256,32 @@ class frange():
 
 
 
-
-
-
-
-
-
-
 if __name__ == '__main__':
     import csdl_alpha as csdl
     from csdl_alpha.src.operations.add import Add
     import numpy as np
     recorder = csdl.Recorder(inline=True)
     recorder.start()
-    dim = 100
+    dim = 10
     b = csdl.Variable(value=np.zeros((dim,dim)), name='b')
-    c = csdl.Variable(value=np.random.rand(dim, dim), name='c')
+    c = csdl.Variable(value=np.ones((dim, dim)), name='c')
 
     for i in frange(dim):
         for j in frange(dim):
-            b = b.set(csdl.slice[i, j], c[i,j])
-            # b = b*2
+            for k in frange(dim):
+                b = b.set(csdl.slice[i, j], c[i,j])
+                b = b*2
 
-    # b_np = np.zeros((dim,dim))
-    # c_np = np.ones((dim,dim))
-    # for i in range(dim):
-    #     for j in range(dim):
-    #         b_np[i,j] = c_np[i,j]
+    b_np = np.zeros((dim,dim))
+    c_np = np.ones((dim,dim))
+    for i in range(dim):
+        for j in range(dim):
+            for k in range(dim):
+                b_np[i,j] = c_np[i,j]
+                b_np = b_np*2
 
 
-    print(b.value-c.value)
-    # print(b_np)
+    print(b.value-b_np)
     exit()
     # print('==============')
     # print(c.value)

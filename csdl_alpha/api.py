@@ -5,7 +5,7 @@ from .src.recorder import Recorder
 from .src.operations.custom.custom import CustomExplicitOperation
 from .src.variable_group import VariableGroup
 from .manager import RecManager
-from .src.operations.loops.loop import vrange
+from .src.operations.loops.loop import frange
 manager = RecManager()
 
 def get_current_recorder():
