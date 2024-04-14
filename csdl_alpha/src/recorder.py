@@ -44,7 +44,10 @@ class Recorder:
         self.auto_hierarchy = auto_hierarchy
 
         self.hierarchy = 0
-        self.in_loop = False
+
+        # keep track of inline stuff for loops
+        self._in_loop = False
+        self._reset_loops = False
 
         self.design_variables = {}
         self.constraints = {}
@@ -115,7 +118,7 @@ class Recorder:
         self.active_graph_node = self.active_graph_node.add_child(Graph())
         self.active_graph = self.active_graph_node.value
         self.active_graph.add_missing_variables = add_missing_variables
-        self.active_graph.inputs = set()
+        self.active_graph.inputs = []
 
     def _exit_subgraph(self):
         """
@@ -153,19 +156,20 @@ class Recorder:
             node_to: The target node.
         """
         from csdl_alpha.src.graph.variable import Variable
-        if node_from not in self.active_graph.node_table: # TODO: consider changing node_graph_map to reflect this
-            if self.active_graph.add_missing_variables and isinstance(node_from, Variable):
-                self.active_graph.add_node(node_from)
-                self.active_graph.inputs.add(node_from)
+        graph = self.active_graph
+        if node_from not in graph.node_table: # TODO: consider changing node_graph_map to reflect this
+            if graph.add_missing_variables and isinstance(node_from, Variable):
+                graph.add_node(node_from)
+                if not node_from in graph.inputs: graph.inputs.append(node_from)
             else:
                 raise ValueError(f"Node {node_from} not in graph")
-        if node_to not in self.active_graph.node_table:
-            # if self.active_graph.add_missing_variables and isinstance(node_to, Variable):
-            #     self.active_graph.add_node(node_to)
+        if node_to not in graph.node_table:
+            # if graph.add_missing_variables and isinstance(node_to, Variable):
+            #     graph.add_node(node_to)
             # else:
             #     raise ValueError(f"Node {node_to} not in graph")
             raise ValueError(f"Node {node_to} not in graph")
-        self.active_graph.add_edge(node_from, node_to)
+        graph.add_edge(node_from, node_to)
 
     def _add_design_variable(self, variable, upper, lower, scalar):
         """

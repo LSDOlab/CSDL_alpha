@@ -6,23 +6,39 @@ from csdl_alpha.src.graph.variable import Variable
 class IterationVariable(Variable):
     def __init__(self, vals):
         super().__init__(value=vals[0])
-        self.shape = (1,)
+        # self.shape = (1,)
         self.vals = vals
         self.name = 'iter'
 
-class LoopVariable(Variable):
-    def __init__(self, var1, var2):
-        super().__init__(shape=(var1.shape)) #NOTE: idk if we even need to do this
-        self.var1 = var1
-        self.var2 = var2
-        self.latched = False
+# class LoopVariable(Variable):
+#     def __init__(self, var1, var2):
+#         super().__init__(shape=(var1.shape)) #NOTE: idk if we even need to do this
+#         self.var1 = var1
+#         self.var2 = var2
+#         self.value = var1.value
+#         self.latched = False
+#         self.name = 'loop_var'
 
-    def update_value(self):
-        if self.latched:
-            self.value = self.var2.value
-        else:
-            self.value = self.var1.value
-            self.latched = True
+#     # def set_value(self, value):
+#     #     if self.latched:
+#     #         self.var2.set_value(value)
+#     #     else:
+#     #         self.var1.set_value(value)
+#     #     super().set_value(value)
+
+#     def reset(self):
+#         # print('loop var reset')
+#         self.latched = False
+#         self.value = self.var1.value
+
+#     def update_value(self):
+#         if self.latched:
+#             self.value = self.var2.value
+#         else:
+#             self.value = self.var1.value
+#             self.latched = True
+#         # print(f'Loop var updating to {self.value}')
+        
 
 class Loop(Operation):
 
@@ -35,7 +51,8 @@ class Loop(Operation):
         self.graph = graph
         self.vals = vals
         self.iter_var = iter_var
-        self.loop_vars = loop_vars
+        self.loop_vars = loop_vars # (input node in graph, input for first iter, input for subsiquent iters)
+        self.has_reset = False
         self._add_outputs_to_graph()
         self._add_to_graph()
 
@@ -44,13 +61,45 @@ class Loop(Operation):
             self.recorder.active_graph.add_node(output)
 
     def compute_inline(self, *args):
-        # print(self.graph)
         for i in range(len(self.vals)):
-            self.iter_var.set_value(self.vals[i])
-            for loop_var in self.loop_vars:
-                loop_var.update_value()
+            if i == 0:
+                for loop_var in self.loop_vars:
+                    loop_var[0].value = loop_var[1].value
+            self.iter_var.value = self.vals[i]
             self.graph.execute_inline()
+            for loop_var in self.loop_vars:
+                loop_var[0].value = loop_var[2].value
         return [output.value for output in self.outputs]
+
+
+
+
+    # def compute_inline(self, *args):
+    #     # print(self.graph)
+    #     self.in_loop = self.recorder._in_loop
+    #     self.recorder._in_loop = True 
+    #     for i in range(len(self.vals)):
+    #         if i == 0:
+    #             if not self.in_loop:
+    #                 print('=============Resetting loop vars=============')
+    #                 self.recorder._reset_loops = True
+    #                 for loop_var in self.loop_vars:
+    #                     loop_var.reset()
+    #                 self.has_reset = True
+    #             else:
+    #                 if self.recorder._reset_loops and not self.has_reset:
+    #                     for loop_var in self.loop_vars:
+    #                         loop_var.reset()
+    #                     self.has_reset = True
+
+    #         self.iter_var.set_value(self.vals[i])
+    #         for loop_var in self.loop_vars:
+    #             loop_var.update_value()
+    #         self.graph.execute_inline()
+    #         if i == 0 and not self.in_loop:
+    #             self.recorder._reset_loops = False
+    #     self.recorder._in_loop = self.in_loop
+    #     return [output.value for output in self.outputs]
 
 
 class vrange():
@@ -280,7 +329,8 @@ class frange():
         return ops, shapes
 
     def post_iteration_one(self):
-        # self._graph.visualize('graph_loop_iter_1')
+        from csdl_alpha.src.operations.set_get.setindex import SetVarIndex
+        self._graph.visualize('graph_loop_iter_1')
         self.iter1_inputs = [] # list of inputs to the first iteration
         self.iter1_outputs = [] # list of outputs to the first iteration
         # NOTE: variables that are created inside the loop but not used in the loop aren't going to show up in either of these lists, but that *should* be okay?
@@ -307,6 +357,8 @@ class frange():
         self._graph._delete_nodes(ops)
 
     def post_iteration_two(self):
+        from csdl_alpha.src.operations.set_get.setindex import SetVarIndex
+        self._graph.visualize('graph_loop_iter_2')
         self.iter2_inputs = [] # list of inputs to the second iteration (same order as first)
         self.iter2_outputs = [] # list of outputs to the second iteration (same order as first)
         for node in self._graph.node_table.keys():
@@ -325,11 +377,10 @@ class frange():
                 if input2 in self.iter1_outputs:
                         # we want to go from input2 to the corresponding output of the 2nd iteration
                         output2 = self.iter2_outputs[self.iter1_outputs.index(input2)] # TODO: make this less bad
-                        loop_var = LoopVariable(input1, output2)
+                        loop_var = (input2, input1, output2) # (input node in graph, input for first iter, input for subsiquent iters)
                         loop_vars.append(loop_var)
                         self._graph._delete_nodes([input1])
                         self.iter1_non_inputs.remove(input2)
-                        self._graph._replace_node(input2, loop_var)
                 else:
                     # this implies input 1 and input 2 are both made in the loop, so we can just keep input 2
                     self._graph._delete_nodes([input1])
@@ -341,7 +392,7 @@ class frange():
         self._graph._delete_nodes(self.iter1_non_inputs)
 
         external_inputs = self._graph.inputs
-        non_feedback_inputs = external_inputs - strike_set # external inputs that are used for things other than feedback (and maybe feedback too)
+        # non_feedback_inputs = external_inputs - strike_set # external inputs that are used for things other than feedback (and maybe feedback too)
 
         # Stop the graph
         # self._graph.visualize('graph_loop_final')
@@ -351,7 +402,7 @@ class frange():
         # add the loop operation to the graph
         #NOTE: this only exposes outputs of operations, not variables created within the loop
         self.op = Loop(
-            list(external_inputs), 
+            external_inputs, 
             self.iter2_outputs, 
             self._graph, 
             self.vals, 
@@ -369,16 +420,22 @@ class frange():
     def __next__(self):
         final = False
         # no processing for zeroith iteration
-        # first iteration - get ops and shapes, figure out inputs
+        if self.curr_index==0:
+            self.in_loop = self._recorder._in_loop
+            self._recorder._in_loop = True
+        # first iteration - figure out inputs
         if self.curr_index==1:
             self.post_iteration_one()
-        # last iteration - check feedback, check ops and shapes, end loop
+        # second iteration - check feedback
         elif self.curr_index == 2:
             final = True
             self.post_iteration_two()
 
         if final:
-            if self._recorder.inline:
+            # print(f'loop vars are {self.op.loop_vars}')
+            self._recorder._in_loop = self.in_loop
+            if self._recorder.inline and not self.in_loop:
+                # print('running_loop_inline')
                 self.op.compute_inline()
             raise StopIteration
 
@@ -400,30 +457,44 @@ class frange():
 if __name__ == '__main__':
     import csdl_alpha as csdl
     from csdl_alpha.src.operations.add import Add
+    import numpy as np
     recorder = csdl.Recorder(inline=True)
     recorder.start()
-    a = csdl.Variable(value=2, name='a')
-    b = csdl.Variable(value=3, name='b')
-    k = 0
+    dim = 100
+    b = csdl.Variable(value=np.zeros((dim,dim)), name='b')
+    c = csdl.Variable(value=np.random.rand(dim, dim), name='c')
 
-    for i in frange(1, 10):
-        for j in frange(1, 10):
-            b = a + b
-            c = a*2
+    for i in frange(dim):
+        for j in frange(dim):
+            b = b.set(csdl.slice[i, j], c[i,j])
+            # b = b*2
 
-    print(b.value)
-    print(c.value)
+    # b_np = np.zeros((dim,dim))
+    # c_np = np.ones((dim,dim))
+    # for i in range(dim):
+    #     for j in range(dim):
+    #         b_np[i,j] = c_np[i,j]
 
-    print(recorder.active_graph)
+
+    print(b.value-c.value)
+    # print(b_np)
+    exit()
+    # print('==============')
+    # print(c.value)
+    # print(c_np)
+
+    # print(recorder.active_graph)
 
     top_graph_node = recorder.active_graph_node
     outer_loop_graph_node = top_graph_node.children[0]
 
     top_graph = top_graph_node.value
     outer_loop_graph = outer_loop_graph_node.value
+    inner_loop_graph = outer_loop_graph_node.children[0].value
 
     top_graph.visualize('top_graph')
     outer_loop_graph.visualize('outer_loop_graph')
+    inner_loop_graph.visualize('inner_loop_graph')
 
 
     # for i in vrange(0, 10, check=True):
