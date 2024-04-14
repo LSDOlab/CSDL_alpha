@@ -87,6 +87,8 @@ class TestMult(csdl_tests.CSDLTest):
         s1 = csdl.mult(x,y)
         t1 = np.array([x_val*y_val])
         compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
+        s1 = x*y
+        compare_values += [csdl_tests.TestingPair(s1, t1)]
 
         # add scalar constants
         s2 = csdl.mult(3.0, 2.0)
@@ -94,6 +96,10 @@ class TestMult(csdl_tests.CSDLTest):
 
         # add scalar constant and scalar variable
         s3 = csdl.mult(3.0, y)
+        compare_values += [csdl_tests.TestingPair(s3, t1, tag = 's3')]
+        s3 = 3.0*y
+        compare_values += [csdl_tests.TestingPair(s3, t1, tag = 's3')]
+        s3 = y*3.0
         compare_values += [csdl_tests.TestingPair(s3, t1, tag = 's3')]
 
         # add tensor constants
@@ -108,20 +114,28 @@ class TestMult(csdl_tests.CSDLTest):
         # add scalar variable and tensor constant
         s6 = csdl.mult(x, 2.0*np.ones((3,2)))
         compare_values += [csdl_tests.TestingPair(s6, t2, tag = 's6')]
+        s6 = x*2.0*np.ones((3,2))
+        compare_values += [csdl_tests.TestingPair(s6, t2, tag = 's6')]
+        s6 = 2.0*np.ones((3,2))*x
+        compare_values += [csdl_tests.TestingPair(s6, t2, tag = 's6')]
 
         z_val = 2.0*np.ones((3,2))
         z = csdl.Variable(name = 'z', value = z_val)
         # add scalar variable and tensor variable
         s7 = csdl.mult(x, z)
         compare_values += [csdl_tests.TestingPair(s7, t2, tag = 's7')]
+        s7 = x*z
+        compare_values += [csdl_tests.TestingPair(s7, t2, tag = 's7')]
+        s7 = z*x
+        compare_values += [csdl_tests.TestingPair(s7, t2, tag = 's7')]
 
         # add scalar constant and tensor variable
         s8 = csdl.mult(3.0, z)
         compare_values += [csdl_tests.TestingPair(s8, t2, tag = 's8')]
-
-        # add tensor variables
-        s9 = csdl.mult(x, z)
-        compare_values += [csdl_tests.TestingPair(s9, t2, tag = 's9')]
+        s8 = z*3.0
+        compare_values += [csdl_tests.TestingPair(s8, t2, tag = 's8')]
+        s8 = 3.0*z
+        compare_values += [csdl_tests.TestingPair(s8, t2, tag = 's8')]
 
         self.run_tests(compare_values = compare_values,)
 
