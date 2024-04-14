@@ -138,7 +138,7 @@ def tensordot(x:VariableLike, y:VariableLike, axes=None)->Variable:
            [[ 3.,  6.],
             [ 9., 12.]]])
 
-    Dot product of y and z along one axis:
+    Dot product of y and z along one axis (same at matrix product z @ y):
 
     >>> csdl.tensordot(y, z, axes=([0], [1])).value
     array([14., 32.])
