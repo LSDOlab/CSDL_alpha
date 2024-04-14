@@ -3,7 +3,7 @@ from .error_utils.error_utils import check_if_valid_shape
 
 def ingest_value(value):
     if isinstance(value, (float, int)):
-        value = np.array([value])
+        value = np.array([value], dtype=np.float64)
     elif not isinstance(value, np.ndarray) and value is not None:
         raise ValueError(f"Value must be a numpy array, float or int. {value} given")
     return value
