@@ -97,10 +97,18 @@ class Operation(Node):
             output_values = self.compute_inline(*[x.value for x in self.inputs])
 
         if self.num_outputs == 1:
-            self.outputs[0].set_value(output_values.reshape(self.outputs[0].shape))
+            # TODO: Avoid this `if` statement in the future if this slows down model evals
+            if self.outputs[0].size == 1:
+                self.outputs[0].set_value(output_values.reshape(self.outputs[0].shape))
+            else:
+                self.outputs[0].set_value(output_values)
         else:
             for output, value in zip(self.outputs, output_values):
-                output.set_value(value.reshape(output.shape))
+            # TODO: Avoid this `if` statement in the future if this slows down model evals
+                if output.size == 1:
+                    output.set_value(value.reshape(output.shape))
+                else:
+                    output.set_value(value)
 
     def finalize_and_return_outputs(self, skip_inline = False):
         """

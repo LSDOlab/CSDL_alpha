@@ -71,6 +71,11 @@ class Variable(Node):
         else:
             self.tags = tags
 
+        self.post_init()
+    
+    def post_init(self):
+        pass
+
     def add_name(self, name: str):
         if self.name is None:
             self.name = name
@@ -410,4 +415,5 @@ class Variable(Node):
         return transpose(self)
 
 class ImplicitVariable(Variable):
-    pass
+    def post_init(self):
+        self.in_solver = False

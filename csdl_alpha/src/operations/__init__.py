@@ -15,6 +15,7 @@ from .maximum import maximum
 from .minimum import minimum
 from .absolute import absolute
 from .neg import negate
+from .copyvar import copyvar
 
 # getting and setting
 from .set_get.setindex import set_index
@@ -23,6 +24,9 @@ from .set_get.loop_slice import _loop_slice as slice
 
 # Trigonometric operations
 from .trig import sin, cos, tan
+
+# Cartesian operations
+from .cross import cross
 
 # Linear algebra operations
 from .linalg.block_matrix import blockmat
@@ -35,6 +39,7 @@ from .linalg.linear_solve import solve_linear
 # Tensor operations
 from .tensor.outer import outer
 from .tensor.inner import inner
+from .tensor.tensordot import tensordot
 from .tensor.reshape import reshape
 from .tensor.transpose import transpose
 from .tensor.expand import expand

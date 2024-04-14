@@ -24,8 +24,8 @@ class CSDLTest():
         ):
         import csdl_alpha as csdl
         import numpy as np
+        recorder = csdl.get_current_recorder()
         if turn_off_recorder:
-            recorder = csdl.get_current_recorder()
             recorder.stop()
 
         if compare_values is None:
@@ -38,6 +38,10 @@ class CSDLTest():
         # TODO: make compatible with sparse variables
         for ind, testing_pair in enumerate(compare_values):
             testing_pair.compare(ind+1)
+
+        # run the graph again to make sure it actually runs twice.
+        recorder.execute()
+        recorder.print_graph_structure()
 
         # for variable, real_value in compare_values.items():
         #     if not isinstance(variable, csdl.Variable):
