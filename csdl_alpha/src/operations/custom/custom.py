@@ -70,6 +70,7 @@ class CustomExplicitOperation(CustomOperation):
         super().__init__(*args, **kwargs)
 
         self.evaluate = self._wrap_evaluate(self.evaluate)
+        self.locked = False
 
     def initialize(self):
         """
@@ -87,7 +88,14 @@ class CustomExplicitOperation(CustomOperation):
         raise NotImplementedError('not implemented')
 
     def _wrap_evaluate(self, evaluate):
+        
         def new_evaluate(*args, **kwargs):
+
+            # If the evaluate method is called multiple times, raise an error
+            if self.locked:
+                raise RuntimeError('Cannot call evaluate multiple times on the same CustomExplicitOperation object. Create a new object instead.')
+            self.locked = True
+
             # Node.__init__(self)
             # self.name = self.__class__.__name__
 

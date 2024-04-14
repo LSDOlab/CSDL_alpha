@@ -193,6 +193,34 @@ class TestCustom(csdl_tests.CSDLTest):
             op = CustomOp()
             f1, f2 = op.evaluate(x1, x2)
 
+        # Can only call evaluate once
+        with pytest.raises(RuntimeError):
+            self.prep()
+
+            import csdl_alpha as csdl
+            import numpy as np
+            recorder = csdl.Recorder(inline=True)
+            recorder.start()
+
+            x1 = csdl.Variable(value=np.array([1, 2, 3]))
+            x2 = csdl.Variable(value=1.0)
+
+            class CustomOp(csdl.CustomExplicitOperation):
+                def evaluate(self,x1, x2):
+                    self.declare_input('x1', x1)
+                    self.declare_input('x2', x2)
+                    f1 = self.create_output('f1', x1.shape)
+                    f2 = self.create_output('f2', x1.shape)
+                    return f1, f2
+                def compute(self, inputs, outputs):
+                    outputs['f1'] = inputs['x1']
+                    outputs['f2'] = inputs['x1']
+                    
+            op = CustomOp()
+            f1, f2 = op.evaluate(x1, x2)
+            f1, f2 = op.evaluate(x1, x2)
+
+
 if __name__ == '__main__':
     test = TestCustom()
     test.test_evaluate_errors()
