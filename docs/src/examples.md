@@ -18,5 +18,4 @@ and add the example files directly into the toctree of this main examples page.
 
 examples/basic
 examples/advanced
-examples/stdops
 ```

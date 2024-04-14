@@ -1,6 +1,6 @@
-
-
-if __name__ == '__main__':
+'''
+Simple coupled example edit:
+'''
     import csdl_alpha as csdl
     import numpy as np
 

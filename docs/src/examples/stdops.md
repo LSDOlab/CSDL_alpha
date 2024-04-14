@@ -13,4 +13,6 @@ examples page.
 :glob:
 
 ../_temp/operations/*
+../operations/add
+
 ```
