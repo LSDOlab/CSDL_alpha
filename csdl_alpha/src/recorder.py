@@ -127,13 +127,13 @@ class Recorder:
                         information_dict['names2nodes'][name] = node
                     information_dict['analytics']['number of variables'] += 1
                 else:
-                    current_num_ops += 1
                     information_dict['analytics']['number of operations'] += 1
                     if isinstance(node, SubgraphOperation):
                         subgraph = node.get_subgraph()
                         graphs_to_process.append(subgraph)
                         information_dict['graph_tree'][current_graph].append((node, subgraph))
-                
+                    else:
+                        current_num_ops += 1
             information_dict['graph_tree'][current_graph].append((None, f'(+{current_num_ops} ops)'))
 
         return information_dict
