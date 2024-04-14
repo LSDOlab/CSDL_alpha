@@ -95,6 +95,8 @@ def reorder_axes(x, action):
         raise ValueError('Cannot reorder axes of a tensor without "action" specified.')
     if not isinstance(action, str):
         raise ValueError('"action" must be a string.')
+    if '->' not in action:
+        raise ValueError('Invalid action string. Use "->" to separate the input and output subscripts.')
 
     in_str, out_str = action.split('->')
     in_shape = x.shape

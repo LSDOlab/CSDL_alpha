@@ -128,6 +128,9 @@ def expand(x, out_shape, action=None):
         else:
             if not isinstance(action, str):
                 raise ValueError('"action" must be a string.')
+            if '->' not in action:
+                raise ValueError('Invalid action string. Use "->" to separate the input and output subscripts.')
+            
             in_str, out_str = action.split('->')
             in_shape = x.shape
             if len(in_str) != len(in_shape):
