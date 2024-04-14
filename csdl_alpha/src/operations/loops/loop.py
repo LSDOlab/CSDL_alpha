@@ -140,7 +140,7 @@ class frange():
         return ops, shapes
 
     def post_iteration_one(self):
-        self._graph.visualize('graph_loop_iter_1')
+        # self._graph.visualize('graph_loop_iter_1')
         self.iter1_inputs = [] # list of inputs to the first iteration
         self.iter1_outputs = [] # list of outputs to the first iteration
         # NOTE: variables that are created inside the loop but not used in the loop aren't going to show up in either of these lists, but that *should* be okay?
@@ -167,7 +167,7 @@ class frange():
         self._graph._delete_nodes(ops)
 
     def post_iteration_two(self):
-        self._graph.visualize('graph_loop_iter_2')
+        # self._graph.visualize('graph_loop_iter_2')
         self.iter2_inputs = [] # list of inputs to the second iteration (same order as first)
         self.iter2_outputs = [] # list of outputs to the second iteration (same order as first)
         for node in self._graph.node_table.keys():
@@ -189,10 +189,9 @@ class frange():
                         loop_var = (input2, input1, output2) # (input node in graph, input for first iter, input for subsiquent iters)
                         loop_vars.append(loop_var)
                         self._graph._delete_nodes([input1])
-                        self.iter1_non_inputs.remove(input2)
+                        self.iter1_non_inputs.discard(input2)
                 else:
                     # this implies input 1 and input 2 are both made in the loop, so we can just keep input 2
-                    self._graph._delete_nodes([input1])
                     pass
         # remove any inputs that are no longer used
         self._graph._delete_nodes(list(strike_set))
