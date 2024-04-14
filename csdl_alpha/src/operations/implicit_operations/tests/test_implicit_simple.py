@@ -13,7 +13,6 @@ def nl_model():
     y = x - (-ax2 - c)/b
     return x, y
 
-
 class TestSimpleImplicit(csdl_tests.CSDLTest):
     def test_solvers_simple(self):
         cases = []
@@ -33,7 +32,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (csdl.Variable(value=0.0), 4)}))
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4.0))}))
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4.0)),'tolerance': csdl.Variable(value=1e-8)}))
-        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4.0)),'tolerance': 1e-7}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (csdl.Variable(value=0.0), csdl.Variable(value=4.0)),'tolerance': 1e-7}))
 
         compare_values = []
         for i, (solver, kwargs) in enumerate(cases):

@@ -43,7 +43,8 @@ class NonlinearSolver(object):
         self.add_metadata('tolerance', tolerance)
         self.add_metadata('max_iter', max_iter)
 
-        # Dictionary to keep track of values for inline evaluations
+        # block nonlinear solver from running more than once
+        self.locked = False
 
     def add_metadata(self, key, datum, is_input=True):
         if isinstance(datum, Variable) and is_input:
@@ -65,8 +66,15 @@ class NonlinearSolver(object):
 
         Initializes mappings between states and residuals, and stores metadata about the state.
         """
+        if self.locked:
+            raise ValueError("Nonlinear solver has already been run. Cannot add more state-residual pairs.")
         if not isinstance(state, ImplicitVariable):
             raise TypeError(f"State must be an ImplicitVariable. {state} given")
+        else:
+            if state.in_solver:
+                raise ValueError(f"Implicit variable {state.name} has already been previously added to a solver.")
+            state.in_solver = True
+
         if not isinstance(residual, Variable):
             raise TypeError(f"Residual must be a Variable. {residual} given")
         
@@ -92,6 +100,8 @@ class NonlinearSolver(object):
         """
         if len(self.state_to_residual_map) == 0:
             raise ValueError("No state-residual pairs added to the solver")
+        
+        self.locked = True
 
         # Steps:
         # G is the current graph we are in
@@ -128,7 +138,7 @@ class NonlinearSolver(object):
         # print(S.node_table, S_inputs, S_outputs)
 
         # 1.c
-        recorder._enter_subgraph()
+        recorder._enter_subgraph(name = self.name)
         recorder.active_graph.replace(S)
         self.update_residual = recorder.active_graph.execute_inline
         self.residual_graph = recorder.active_graph

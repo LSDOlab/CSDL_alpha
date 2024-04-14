@@ -74,6 +74,109 @@ class Recorder:
         """
         self.manager.deactivate_recorder(self)
 
+    def execute(self):
+        """
+        Executes the current active graph inline and updates all variable values
+        """
+        #TODO: TEST TEST TEST TEST
+
+        self.active_graph.execute_inline()
+
+    def gather_insights(self):
+        """
+        UNTESTED!
+        """
+        #TODO: TEST TEST TEST TEST
+
+        from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
+        from csdl_alpha.src.graph.variable import Variable
+
+        information_dict = {}
+        information_dict['names2nodes'] = {}
+        information_dict['graph_tree'] = {}
+        information_dict['analytics'] = {
+            'number of nodes': 0,
+            'number of edges': 0,
+            'number of variables': 0,
+            'number of operations': 0,
+            'number of namespaces': 0,
+            'number of graphs': 0,
+        }
+
+        all_nodes = set()
+
+        graphs_to_process = [self.get_root_graph()]
+        while len(graphs_to_process) > 0:
+            # current graph
+            current_graph = graphs_to_process.pop(0)
+            current_num_ops = 0
+            
+            # initialize graph tree and analytics
+            information_dict['graph_tree'][current_graph] = []
+            information_dict['analytics']['number of graphs'] += 1
+
+            # iterate over all nodes in the current graph and store information
+            for node in current_graph.node_table:
+                information_dict['analytics']['number of nodes'] += 1
+                if isinstance(node, Variable):
+                    if node in all_nodes:
+                        continue
+
+                    all_nodes.add(node)
+                    for name in node.names:
+                        information_dict['names2nodes'][name] = node
+                    information_dict['analytics']['number of variables'] += 1
+                else:
+                    current_num_ops += 1
+                    information_dict['analytics']['number of operations'] += 1
+                    if isinstance(node, SubgraphOperation):
+                        subgraph = node.get_subgraph()
+                        graphs_to_process.append(subgraph)
+                        information_dict['graph_tree'][current_graph].append((node, subgraph))
+                
+            information_dict['graph_tree'][current_graph].append((None, f'(+{current_num_ops} ops)'))
+
+        return information_dict
+
+    def print_graph_structure(self):
+        """
+        prints graph tree structure like:
+
+        root
+            graph1
+                graph2
+            graph3
+                graph4
+                graph5
+        """
+        #TODO: TEST TEST TEST TEST
+        graph_tree = self.gather_insights()['graph_tree']
+
+        # from https://stackoverflow.com/questions/51903172/how-to-display-a-tree-in-python-similar-to-msdos-tree-command 
+        def ptree(parent, tree, indent=''):
+
+
+            if isinstance(parent, str):
+                print(parent)
+            else:
+                print(parent.name)
+
+            if parent not in tree:
+                return
+
+            indent += ' '
+
+            for child in tree[parent][:-1]:
+                print(indent + '|' + '-' * 4, end='')
+                ptree(child[1], tree, indent + '|' + ' ' * 4)
+
+            if len(tree[parent]) > 0:
+                child = tree[parent][-1]
+                print(indent + '`' + '-' * 4, end='')
+                ptree(child[1], tree, indent + ' ' * 4)
+
+        ptree(self.get_root_graph(), graph_tree)
+
     def _enter_namespace(self, name: str):
         """
         Enters a new namespace.
@@ -108,11 +211,13 @@ class Recorder:
         self.active_namespace = self.active_namespace.parent
         self.active_namespace = self.active_namespace
 
-    def _enter_subgraph(self, add_missing_variables: bool = False):
+    def _enter_subgraph(self, add_missing_variables: bool = False, name:str = None):
         """
         Enters a new subgraph.
         """
-        self.active_graph_node = self.active_graph_node.add_child(Graph())
+        #TODO: TEST TEST TEST TEST
+
+        self.active_graph_node = self.active_graph_node.add_child(Graph(name = name))
         self.active_graph = self.active_graph_node.value
         self.active_graph.add_missing_variables = add_missing_variables
         self.active_graph.inputs = set()
@@ -224,7 +329,16 @@ class Recorder:
         """
         self.active_graph.visualize_n2()
         
+    def get_root_graph(self):
+        """
+        Gets the root graph.
 
+        Returns:
+            The root graph.
+        """
+        #TODO: TEST TEST TEST TEST
+
+        return self.graph_tree.value
 
 class Tree:
     """
