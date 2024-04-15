@@ -98,7 +98,7 @@ def import_h5py(filename:str, group:str):
     # Return the dictionary of variables
     return variables
     
-def inline_csv_save(filename:str):
+def inline_csv_save(filename:str, print_csv:bool=False):
     """Save the name, min, max, and mean of variables from the current recorder's node graph to a CSV file.
 
     Parameters
@@ -115,22 +115,38 @@ def inline_csv_save(filename:str):
         filename = f'{filename}.csv'
 
     recorder = get_current_recorder()
+    insights = recorder.gather_insights()
     name_counter_dict = {}
+    max_var_len = 0
     with open(filename, mode='w', newline='') as f:
         csv_writer = csv.writer(f)
-        csv_writer.writerow(['Variable', 'Min', 'Max', 'Mean', 'Shape'])
-        for key in recorder.node_graph_map.keys():
+        csv_writer.writerow(['Variable', 'Min', 'Max', 'Mean', 'Shape', 'Graphs'])
+        for key in insights['nodes2graphs']:
             if isinstance(key, Variable):
                 if key._save:
                     savename = _get_savename(key, name_counter_dict)
+                    if len(savename) > max_var_len:
+                        max_var_len = len(savename)
+
+                    # in_graphs = ''
+                    # if key in insights['nodes2graphs']:
+                    in_graphs = ','.join([graph.name for graph in insights['nodes2graphs'][key]])
+
                     if key.value is not None:
                         value = key.value
-                        csv_writer.writerow([savename, np.min(value), np.max(value), np.mean(value), value.shape])
+                        csv_writer.writerow([savename, np.min(value), np.max(value), np.mean(value), value.shape, in_graphs])
                     else:
-                        csv_writer.writerow([savename, None, None, None, None])
+                        csv_writer.writerow([savename, None, None, None, None, in_graphs])
 
+    if print_csv:
+        name_len = max_var_len+5
+        with open(f"{filename}", 'r') as f:
+            csv_f = csv.reader(f)
+            with np.printoptions(precision=3, suppress=True):
 
-
+                for row in csv_f:
+                    print('{:<{}}  {:<30}  {:<30} {:<30} {:<10} {:<30}'.format(row[0], name_len, row[1], row[2], row[3], row[4], row[5]))
+                
 def save_optimization_variables():
     """Save optimization variables.
 
@@ -146,7 +162,7 @@ def save_optimization_variables():
     for key in recorder.design_variables:
         key.save()
 
-def save_all_variables():
+def save_all_variables(ignore_unnamed = False):
     """Save all variables in the current recorder's node graph."""
     from ..api import Variable
     from ..api import get_current_recorder
@@ -154,4 +170,8 @@ def save_all_variables():
     recorder = get_current_recorder()
     for key in recorder.node_graph_map.keys():
         if isinstance(key, Variable):
-            key.save()
+            if ignore_unnamed:
+                if key.name:
+                    key.save()
+            else:
+                key.save()

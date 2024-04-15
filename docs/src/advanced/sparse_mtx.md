@@ -1,14 +1,15 @@
+# Support for sparse matrices
+
 ## FOR WORKSHOP
 
+```{warning}
 Sparse matrices are currently not natively supported as of April 2024. They are planned to be integrated slowly in the upcoming weeks. Please use the ```csdl.SparseMatrix``` class for now (it is just a dense variable).
-
+```
 ```python
 import numpy as np
 
 sparse_matrix = csdl.SparseMatrix(value = <np array>)
 ```
-
-# Support for sparse matrices
 
 CSDL supports sparse matrix variables and a limited set of operations on them.
 In this page, we will go over all the features of CSDL sparse variables.

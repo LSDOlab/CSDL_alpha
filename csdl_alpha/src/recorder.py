@@ -96,6 +96,7 @@ class Recorder:
 
         information_dict = {}
         information_dict['names2nodes'] = {}
+        information_dict['nodes2graphs'] = {}
         information_dict['graph_tree'] = {}
         information_dict['analytics'] = {
             'number of nodes': 0,
@@ -113,7 +114,7 @@ class Recorder:
             # current graph
             current_graph = graphs_to_process.pop(0)
             current_num_ops = 0
-            
+
             # initialize graph tree and analytics
             information_dict['graph_tree'][current_graph] = []
             information_dict['analytics']['number of graphs'] += 1
@@ -122,13 +123,18 @@ class Recorder:
             for node in current_graph.node_table:
                 information_dict['analytics']['number of nodes'] += 1
                 if isinstance(node, Variable):
-                    if node in all_nodes:
-                        continue
+                    if node not in all_nodes:
+                        for name in node.names:
+                            information_dict['names2nodes'][name] = node
+                        information_dict['analytics']['number of variables'] += 1
 
                     all_nodes.add(node)
-                    for name in node.names:
-                        information_dict['names2nodes'][name] = node
-                    information_dict['analytics']['number of variables'] += 1
+
+                    if node not in information_dict['nodes2graphs']:
+                        information_dict['nodes2graphs'][node] = [current_graph]
+                    else:
+                        information_dict['nodes2graphs'][node].append(current_graph)
+                        
                 else:
                     information_dict['analytics']['number of operations'] += 1
                     if isinstance(node, SubgraphOperation):
@@ -321,11 +327,11 @@ class Recorder:
         self.active_graph_node = parent_graph_node
         self.active_graph = parent_graph_node.value
 
-    def visualize_graph(self):
+    def visualize_graph(self, filename: str = 'image'):
         """
         Visualizes the graph.
         """
-        self.active_graph.visualize()
+        self.active_graph.visualize(filename)
 
     def visualize_adjacency_matrix(self):
         """
