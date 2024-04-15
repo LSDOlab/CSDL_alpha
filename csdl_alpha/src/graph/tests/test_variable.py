@@ -8,4 +8,15 @@ class TestVariable(csdl_tests.CSDLTest):
         self.docstest(Variable.T)
         self.docstest(Variable.__getitem__)
         self.docstest(Variable.set)
+
+    def test_int_float(self):
+        self.prep()
+        import csdl_alpha as csdl
+        import numpy as np
+
+        a = csdl.Variable(value=2, name='a')
+        b = csdl.Variable(value=3.0, name='b')
+
+        assert isinstance(a.value[0], np.float64)
+        assert isinstance(b.value[0], np.float64)
     
