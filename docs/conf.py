@@ -54,7 +54,7 @@ bibtex_bibfiles = ['src/references.bib']
 # myst_nb options
 myst_title_to_header = True
 myst_enable_extensions = ["dollarmath", "amsmath", "tasklist"]
-nb_execution_mode = 'force'
+nb_execution_mode = 'off'
 
 # autoapi options
 autoapi_dirs = ["../csdl_alpha/src"]
