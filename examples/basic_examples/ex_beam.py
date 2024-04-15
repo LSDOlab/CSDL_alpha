@@ -18,19 +18,25 @@ class BeamModel():
         num_elements = self.parameters['num_elements']
 
         moment_of_inertia_comp = MomentOfInertiaComp(b=b)
-        I = moment_of_inertia_comp.evaluate(h=h)
+
+        with csdl.Namespace('inertia'):
+            I = moment_of_inertia_comp.evaluate(h=h)
 
         local_stiffness_matrix_comp = LocalStiffnessMatrixComp(num_elements=num_elements, E=E, L=L)
-        K_local = local_stiffness_matrix_comp.evaluate(I=I)
+        with csdl.Namespace('stiffness'):
+            K_local = local_stiffness_matrix_comp.evaluate(I=I)
 
         states_comp = StatesComp(num_elements=num_elements)
-        d = states_comp.evaluate(K_local=K_local, force_vector=force_vector)
+        with csdl.Namespace('states'):
+            d = states_comp.evaluate(K_local=K_local, force_vector=force_vector)
 
         compliance_comp = ComplianceComp()
-        compliance = compliance_comp.evaluate(d=d[:-2], force_vector=force_vector)
+        with csdl.Namespace('compliance'):
+            compliance = compliance_comp.evaluate(d=d[:-2], force_vector=force_vector)
 
         volume_comp = VolumeComp(num_elements=num_elements, L=L)
-        volume = volume_comp.evaluate(h=h, b=b)
+        with csdl.Namespace('volume'):
+            volume = volume_comp.evaluate(h=h, b=b)
 
         return d, compliance, volume
     
@@ -67,8 +73,11 @@ class LocalStiffnessMatrixComp():
             mtx[ind, :, :, ind] = coeffs
 
         K_local = csdl.Variable(value=np.zeros((num_elements, 4, 4)))
-        for ind in range(num_elements):
+        mtx = csdl.Variable(value=mtx)
+
+        for ind in csdl.frange(num_elements):
             K_local = K_local.set(csdl.slice[ind, :, :], mtx[ind, :, :, ind] * I[ind])
+            
         return K_local
     
 class StatesComp():
@@ -139,7 +148,6 @@ class StatesComp():
             # SE and SW quadrants together
             data = data.set(csdl.slice[[j+4, j+5, j+6, j+7, j+8, j+9, j+10, j+11]], K[2:, :].flatten())
 
-
         data = data.set(csdl.slice[-4:], 1.0)
         rows[-4] = 2 * num_nodes
         rows[-3] = 2 * num_nodes + 1
@@ -154,8 +162,7 @@ class StatesComp():
 
         # ready for sparse, but turning to dense for now
         K_global = csdl.Variable(value=np.zeros((n_K, n_K)))
-        for ind in range(len(rows)):
-            K_global = K_global.set(csdl.slice[int(rows[ind]), int(cols[ind])], data[ind])
+        K_global = K_global.set(csdl.slice[list(rows.astype(int)), list(cols.astype(int))], data)
                             
         return K_global
     
@@ -186,25 +193,25 @@ recorder.start()
 E = 1.
 L = 1.
 b = 0.1
-num_elements = 50
+num_elements = 1000
 force_vector = np.zeros(2 * (num_elements + 1))
 force_vector[-2] = -1.
-# h = np.ones(num_elements) * 0.5
-h = np.array(
-[0.14915751, 0.14764323, 0.14611341, 0.14456713, 0.14300423, 0.14142421,
- 0.13982606, 0.13820962, 0.13657403, 0.13491857, 0.13324265, 0.1315453,
- 0.12982572, 0.12808315, 0.12631656, 0.12452484, 0.122707,   0.12086183,
- 0.11898806, 0.11708424, 0.11514905, 0.11318069, 0.11117766, 0.10913768,
- 0.10705894, 0.10493899, 0.1027754,  0.10056525, 0.09830549, 0.09599247,
- 0.09362247, 0.0911908,  0.08869256, 0.08612201, 0.08347219, 0.08073579,
- 0.07790323, 0.07496376, 0.07190454, 0.06870931, 0.0653583,  0.06182638,
- 0.05808046, 0.05407658, 0.04975292, 0.04501854, 0.03972909, 0.03363155,
- 0.0262019,  0.01610862]
- )
-
+h = csdl.Variable(value=np.ones(num_elements) * 0.5)
+# h = np.array(
+# [0.14915751, 0.14764323, 0.14611341, 0.14456713, 0.14300423, 0.14142421,
+#  0.13982606, 0.13820962, 0.13657403, 0.13491857, 0.13324265, 0.1315453,
+#  0.12982572, 0.12808315, 0.12631656, 0.12452484, 0.122707,   0.12086183,
+#  0.11898806, 0.11708424, 0.11514905, 0.11318069, 0.11117766, 0.10913768,
+#  0.10705894, 0.10493899, 0.1027754,  0.10056525, 0.09830549, 0.09599247,
+#  0.09362247, 0.0911908,  0.08869256, 0.08612201, 0.08347219, 0.08073579,
+#  0.07790323, 0.07496376, 0.07190454, 0.06870931, 0.0653583,  0.06182638,
+#  0.05808046, 0.05407658, 0.04975292, 0.04501854, 0.03972909, 0.03363155,
+#  0.0262019,  0.01610862]
+#  )
 
 
 beam_model = BeamModel(E, L, b, num_elements)
 d, compliance, volume = beam_model.evaluate(force_vector, h)
 print(d.value, compliance.value, volume.value)
 recorder.stop()
+recorder.visualize_graph()
