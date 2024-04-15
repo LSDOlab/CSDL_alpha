@@ -1,8 +1,10 @@
 from csdl_alpha.utils.parameters import Parameters
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.operation import Operation
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, get_type_string, ingest_value
 from csdl_alpha.src.graph.node import Node
+from csdl_alpha.utils.typing import VariableLike
+import numpy as np
 
 class CustomOperation(Operation):
     def __init__(self, *args, **kwargs):
@@ -15,15 +17,66 @@ class CustomOperation(Operation):
         self.output_dict = {}
         self.derivative_parameters = {}
 
+# https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
+def _readonly(self, *args, **kwargs):
+    raise RuntimeError("Cannot modify inputs dictionary.")
+
+# https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
+class CustomInputsDict(dict):
+    __setitem__ = _readonly
+    __delitem__ = _readonly
+    pop = _readonly
+    popitem = _readonly
+    clear = _readonly
+    update = _readonly
+    setdefault = _readonly
+
+def preprocess_custom_inputs(inputs):
+    return CustomInputsDict(inputs)
+
+def postprocess_custom_outputs(given_outputs:dict, declared_outputs:dict):
+    processed_outputs = {}
+    for given_key, given_output in given_outputs.items():
+
+        # If they give an output that isn't a VariableLike, raise an error
+        try:
+            given_output = ingest_value(given_output)
+        except Exception as e:
+            raise TypeError(f'Error with output \'{given_key}\': {e}')
+
+        # If they give an output that wasn't declared, raise an error
+        if given_key not in declared_outputs:
+            raise KeyError(f'Output \'{given_key}\' was not declared but was computed')
+        
+        # If they give an output that doesn't have the right shape, raise an error
+        if given_output.size == 1: # broadcasting????
+            given_output = np.ones(declared_outputs[given_key].shape) * given_output.flatten()
+        elif given_output.shape != declared_outputs[given_key].shape:
+            raise ValueError(f'Output \'{given_key}\' must have shape {declared_outputs[given_key].shape}, but shape {given_output.shape} was given')
+
+        processed_outputs[given_key] = given_output
+
+    for declared_key, declared_output_variable in declared_outputs.items():
+
+        # If they didn't give an output that was declared, raise an error
+        if declared_key not in processed_outputs:
+            raise KeyError(f'Output \'{declared_key}\' was declared but was not computed')
+
+    return processed_outputs
+
 class CustomExplicitOperation(CustomOperation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.evaluate = self._wrap_evaluate(self.evaluate)
+        self.locked = False
 
     def initialize(self):
-        raise NotImplementedError('not implemented')
+        """
+        Declare parameters here.
+        """
+        pass
 
     def evaluate(self):
         raise NotImplementedError('not implemented')
@@ -35,7 +88,14 @@ class CustomExplicitOperation(CustomOperation):
         raise NotImplementedError('not implemented')
 
     def _wrap_evaluate(self, evaluate):
+        
         def new_evaluate(*args, **kwargs):
+
+            # If the evaluate method is called multiple times, raise an error
+            if self.locked:
+                raise RuntimeError('Cannot call evaluate multiple times on the same CustomExplicitOperation object. Create a new object instead.')
+            self.locked = True
+
             # Node.__init__(self)
             # self.name = self.__class__.__name__
 
@@ -53,7 +113,11 @@ class CustomExplicitOperation(CustomOperation):
     def compute_inline(self, *args):
         inputs = {key:input for key, input in zip(self.input_dict.keys(), args)}
         comp_outputs = {}
+
+        inputs = preprocess_custom_inputs(inputs)
         self.compute(inputs, comp_outputs)
+        comp_outputs = postprocess_custom_outputs(comp_outputs, self.output_dict)
+
         output = [comp_outputs[key] for key in self.output_dict.keys()]
         if len(output) == 1:
             output = output[0]
@@ -69,31 +133,36 @@ class CustomExplicitOperation(CustomOperation):
     #         output.set_value(comp_outputs[key])
 
     def create_output(self, name:str, shape:tuple):
-            """Create and store an output variable.
+        """Create and store an output variable. 
 
-            This method creates a new output variable with the given name and shape,
-            and stores it in the `outputs` dictionary of the object.
+        This method creates a new output variable with the given name and shape,
+        and populates the `outputs` dictionary of the object. 
 
-            Parameters
-            ----------
-            name : str
-                The name of the output variable.
-            shape : tuple
-                The shape of the output variable.
+        Parameters
+        ----------
+        name : str
+            The name of the output variable.
+        shape : tuple
+            The shape of the output variable.
 
-            Returns
-            -------
-            Variable
-                The created output variable.
-            """
-            output = Variable(shape)
-            self.output_dict[name] = output
-            return output
+        Returns
+        -------
+        Variable
+            The created output variable that represents the output of the operation.
+        """
+        output = Variable(shape)
+
+        if name in self.output_dict.keys():
+            raise KeyError(f'Output variable \'{name}\' already created.')
+
+        self.output_dict[name] = output
+        return output
     
     def declare_input(self, key:str, variable):
         """Declares a variable as an input.
 
-        This method stores the given input variable in the inputs dictionary under the given key.
+        Defines the 'inputs' dictionary for the 'compute' method. 
+        Sets the given input variable in the 'inputs' dictionary under the given key.
 
         Parameters
         ----------
@@ -102,8 +171,13 @@ class CustomExplicitOperation(CustomOperation):
         variable : csdl.Variable
             The input variable.
         """
-        self.input_dict[key] = variablize(variable)
-    
+        if key in self.input_dict.keys():
+            raise KeyError(f'Input variable \'{key}\' already declared.')
+        try:
+            self.input_dict[key] = variablize(variable)
+        except Exception as e:
+            raise TypeError(f'Error with input variable \'{key}\': {e}')
+
     def declare_derivative_parameters(
         self,
         of, wrt,

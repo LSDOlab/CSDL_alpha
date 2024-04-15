@@ -11,5 +11,5 @@ tutorials page.
 ```{toctree}
 :maxdepth: 1
 
-../_temp/tutorials/advanced_tutorials/modopt_tutorial
+../_temp/tutorials/advanced_tutorials/nonlinear_solver
 ```

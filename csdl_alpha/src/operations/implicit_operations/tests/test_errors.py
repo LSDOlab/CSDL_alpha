@@ -3,7 +3,7 @@ import pytest
 import csdl_alpha as csdl
 import numpy as np
 
-class TestErrorsBracket(csdl_tests.CSDLTest):
+class TestErrors(csdl_tests.CSDLTest):
 
     def test_gauss_seidel(self):
         self.prep()
@@ -71,17 +71,38 @@ class TestErrorsBracket(csdl_tests.CSDLTest):
 
         solver = csdl.nonlinear_solvers.GaussSeidel()
         with pytest.raises(TypeError):
+            x = csdl.ImplicitVariable((1,), value=0.34)
+            ax2 = a*x**2
+            y = x - (-ax2 - c)/b
             solver.add_state(3.0, y)
         with pytest.raises(TypeError):
+            x = csdl.ImplicitVariable((1,), value=0.34)
+            ax2 = a*x**2
+            y = x - (-ax2 - c)/b
             solver.add_state(x, 3.0)
 
         solver = csdl.nonlinear_solvers.GaussSeidel()
-        with pytest.raises(ValueError):
+        with pytest.raises(RuntimeError):
+            x = csdl.ImplicitVariable((1,), value=0.34)
+            ax2 = a*x**2
+            y = x - (-ax2 - c)/b
             solver.add_state(x, y)
             solver.run()
             solver.add_state(x, y)
 
         solver = csdl.nonlinear_solvers.GaussSeidel()
         with pytest.raises(ValueError):
+            x = csdl.ImplicitVariable((1,), value=0.34)
+            ax2 = a*x**2
+            y = x - (-ax2 - c)/b
             solver.add_state(x, y)
             solver.add_state(x, y)
+
+        solver = csdl.nonlinear_solvers.GaussSeidel()
+        with pytest.raises(RuntimeError):
+            x = csdl.ImplicitVariable((1,), value=0.34)
+            ax2 = a*x**2
+            y = x - (-ax2 - c)/b
+            solver.add_state(x, y)
+            solver.run()
+            solver.run()

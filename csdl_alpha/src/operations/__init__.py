@@ -44,6 +44,7 @@ from .tensor.reshape import reshape
 from .tensor.transpose import transpose
 from .tensor.expand import expand
 from .tensor.reorder_axes import reorder_axes
+from .tensor.einsum import einsum
 
 # Special operations
 from .special.bessel import bessel

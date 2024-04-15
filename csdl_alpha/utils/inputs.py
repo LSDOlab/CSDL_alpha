@@ -1,11 +1,14 @@
 import numpy as np
 from .error_utils.error_utils import check_if_valid_shape
 
+def get_type_string(obj)-> str:
+    return f'\'{type(obj).__name__}\''
+
 def ingest_value(value):
-    if isinstance(value, (float, int)):
+    if isinstance(value, (float, int, np.integer, np.floating)):
         value = np.array([value], dtype=np.float64)
     elif not isinstance(value, np.ndarray) and value is not None:
-        raise ValueError(f"Value must be a numpy array, float or int. {value} given")
+        raise TypeError(f"Value must be a numpy array, float or int. Value {value} of type {get_type_string(value)} given")
     return value
 
 def scalarize(value):

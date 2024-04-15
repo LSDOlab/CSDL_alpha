@@ -67,12 +67,12 @@ class NonlinearSolver(object):
         Initializes mappings between states and residuals, and stores metadata about the state.
         """
         if self.locked:
-            raise ValueError("Nonlinear solver has already been run. Cannot add more state-residual pairs.")
+            raise RuntimeError("Nonlinear solver has already been run. Cannot add more state-residual pairs.")
         if not isinstance(state, ImplicitVariable):
             raise TypeError(f"State must be an ImplicitVariable. {state} given")
         else:
             if state.in_solver:
-                raise ValueError(f"Implicit variable {state.name} has already been previously added to a solver.")
+                raise ValueError(f"Implicit variable with name = {state.name} has already been previously added to a solver.")
             state.in_solver = True
 
         if not isinstance(residual, Variable):
@@ -101,6 +101,9 @@ class NonlinearSolver(object):
         if len(self.state_to_residual_map) == 0:
             raise ValueError("No state-residual pairs added to the solver")
         
+        if self.locked:
+            raise RuntimeError("Nonlinear solver has already been run. Cannot run again.")
+
         self.locked = True
 
         # Steps:

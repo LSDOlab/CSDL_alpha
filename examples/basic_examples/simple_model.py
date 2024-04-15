@@ -1,3 +1,6 @@
+'''
+Simple model:
+'''
 import csdl_alpha as csdl
 import numpy as np
 
