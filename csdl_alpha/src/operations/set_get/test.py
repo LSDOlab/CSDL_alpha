@@ -134,21 +134,21 @@ def test_slices():
     """
     tests to make sure that slices are correct
     """
-    from csdl_alpha.src.operations.set_get.slice import _slice
+    from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as _slice
 
-    assert _slice[0] == (0,)
-    assert _slice[[0,1,2]] == ([0,1,2],)
-    assert _slice[0:1] == (slice(0,1),)
+    assert _slice[0].evaluate() == (0,)
+    assert _slice[[0,1,2]].evaluate() == ([0,1,2],)
+    assert _slice[0:1].evaluate() == (slice(0,1),)
 
-    assert _slice[0:1,0:1] == (slice(0,1), slice(0,1))
-    assert _slice[[0,1],0:1] == ([0,1], slice(0,1))
-    assert _slice[0:1,[0,1]] == (slice(0,1), [0,1])
-    assert _slice[[0,1],[0,1]] == ([0,1], [0,1])
+    assert _slice[0:1,0:1].evaluate() == (slice(0,1), slice(0,1))
+    assert _slice[[0,1],0:1].evaluate() == ([0,1], slice(0,1))
+    assert _slice[0:1,[0,1]].evaluate() == (slice(0,1), [0,1])
+    assert _slice[[0,1],[0,1]].evaluate() == ([0,1], [0,1])
 
     with pytest.raises(TypeError):
         _slice[(0,1,(1,2,3))]
 
-    assert  _slice[[1,2,3], [1,2,3]] == ([1,2,3], [1,2,3])
+    assert  _slice[[1,2,3], [1,2,3]].evaluate() == ([1,2,3], [1,2,3])
 
     # List indices must be the same length
     with pytest.raises(IndexError):
@@ -164,13 +164,15 @@ def test_slices():
         _slice[[1,2], [1,2], [2,3,4]]
 
     # weird cases :(
-    assert _slice[1,[0,1],[0,1],1] == (1, [0,1], [0,1], 1)
+    assert _slice[1,[0,1],[0,1],1].evaluate() == (1, [0,1], [0,1], 1)
     with pytest.raises(IndexError):
         _slice[0:1,[0,1],[0,1],1, [1,2,3], [1,2,3], 0:1]
 
-    assert _slice[1,[0,],[0,],1] == (1, 0, 0, 1)
+    assert _slice[1,[0,],[0,],1].evaluate() == (1, 0, 0, 1)
 
     import numpy as np
+    with pytest.raises(TypeError):
+        _slice[np.array([1, 2, 3])]
     # x = np.ones((10,9,8,7,6,5,4))
     # # test = x[[0,1],[0,1],0:1, [1,2,3], [1,2,3]]
     # test = x[[0,1],[0,1]]

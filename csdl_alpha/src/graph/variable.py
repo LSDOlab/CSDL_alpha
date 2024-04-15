@@ -127,7 +127,9 @@ class Variable(Node):
         out: Variable
             A new variable that represents the original variable with the sliced selection set to the new value.
 
-        Exam    c_np = 0
+        Examples
+        --------
+        
         The set method creates a new variable with the sliced selection set to the new value. The original variable is not modified.
 
         >>> recorder = csdl.Recorder(inline = True)
