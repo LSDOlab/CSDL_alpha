@@ -27,7 +27,6 @@ CSDL is a domain-specific language for building large-scale MDO models.
 src/getting_started
 src/basics
 src/advanced
-src/tutorials
 src/examples
 src/api
 ```
