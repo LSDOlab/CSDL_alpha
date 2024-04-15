@@ -103,13 +103,13 @@ def log(x, base=None):
     >>> y1.value
     array([0.        , 0.69314718, 1.09861229])
 
-    # Logarithm with a specified base
+    Logarithm with a specified base
 
     >>> y2 = csdl.log(x, 2)
     >>> y2.value
     array([0.       , 1.       , 1.5849625])
 
-    # Logarithm with a specified tensor variable base
+    Logarithm with a specified tensor variable base
 
     >>> b = csdl.Variable(value = 2.0 * np.ones((3,)))
     >>> y3 = csdl.log(x, b)

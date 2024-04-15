@@ -48,14 +48,14 @@ def blockmat(l):
     >>> x = csdl.Variable(name = 'x', value = x_val)
     >>> z = csdl.Variable(name = 'z', value = z_val)
 
-    # create a block row matrix
+    Create a block row matrix
 
     >>> b1 = csdl.blockmat([x, np.zeros((2,2))])
     >>> b1.value
     array([[3., 3., 3., 0., 0.],
            [3., 3., 3., 0., 0.]])
 
-    # Create a block matrix with block rows and columns
+    Create a block matrix with block rows and columns
 
     >>> b2 = csdl.blockmat([[x, np.zeros((2,2))], [z]])
     >>> b2.value

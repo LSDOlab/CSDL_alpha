@@ -1,6 +1,10 @@
+# Support for sparse matrices 
+
 ## FOR WORKSHOP
 
-Sparse matrices are currently not natively supported as of April 2024. They are planned to be integrated slowly in the upcoming weeks. Please use the ```csdl.SparseMatrix``` class for now (it is just a dense variable).
+Sparse matrices are currently not natively supported as of April 2024. 
+They are planned to be integrated slowly in the upcoming weeks. 
+Please use the ```csdl.SparseMatrix``` class for now (it is just a dense variable).
 
 ```python
 import numpy as np
@@ -8,7 +12,7 @@ import numpy as np
 sparse_matrix = csdl.SparseMatrix(value = <np array>)
 ```
 
-# Support for sparse matrices
+## Support for sparse matrices (in the future)
 
 CSDL supports sparse matrix variables and a limited set of operations on them.
 In this page, we will go over all the features of CSDL sparse variables.
@@ -28,7 +32,7 @@ data = np.array([4, 5, 7, 9])
 scipy_mtx=coo_array((data, (row, col)), shape=(4, 4))
 
 import csdl
-s1 = csdl.SparseVariable(scipy_mtx=scipy_mtx, name='s1')
+s1 = csdl.SpMtxVariable(scipy_mtx=scipy_mtx, name='s1')
 ```
 
 Another way to initialize a sparse variable is by manually
@@ -52,7 +56,7 @@ value = np.array([4, 5, 7, 9])
 
 import csdl
 # coo
-s2 = csdl.SparseVariable(
+s2 = csdl.SpMtxVariable(
     rows=rows, 
     cols=cols, 
     value=value, 
@@ -60,7 +64,7 @@ s2 = csdl.SparseVariable(
     name='s2'
     )
 # coo with scalar value
-s3 = csdl.SparseVariable(
+s3 = csdl.SpMtxVariable(
     rows=rows, 
     cols=cols, 
     value=1., 
@@ -73,7 +77,7 @@ rows  = np.array([0, 0, 1, 3])
 cols  = np.array([0, 2, 1, 3])
 value = np.array([4, 9, 7, 5])
 ind_ptr = [0, 2, 3, 3, 4]
-s4 = csdl.SparseVariable(
+s4 = csdl.SpMtxVariable(
     ind_ptr=ind_ptr, 
     cols=cols, 
     value=value, 
@@ -86,7 +90,7 @@ rows  = np.array([0, 1, 0, 3])
 cols  = np.array([0, 1, 2, 3])
 value = np.array([4, 7, 9, 5])
 ind_ptr = [0, 1, 2, 3, 4]
-s5 = csdl.SparseVariable(
+s5 = csdl.SpMtxVariable(
     ind_ptr=ind_ptr, 
     rows=rows, 
     value=value, 
@@ -125,7 +129,7 @@ data = np.array([4, 5, 7, 9])
 scipy_mtx=coo_array((data, (row, col)), shape=(4, 4))
 
 import csdl
-s1 = csdl.SparseVariable(scipy_mtx=scipy_mtx, name='s1')
+s1 = csdl.SpMtxVariable(scipy_mtx=scipy_mtx, name='s1')
 # sparse to dense
 d1 = csdl.sparse2dense(s1)
 

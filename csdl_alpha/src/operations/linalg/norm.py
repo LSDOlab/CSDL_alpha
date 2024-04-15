@@ -64,7 +64,7 @@ def norm(*args, axes=None, ord=2):
     >>> y2.value
     array([4.28457229])
 
-    # norm of a single tensor variable along a specified axis
+    Norm of a single tensor variable along a specified axis
 
     >>> x_val = np.arange(6).reshape(2,3)
     >>> x = csdl.Variable(value = x_val)
@@ -72,7 +72,7 @@ def norm(*args, axes=None, ord=2):
     >>> y3.value
     array([2.23606798, 7.07106781])
 
-    # elementwise norm of multiple tensors
+    Elementwise norm of multiple tensors
 
     >>> y4 = csdl.norm(x, 2 * np.ones((2,3)), np.ones((2,3)))
     >>> y4.value
