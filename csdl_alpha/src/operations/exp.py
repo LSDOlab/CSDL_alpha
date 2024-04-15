@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
 
@@ -46,7 +46,7 @@ def exp(x:VariableLike) -> Variable:
     >>> y.value
     array([ 2.71828183,  7.3890561 , 20.08553692])
     '''
-    op = Exp(variablize(x))
+    op = Exp(validate_and_variablize(x))
     return op.finalize_and_return_outputs()
 
 class TestExp(csdl_tests.CSDLTest):

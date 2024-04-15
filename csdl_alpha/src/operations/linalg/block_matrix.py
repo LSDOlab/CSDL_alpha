@@ -1,6 +1,6 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 
 import numpy as np
@@ -79,7 +79,7 @@ def blockmat(l):
             if sum([x.shape[1] for x in elem_l]) != num_cols:
                 raise ValueError('Total number of columns are not the same for the 0th and {i}th block rows.')
 
-        args = [variablize(y) for x in l for y in x ]
+        args = [validate_and_variablize(y) for x in l for y in x ]
         num_row_blocks = [len(x) for x in l]
     else:
         num_rows = l[0].shape[0]
@@ -87,7 +87,7 @@ def blockmat(l):
 
         if all([x.shape[0] != num_rows for x in l]):
             raise ValueError('Number of rows are not the same for all the blocks.')
-        args = [variablize(x) for x in l]
+        args = [validate_and_variablize(x) for x in l]
         num_row_blocks = None
 
     op = BLockMatrix(*args, num_row_blocks=num_row_blocks, shape=(num_rows, num_cols))

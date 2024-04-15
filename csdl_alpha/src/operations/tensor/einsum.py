@@ -1,6 +1,6 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, get_type_string
 from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
@@ -162,10 +162,10 @@ def einsum(*args, action=None)->Variable:
         raise ValueError('Cannot perform einsum without "action" specified.')
     
     if not isinstance(action, str):
-        raise ValueError('"action" must be a string.')
+        raise TypeError(f'"action" must be a string, got type {get_type_string(action)}')
     
     if '->' not in action:
-        raise ValueError('Invalid action string. Use "->" to separate the input and output subscripts.')
+        raise ValueError(f'Invalid action string. Use "->" to separate the input and output subscripts. String {action} given')
     
     alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ,->'
     if not all(char in alphabet for char in action):

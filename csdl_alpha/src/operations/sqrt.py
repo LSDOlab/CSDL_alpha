@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 import csdl_alpha as csdl
 from typing import Union
@@ -44,7 +44,7 @@ def sqrt(x:Union[Variable, np.ndarray]) -> Variable:
     >>> y.value
     array([1.        , 1.41421356, 1.73205081])
     """
-    op = Sqrt(variablize(x))
+    op = Sqrt(validate_and_variablize(x))
     return op.finalize_and_return_outputs()
 
 class TestSqrt(csdl_tests.CSDLTest):

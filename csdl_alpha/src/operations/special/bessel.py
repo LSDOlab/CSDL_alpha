@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
 from numbers import Number
@@ -74,7 +74,7 @@ def bessel(
     >>> csdl.bessel(x, kind = 2, order = 3).value
     array([-5.82151761, -1.12778378, -0.53854162])
     '''
-    x = variablize(x)
+    x = validate_and_variablize(x)
     if kind not in [1,2]:
         raise TypeError(f"Bessel function kind must be an integer 1 or 2. {kind} given.")
     if not isinstance(order, (Number, np.ndarray)):

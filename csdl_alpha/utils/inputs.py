@@ -22,6 +22,36 @@ def scalarize(value):
     else:
         return value
 
+
+def validate_and_variablize(value, raise_on_sparse = True):
+    """Must be called on all variables that are inputs to operations
+
+    Parameters
+    ----------
+    value : _type_
+        _description_
+    raise_on_sparse : bool, optional
+        _description_, by default True
+
+    Returns
+    -------
+    _type_
+        _description_
+
+    Raises
+    ------
+    ValueError
+        _description_
+    """
+
+    var = variablize(value)
+
+    from csdl_alpha.src.graph.variable import SparseMatrix
+    if isinstance(var, SparseMatrix):
+        if raise_on_sparse:
+            raise TypeError("Sparse matrices not supported for this value.")
+    return var
+
 def variablize(variable):
     from csdl_alpha.src.graph.variable import Variable
     if isinstance(variable, Variable):

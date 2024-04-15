@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 
 import numpy as np
@@ -68,8 +68,8 @@ def cross(x, y, axis=None):
     array([[ 3., -6.,  3.],
            [ 3., -6.,  3.]])
     '''
-    x = variablize(x)
-    y = variablize(y)
+    x = validate_and_variablize(x)
+    y = validate_and_variablize(y)
 
     if x.size == 1 or y.size == 1:
         raise ValueError("The input tensors must be atleast 1D vectors of size 2 or 3.")

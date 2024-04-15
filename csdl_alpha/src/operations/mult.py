@@ -1,6 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 import csdl_alpha.utils.test_utils as csdl_tests
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.utils.typing import VariableLike
 
@@ -58,8 +58,8 @@ def mult(x,y):
     >>> (x * 2.0).value # broadcasting is also supported
     array([2., 4., 6.])
     """
-    x = variablize(x)
-    y = variablize(y)
+    x = validate_and_variablize(x, raise_on_sparse = False)
+    y = validate_and_variablize(y, raise_on_sparse = False)
     if x.shape == y.shape:
         op = Mult(x,y)
     elif x.size == 1:

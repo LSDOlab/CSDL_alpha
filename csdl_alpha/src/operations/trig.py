@@ -4,6 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 import csdl_alpha.utils.test_utils as csdl_tests
 import numpy as np
 from csdl_alpha.utils.typing import VariableLike
+from csdl_alpha.utils.inputs import validate_and_variablize
 
 @set_properties(linear=False)
 class Sin(ElementwiseOperation):
@@ -56,6 +57,7 @@ def sin(x:VariableLike) -> Variable:
     array([0.84147098, 0.90929743, 0.14112001])
 
     """
+    x = validate_and_variablize(x, raise_on_sparse = False)
     return Sin(x).finalize_and_return_outputs()
 
 
@@ -82,6 +84,7 @@ def cos(x:VariableLike) -> Variable:
     >>> y.value
     array([ 0.54030231, -0.41614684, -0.9899925 ])
     """
+    x = validate_and_variablize(x)
     return Cos(x).finalize_and_return_outputs()
 
 
@@ -107,6 +110,7 @@ def tan(x:VariableLike) -> Variable:
     >>> y.value
     array([ 1.55740772, -2.18503986, -0.14254654])
     """
+    x = validate_and_variablize(x)
     return Tan(x).finalize_and_return_outputs()
 
 class TestTrig(csdl_tests.CSDLTest):

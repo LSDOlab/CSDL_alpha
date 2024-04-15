@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import pytest
 from csdl_alpha.utils.typing import VariableLike
 
@@ -43,8 +43,8 @@ def matmat(A:VariableLike, B:VariableLike) -> Variable:
            [23, 34]])
     """
 
-    A = variablize(A)
-    B = variablize(B)
+    A = validate_and_variablize(A, raise_on_sparse = False)
+    B = validate_and_variablize(B, raise_on_sparse = False)
 
     # checks:
     # - A must be 2D

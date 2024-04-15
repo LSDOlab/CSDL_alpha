@@ -1,7 +1,7 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 from csdl_alpha.src.operations.set_get.loop_slice import VarSlice
 from csdl_alpha.src.operations.set_get.slice import Slice
 
@@ -31,7 +31,7 @@ def get_index(x:Variable, slices: Slice, shape = None):
     """
     doc strings
     """
-    x = variablize(x)
+    x = validate_and_variablize(x, raise_on_sparse=False)
     
 
     if isinstance(slices, VarSlice):

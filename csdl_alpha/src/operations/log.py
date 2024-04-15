@@ -2,7 +2,7 @@ from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 import numpy as np
 from csdl_alpha.src.operations import add
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 
 class Log(ElementwiseOperation):
@@ -117,11 +117,11 @@ def log(x, base=None):
     array([0.       , 1.       , 1.5849625])
     '''
 
-    x = variablize(x)
+    x = validate_and_variablize(x)
     if base is None:
-        y = variablize(np.e)
+        y = validate_and_variablize(np.e)
     else:
-        y = variablize(base)
+        y = validate_and_variablize(base)
 
     if x.shape == y.shape:
         op = Log(x, y)

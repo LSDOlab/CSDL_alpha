@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 from csdl_alpha.src.operations.linalg.utils import process_matA_vecb
 from csdl_alpha.utils.typing import VariableLike
 
@@ -43,8 +43,8 @@ def matvec(A:VariableLike, x:VariableLike) -> Variable:
     >>> csdl.matvec(A, x).value
     array([ 5, 11, 17])
     """
-    A_mat = variablize(A)
-    x_vec = variablize(x)
+    A_mat = validate_and_variablize(A, raise_on_sparse=False)
+    x_vec = validate_and_variablize(x)
 
     output = MatVec(*process_matA_vecb(A_mat, x_vec)).finalize_and_return_outputs()
 

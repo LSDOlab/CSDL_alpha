@@ -1,7 +1,7 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 import numpy as np
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
 from csdl_alpha.src.graph.variable import Variable
@@ -83,8 +83,8 @@ def power(x:VariableLike, y:VariableLike) -> Variable:
     >>> y2.value
     array([ 1.,  8., 27.])
     '''
-    x = variablize(x)
-    y = variablize(y)
+    x = validate_and_variablize(x)
+    y = validate_and_variablize(y)
 
     if x.shape == y.shape:
         op = Power(x, y)

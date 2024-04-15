@@ -1,6 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
@@ -71,8 +71,8 @@ def div(x:VariableLike,y:VariableLike)->Variable:
     >>> (x/2.0).value # broadcasting is also supported
     array([0.5, 1. , 1.5])
     """
-    x = variablize(x)
-    y = variablize(y)
+    x = validate_and_variablize(x)
+    y = validate_and_variablize(y)
 
     if x.shape == y.shape:
         op = Div(x,y)

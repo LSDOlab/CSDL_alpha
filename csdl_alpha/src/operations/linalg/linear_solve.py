@@ -3,7 +3,7 @@ import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.operations.linalg.linear_solvers import DirectSolver
 from csdl_alpha.src.operations.linalg.linear_solvers.linear_solver import LinearSolver
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 from csdl_alpha.utils.typing import VariableLike
 from csdl_alpha.src.operations.linalg.utils import process_matA_vecb
 import pytest
@@ -59,8 +59,8 @@ def solve_linear(
     array([-4. ,  4.5])
     >>> recorder.stop()
     """
-    A = variablize(A)
-    b = variablize(b)
+    A = validate_and_variablize(A, raise_on_sparse=False)
+    b = validate_and_variablize(b)
     A_mat, b_vec = process_matA_vecb(A, b)
 
     if A_mat.shape[0] != A_mat.shape[1]:

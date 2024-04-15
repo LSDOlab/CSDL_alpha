@@ -1,6 +1,7 @@
 from csdl_alpha.src.operations.operation_subclasses import ComposedOperation, check_expand_subgraphs
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 
 class Sub(ComposedOperation):
 
@@ -40,6 +41,8 @@ def sub(x:VariableLike,y:VariableLike)->Variable:
     >>> (x - 2.0).value # broadcasting is also supported
     array([2., 3., 4.])
     """
+    x = validate_and_variablize(x)
+    x = validate_and_variablize(x)
     
     if check_expand_subgraphs():
         return evaluate_sub(x,y)
@@ -129,8 +132,7 @@ class TestSub(csdl_tests.CSDLTest):
         assert len(current_graph.node_table) == 6
         # subtract scalar constants
         s2 = csdl.sub(3.0, 2.0)
-        # compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
-        assert isinstance(s2, float)
+        compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
 
         # subtract scalar constant and scalar variable
         s3 = csdl.sub(3.0, y)
@@ -141,13 +143,11 @@ class TestSub(csdl_tests.CSDLTest):
         # subtract tensor constants
         s4 = csdl.sub(3.0*np.ones((3,2)), 2.0*np.ones((3,2)))
         t2 = 1.0 * np.ones((3,2))
-        assert isinstance(s4, np.ndarray)
-        # compare_values += [csdl_tests.TestingPair(s4, t2, tag = 's4')]
+        compare_values += [csdl_tests.TestingPair(s4, t2, tag = 's4')]
 
         # subtract scalar constant and tensor constant
         s5 = csdl.sub(3.0, 2.0*np.ones((3,2)))
-        assert isinstance(s5, np.ndarray)
-        # compare_values += [csdl_tests.TestingPair(s5, t2, tag = 's5')]
+        compare_values += [csdl_tests.TestingPair(s5, t2, tag = 's5')]
 
         # subtract scalar variable and tensor constant
         s6 = csdl.sub(x, 2.0*np.ones((3,2)))

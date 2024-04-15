@@ -13,6 +13,27 @@ class ElementwiseOperation(Operation):
             if arg.shape != args[0].shape:
                 raise ValueError("All inputs must have the same shape for elementwise operations")
 
+# Maybe later?
+# class BinaryElementwiseBuilder():
+#     def __init__(self):
+#         self.function_mappings = {}
+
+#     def map(self, sparse_a:bool, sparse_b:bool, scalar_a:bool, scalar_b:bool, operation_class):
+#         self.function_mappings[(sparse_a, sparse_b, scalar_a, scalar_b)] = operation_class
+
+#     def build(self, variable_a, variable_b):
+#         from csdl_alpha.src.graph.variable import SparseMatrix
+#         sparse_a = isinstance(variable_a, SparseMatrix)
+#         sparse_b = isinstance(variable_b, SparseMatrix)
+#         scalar_a = variable_a.size == 1
+#         scalar_b = variable_b.size == 1
+
+#         key = (sparse_a, sparse_b, scalar_a, scalar_b)
+#         if key not in self.function_mappings:
+#             raise TypeError("No function mapping found for given inputs")
+#         else:
+#             return self.function_mappings[(sparse_a, sparse_b, scalar_a, scalar_b)]
+    
 @set_properties(elementary = False, contains_subgraph = True)
 class SubgraphOperation(Operation):
 

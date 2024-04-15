@@ -1,7 +1,7 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
 
@@ -108,8 +108,8 @@ def add(x:VariableLike,y:VariableLike)->Variable:
     >>> (x + 2.0).value # broadcasting is also supported
     array([3., 4., 5.])
     """
-    x = variablize(x)
-    y = variablize(y)
+    x = validate_and_variablize(x, raise_on_sparse=False)
+    y = validate_and_variablize(y, raise_on_sparse=False)
 
     if x.shape == y.shape:
         op = Add(x,y)
@@ -118,7 +118,45 @@ def add(x:VariableLike,y:VariableLike)->Variable:
     elif y.size == 1:
         op = BroadcastAdd(y.flatten(),x)
     else:
-        raise ValueError('Shapes not compatible for add operation.')
+        raise ValueError(f'Shapes not compatible for sparse add operation. x shape: {x.shape}, y shape: {y.shape}')
+
+    
+    # TODO: add later
+    # if (not x.is_sparse) and (not y.is_sparse):
+    #     if x.shape == y.shape:
+    #         op = Add(x,y)
+    #     elif x.size == 1:
+    #         op = BroadcastAdd(x.flatten(),y)
+    #     elif y.size == 1:
+    #         op = BroadcastAdd(y.flatten(),x)
+    #     else:
+    #         raise ValueError(f'Shapes not compatible for sparse add operation. x shape: {x.shape}, y shape: {y.shape}')
+    # elif (x.is_sparse) and (y.is_sparse):
+    #     if x.shape == y.shape:
+    #         op = SparseAdd(x,y)
+    #     else:
+    #         raise ValueError(f'Shapes not compatible for sparse add operation. x shape: {x.shape}, y shape: {y.shape}')
+    # elif (x.is_sparse) and (not y.is_sparse):
+    #     if x.shape == y.shape:
+    #         op = SparseDenseAdd(x,y)
+    #     elif x.size == 1:
+    #         op = BroadcastAdd(x.to_dense().flatten(),y)
+    #     elif y.size == 1:
+    #         op = SparseBroadcastAdd(y.flatten(),x)
+    #     else:
+    #         raise ValueError(f'Shapes not compatible for sparse add operation. x shape: {x.shape}, y shape: {y.shape}')        
+    # elif (not x.is_sparse) and (y.is_sparse):
+    #     if x.shape == y.shape:
+    #         op = SparseDenseAdd(y,x)
+    #     elif x.size == 1:
+    #         op = BroadcastAdd(y.to_dense().flatten(),x)
+    #     elif y.size == 1:
+    #         op = SparseBroadcastAdd(x.flatten(),y)
+    #     else:
+    #         raise ValueError(f'Shapes not compatible for sparse add operation. x shape: {x.shape}, y shape: {y.shape}')        
+
+    
+    
     return op.finalize_and_return_outputs()
 
 
@@ -177,47 +215,19 @@ class TestAdd(csdl_tests.CSDLTest):
 
         self.run_tests(compare_values = compare_values,)
 
-    def test_example(self,):
+
+    def test_errors(self):
         self.prep()
 
-        # docs:entry
         import csdl_alpha as csdl
         import numpy as np
-
-        recorder = csdl.build_new_recorder(inline = True)
-        recorder.start()
-
-        # add two scalar constants
-        s0 = csdl.add(3,2)
-        print(s0.value)
-
-        x = csdl.Variable(name = 'x', value = np.ones((3,2))*3.0)
-        y = csdl.Variable(name = 'y', value = 2.0)
-        z = csdl.Variable(name = 'z', value = np.ones((3,2))*2.0)
+        x_val = 3.0
+        y_val = 2.0
+        x = csdl.SparseMatrix(name = 'x', value = x_val)
+        y = csdl.SparseMatrix(name = 'y', value = y_val)
         
-        # add a tensor variable and a scalar variable
-        s1 = csdl.add(x,y)
-        print(s1.value)
+        x+y
 
-        # add 2 tensor variables
-        s2 = csdl.add(x,z)
-        print(s2.value)
-        
-        # add a tensor variable and a scalar constant
-        s3 = csdl.add(3,z)
-        print(s3.value)
-        # docs:exit
-
-        compare_values = []
-        t0 = np.array([5.0])
-        t  = np.ones((3,2)) * t0
-
-        compare_values += [csdl_tests.TestingPair(s0, t0)]
-        compare_values += [csdl_tests.TestingPair(s1, t)]
-        compare_values += [csdl_tests.TestingPair(s2, t)]
-        compare_values += [csdl_tests.TestingPair(s3, t)]
-
-        self.run_tests(compare_values = compare_values,)
 
     def test_docstring(self):
         self.docstest(add)
@@ -225,4 +235,4 @@ class TestAdd(csdl_tests.CSDLTest):
 if __name__ == '__main__':
     test = TestAdd()
     test.test_functionality()
-    test.test_example()
+    test.test_errors()

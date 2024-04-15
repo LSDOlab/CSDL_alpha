@@ -1,6 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
@@ -27,7 +27,7 @@ def copyvar(x:VariableLike)->Variable:
     out: Variable
         A new variable that represents the same value as x
     """
-    x = variablize(x)
+    x = validate_and_variablize(x, raise_on_sparse=False)
     return CopyVar(x).finalize_and_return_outputs()
 
 class TestDiv(csdl_tests.CSDLTest):

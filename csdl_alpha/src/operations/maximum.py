@@ -1,6 +1,6 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 import csdl_alpha as csdl
 
@@ -165,10 +165,10 @@ def maximum(*args, axes=None, rho=20.):
                 raise ValueError('It is inefficient to find the maximum of a tensor Variable along all axes. \
                                  Use maximum(A) to find the maximum of all tensor entries.')
         
-        op = Maximum(variablize(args[0]), axes=axes, out_shape=out_shape, rho=rho)
+        op = Maximum(validate_and_variablize(args[0]), axes=axes, out_shape=out_shape, rho=rho)
     else:
         # axes is None for multiple variables
-        args = [variablize(x) for x in args]
+        args = [validate_and_variablize(x, raise_on_sparse=False) for x in args]
         op = ElementwiseMaximum(*args, rho=rho)
     
     return op.finalize_and_return_outputs()

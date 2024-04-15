@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 
 import numpy as np
@@ -110,10 +110,10 @@ def sum(*args, axes=None):
                 raise ValueError('It is inefficient to sum a tensor Variable along all axes. \
                                  Use sum(A) to find the sum of all tensor entries.')
         
-        op = Sum(variablize(args[0]), axes=axes, out_shape=out_shape)
+        op = Sum(validate_and_variablize(args[0]), axes=axes, out_shape=out_shape)
     else:
         # axes is None for multiple variables
-        args = [variablize(x) for x in args]
+        args = [validate_and_variablize(x) for x in args]
         op = ElementwiseSum(*args)
     
     return op.finalize_and_return_outputs()

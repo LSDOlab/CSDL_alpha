@@ -1,5 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 from csdl_alpha.src.graph.operation import set_properties 
+from csdl_alpha.utils.inputs import validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 
 @set_properties(linear=True)
@@ -42,6 +43,7 @@ def negate(x):
     >>> (-x).value # equivalent to the above
     array([-1., -2., -3., -4.])
     """
+    x = validate_and_variablize(x, raise_on_sparse = False)
     return Neg(x).finalize_and_return_outputs()
 
 class TestPower(csdl_tests.CSDLTest):

@@ -2,7 +2,7 @@ from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation,
 from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 
-from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.test_utils as csdl_tests
 from csdl_alpha.src.operations.set_get.slice import Slice
 from csdl_alpha.src.operations.set_get.loop_slice import VarSlice
@@ -62,8 +62,8 @@ class BroadcastSetIndex(SetVarIndex):
 #         pass
 
 def set_index(x:Variable, s:Slice, y:VariableLike) -> Variable:
-    x = variablize(x)
-    y = variablize(y)
+    x = validate_and_variablize(x)
+    y = validate_and_variablize(y)
 
     if y.size != 1:
         import numpy as np

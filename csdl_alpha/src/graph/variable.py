@@ -419,3 +419,6 @@ class Variable(Node):
 class ImplicitVariable(Variable):
     def post_init(self):
         self.in_solver = False
+
+class SparseMatrix(Variable):
+    pass

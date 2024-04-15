@@ -1,6 +1,6 @@
 from csdl_alpha.src.graph.variable import ImplicitVariable, Variable
 from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation
-from csdl_alpha.utils.inputs import scalarize, ingest_value
+from csdl_alpha.utils.inputs import scalarize, ingest_value, validate_and_variablize
 import csdl_alpha.utils.error_utils as error_utils
 from csdl_alpha.utils.error_utils import GraphError
 
@@ -76,6 +76,7 @@ class NonlinearSolver(object):
             state.in_solver = True
 
         if not isinstance(residual, Variable):
+            residual = validate_and_variablize(residual)
             raise TypeError(f"Residual must be a Variable. {residual} given")
         
         if state.shape != residual.shape:
