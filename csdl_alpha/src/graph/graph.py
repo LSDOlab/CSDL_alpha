@@ -48,7 +48,7 @@ class Graph():
         sorted_nodes = rx.topological_sort(self.rxgraph)
         for node_index in sorted_nodes:
             node = self.rxgraph[node_index]
-
+        # for node in self.rxgraph.nodes():
             if subset is not None:
                 if self.node_table[node] not in subset:
                     continue
@@ -172,15 +172,17 @@ class Graph():
         """
         from csdl_alpha.src.graph.node import Node
         for node_index in nodes:
-            if isinstance(node_index, Node):
-                node_index = self.node_table[node_index]
-            self.rxgraph.remove_node(node_index)
+            if node_index in self.node_table:
+                if isinstance(node_index, Node):
+                    node_index = self.node_table[node_index]
+                self.rxgraph.remove_node(node_index)
         self.update_node_table()
 
     def _replace_node(self, old_node, new_node):
         """
         Replaces old_node with new_node in the graph
         """
+        from csdl_alpha.src.operations.loops.loop import Loop
         # replace node in graph
         self._delete_nodes([new_node]) #NOTE: this is kinda dumb
         old_node_index = self.node_table[old_node]
@@ -188,10 +190,14 @@ class Graph():
         self.update_node_table()
         # TODO: update operations to refer to new node?
         for operation in self.rxgraph.successors(old_node_index):
-            print(operation)
             for i in range(len(operation.inputs)):
                 if operation.inputs[i] == old_node:
                     operation.inputs[i] = new_node
+            if isinstance(operation, Loop):
+                for loop_var in operation.loop_vars:
+                    print('loop var thing found')
+                    if loop_var.var1 == old_node:
+                        loop_var.var1 = new_node
         
     def check_self(self):
         """

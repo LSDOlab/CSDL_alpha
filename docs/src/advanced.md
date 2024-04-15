@@ -9,8 +9,8 @@ Here we highlight the important features of CSDL.
 :numbered:
 :includehidden:
 
-advanced/nl_solvers
-advanced/loops
+./_temp/tutorials/advanced_tutorials/nonlinear_solver
+./_temp/tutorials/advanced_tutorials/loop
 advanced/sparse_mtx
 advanced/custom_model
 advanced/optimization
