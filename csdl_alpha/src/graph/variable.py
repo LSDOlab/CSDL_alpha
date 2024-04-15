@@ -419,4 +419,7 @@ class ImplicitVariable(Variable):
         self.in_solver = False
 
 class SparseMatrix(Variable):
-    pass
+    
+    def post_init(self):
+        if len(self.shape) != 2:
+            raise ValueError("SparseMatrix must have 2 dimensions")

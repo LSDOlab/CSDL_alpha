@@ -1,4 +1,5 @@
 from csdl_alpha.src.graph.operation import Operation
+from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
 from csdl_alpha.src.graph.variable import Variable
 
 class IterationVariable(Variable):
@@ -38,7 +39,7 @@ class IterationVariable(Variable):
 #         # print(f'Loop var updating to {self.value}')
         
 
-class Loop(Operation):
+class Loop(SubgraphOperation):
 
     def __init__(self, inputs, outputs, graph, vals, iter_var, loop_vars) -> None:
         super().__init__()
@@ -53,6 +54,7 @@ class Loop(Operation):
         self.has_reset = False
         self._add_outputs_to_graph()
         self._add_to_graph()
+        self.assign_subgraph(graph)
 
     def _add_outputs_to_graph(self):
         for output in self.outputs:

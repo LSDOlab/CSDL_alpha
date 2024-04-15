@@ -221,8 +221,8 @@ class TestAdd(csdl_tests.CSDLTest):
 
         import csdl_alpha as csdl
         import numpy as np
-        x_val = 3.0
-        y_val = 2.0
+        x_val = np.ones((2,2))
+        y_val = np.ones((2,2))
         x = csdl.SparseMatrix(name = 'x', value = x_val)
         y = csdl.SparseMatrix(name = 'y', value = y_val)
         
