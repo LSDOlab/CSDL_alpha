@@ -125,16 +125,16 @@ def maximum(*args, axes=None, rho=20.):
     >>> y2.value
     array([2., 5.])
 
-    # elementwise maximum of multiple tensor variables
+    Elementwise maximum of multiple tensor variables
 
     >>> y3 = csdl.maximum(x, 2 * np.ones((2,3)), np.ones((2,3)))
     >>> y3.value
     array([[2.        , 2.        , 2.03465736],
            [3.        , 4.        , 5.        ]])
 
-    # Note that y3.value[0,2] is not exactly 2.0 due to the smoothing term.
-    # It can be made closer to 2.0 by increasing the value of 
-    # the smoothing parameter rho as shown below.
+    Note that `y3.value[0,2]` is not exactly `2.0` due to the smoothing term.
+    It can be made closer to `2.0` by increasing the value of 
+    the smoothing parameter rho as shown below.
     
     >>> y = csdl.maximum(x, 2 * np.ones((2,3)), np.ones((2,3)), rho=200)
     >>> y.value

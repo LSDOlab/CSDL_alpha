@@ -15,7 +15,17 @@ def evaluate_square(x):
 
 def square(x):
     """
-    doc strings
+    The elementwise squares of the input tensor.
+
+    Parameters
+    ----------
+    x : Variable, np.ndarray, float, or int
+        Input tensor to take the square of.
+
+    Returns
+    -------
+    Variable
+        Elementwise squares of the input tensor.
     """
     x = validate_and_variablize(x)
 

@@ -72,7 +72,7 @@ def product(*args, axes=None):
     >>> y1.value
     array([6.])
 
-    # product of a single tensor variable along a specified axis
+    Product of a single tensor variable along a specified axis
 
     >>> x_val = np.array([[1, 2, 3], [4, 5, 6]])
     >>> x = csdl.Variable(value = x_val)
@@ -80,7 +80,7 @@ def product(*args, axes=None):
     >>> y2.value
     array([  6, 120])
 
-    # elementwise product of multiple tensor variables
+    Elementwise product of multiple tensor variables
 
     >>> y3 = csdl.product(x, 2 * np.ones((2,3)), np.ones((2,3)))
     >>> y3.value

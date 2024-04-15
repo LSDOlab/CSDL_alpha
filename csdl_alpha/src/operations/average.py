@@ -71,7 +71,7 @@ def average(*args, axes=None):
     >>> y1.value
     array([2.])
 
-    # average of a single tensor variable along a specified axis
+    Average of a single tensor variable along a specified axis
 
     >>> x_val = np.arange(6).reshape(2,3)
     >>> x = csdl.Variable(value = x_val)
@@ -79,7 +79,7 @@ def average(*args, axes=None):
     >>> y2.value
     array([1., 4.])
 
-    # elementwise average of multiple tensor variables
+    Elementwise average of multiple tensor variables
 
     >>> y3 = csdl.average(x, 2 * np.ones((2,3)), np.ones((2,3)))
     >>> y3.value

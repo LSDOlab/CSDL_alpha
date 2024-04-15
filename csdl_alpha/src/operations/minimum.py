@@ -62,21 +62,21 @@ def minimum(*args, axes=None, rho=20.):
     >>> y1.value
     array([-1.03057685e-10])
 
-    # Note that the value of y1 is not exactly 0.0 due to the smoothing term.
-    # The value of y1 can be made closer to 0.0 by increasing the value of 
-    # the smoothing parameter rho as shown below.
+    Note that the value of `y1` is not exactly `0.0` due to the smoothing term.
+    The value of `y1` can be made closer to `0.0` by increasing the value of 
+    the smoothing parameter rho as shown below.
     
     >>> y = csdl.minimum(x, rho=200)
     >>> y.value
     array([-0.])
 
-    # minimum of a single tensor variable along a specified axis
+    Minimum of a single tensor variable along a specified axis
 
     >>> y2 = csdl.minimum(x, axes=(1,))
     >>> y2.value
     array([-1.03057685e-10,  3.00000000e+00])
 
-    # elementwise minimum of multiple tensor variables
+    Elementwise minimum of multiple tensor variables
 
     >>> y3 = csdl.minimum(x, 2 * np.ones((2,3)), np.ones((2,3)))
     >>> y3.value

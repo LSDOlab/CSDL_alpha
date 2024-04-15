@@ -54,9 +54,9 @@ def absolute(x, rho=20.):
     >>> y.value
     array([0.03465736])
 
-    # Note that the value of y is not exactly 0.0 due to the smoothing term.
-    # The value of y can be made closer to 0.0 by increasing the value of 
-    # the smoothing parameter rho.
+    Note that the value of `y` is not exactly `0.0` due to the smoothing term.
+    The value of y can be made closer to `0.0` by increasing the value of 
+    the smoothing parameter `rho`.`
     
     >>> y = csdl.absolute(0.0, rho=200)
     >>> y.value

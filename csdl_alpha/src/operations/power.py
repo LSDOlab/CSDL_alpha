@@ -76,7 +76,7 @@ def power(x:VariableLike, y:VariableLike) -> Variable:
     >>> y2.value
     array([1., 4., 9.])
 
-    # Power raised to a tensor variable exponent
+    Power raised to a tensor variable exponent
 
     >>> z = csdl.Variable(value = 3.0 * np.ones((3,)))
     >>> y2 = x ** z

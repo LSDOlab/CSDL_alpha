@@ -4,7 +4,7 @@ and running a minimal example.
 
 ## Installation
 
-`csdl_aphla` is tested on Linux, and may not work on other operating systems.
+`csdl_alpha` is tested on Linux, and may not work on other operating systems.
 
 ### Installation instructions for users
 For direct installation with all dependencies, run on the terminal or command line

@@ -72,7 +72,7 @@ def sum(*args, axes=None):
     >>> y1.value
     array([6.])
 
-    # sum of a single tensor variable along a specified axis
+    Sum of a single tensor variable along a specified axis
 
     >>> x_val = np.arange(6).reshape(2,3)
     >>> x = csdl.Variable(value = x_val)
@@ -80,7 +80,7 @@ def sum(*args, axes=None):
     >>> y2.value
     array([ 3, 12])
 
-    # elementwise sum of multiple tensor variables
+    Elementwise sum of multiple tensor variables
 
     >>> y3 = csdl.sum(x, 2 * np.ones((2,3)), np.ones((2,3)))
     >>> y3.value

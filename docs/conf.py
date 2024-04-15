@@ -31,13 +31,16 @@ version = '0.1'
 extensions = [
     "sphinx_rtd_theme",
     "autoapi.extension",
-    "numpydoc",                 
+    "numpydoc", 
+    "sphinx.ext.autodoc.typehints",             
     "sphinx_copybutton",            # allows copying code embedded in the docs rendered from .md or .ipynb files
     "myst_nb",                      # renders .md, .myst, .ipynb files
     "sphinx.ext.viewcode",          # adds the source code for classes and functions in auto generated api ref
     "sphinxcontrib.collections",    # adds files from outside src and executes functions before Sphinx builds
     "sphinxcontrib.bibtex",         # for references and citations
 ]
+
+autodoc_typehints = 'none'
 
 # import sphinx as aa
 # print(aa.__version__)
@@ -59,7 +62,8 @@ autoapi_root = 'src/autoapi'
 autoapi_type = 'python'
 autoapi_file_patterns = ['*.py', '*.pyi']
 autoapi_options = [ 'members', 'undoc-members', 'private-members', 'show-inheritance', 
-                   'show-module-summary', 'special-members', 'imported-members', ]
+                   'show-module-summary', 
+                   'special-members', 'imported-members', ]
 autoapi_add_toctree_entry = False
 autoapi_member_order = 'groupwise'
 autoapi_python_class_content = 'class' # 'both' or '__init'
