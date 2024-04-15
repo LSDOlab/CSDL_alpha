@@ -12,6 +12,8 @@ class LoopSlicer(Slicer):
         # tuplify keys if not already a tuple
         if isinstance(keys, self.valid_types):
             keys = (keys,)
+        elif not isinstance(keys, tuple):
+            raise TypeError(f"Invalid key {keys}. Must be an integer, slice, or tuple index list.")
         
         # check to make sure all axes are correct types and dimensions
         return_keys = []
