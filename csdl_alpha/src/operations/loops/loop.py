@@ -190,7 +190,8 @@ class frange():
                         output2 = self.iter2_outputs[self.iter1_outputs.index(input2)] # TODO: make this less bad
                         loop_var = (input2, input1, output2) # (input node in graph, input for first iter, input for subsiquent iters)
                         loop_vars.append(loop_var)
-                        self._graph._delete_nodes([input1])
+                        if input1 in self._graph.node_table.keys():
+                            self._graph._delete_nodes([input1])
                         self.iter1_non_inputs.discard(input2)
                 else:
                     # this implies input 1 and input 2 are both made in the loop, so we can just keep input 2

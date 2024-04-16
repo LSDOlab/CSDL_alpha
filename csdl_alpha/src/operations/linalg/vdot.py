@@ -39,7 +39,7 @@ def vdot(x:VariableLike,y:VariableLike)->Variable:
     >>> x = csdl.Variable(value = np.array([1, 2, 3]))
     >>> y = csdl.Variable(value = np.array([4, 5, 6]))
     >>> csdl.vdot(x, y).value
-    array([32])
+    array([32.])
     """
     x = validate_and_variablize(x)
     y = validate_and_variablize(y)

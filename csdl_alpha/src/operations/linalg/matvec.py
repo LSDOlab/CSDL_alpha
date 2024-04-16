@@ -41,7 +41,7 @@ def matvec(A:VariableLike, x:VariableLike) -> Variable:
     >>> A = csdl.Variable(value = np.array([[1, 2], [3, 4], [5, 6]]))
     >>> x = csdl.Variable(value = np.array([1, 2]))
     >>> csdl.matvec(A, x).value
-    array([ 5, 11, 17])
+    array([ 5., 11., 17.])
     """
     A_mat = validate_and_variablize(A, raise_on_sparse=False)
     x_vec = validate_and_variablize(x)
