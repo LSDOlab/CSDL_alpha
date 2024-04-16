@@ -27,7 +27,11 @@ class TestImplicit(csdl_tests.CSDLTest):
         # ONE SOLVER COUPLING:
         solver = csdl.nonlinear_solvers.GaussSeidel('gs_x_simpler')
         solver.add_state(x, y)
+        current_graph = csdl.get_current_recorder().active_graph
+        num_nodes_right_now = len(current_graph.node_table)
         solver.run()
+        num_nodes_after_run = len(current_graph.node_table)
+        assert num_nodes_after_run < num_nodes_right_now
 
         self.run_tests(
             compare_values = [
@@ -71,11 +75,23 @@ class TestImplicit(csdl_tests.CSDLTest):
         # NESTED (x) SOLVER COUPLING:
         solver = csdl.nonlinear_solvers.GaussSeidel('gs_x')
         solver.add_state(x, residual_1, state_update=x_update)
+
+        # Make sure nodes are deleted
+        current_graph = csdl.get_current_recorder().active_graph
+        num_nodes_right_now = len(current_graph.node_table)
         solver.run()
+        num_nodes_after_run = len(current_graph.node_table)
+        assert num_nodes_after_run < num_nodes_right_now
 
         solver = csdl.nonlinear_solvers.GaussSeidel('gs_y')
         solver.add_state(y, residual_2, state_update=y_update)
+
+        # Make sure nodes are deleted
+        current_graph = csdl.get_current_recorder().active_graph
+        num_nodes_right_now = len(current_graph.node_table)
         solver.run()
+        num_nodes_after_run = len(current_graph.node_table)
+        assert num_nodes_after_run < num_nodes_right_now
 
         x_sol = np.array([(np.sqrt(5)-1)/2])
         y_sol = np.array([np.sqrt((-1+np.sqrt(5))/2)])
@@ -118,12 +134,21 @@ class TestImplicit(csdl_tests.CSDLTest):
         # NESTED (x) SOLVER COUPLING:
         solver = csdl.nonlinear_solvers.GaussSeidel('gs_y')
         solver.add_state(y, residual_2, state_update=y_update)
+
+        # Make sure nodes are deleted
+        current_graph = csdl.get_current_recorder().active_graph
+        num_nodes_right_now = len(current_graph.node_table)
         solver.run()
+        num_nodes_after_run = len(current_graph.node_table)
+        assert num_nodes_after_run < num_nodes_right_now
 
         solver = csdl.nonlinear_solvers.GaussSeidel('gs_x')
         solver.add_state(x, residual_1, state_update=x_update)
+        
+        num_nodes_right_now = len(current_graph.node_table)
         solver.run()
-
+        num_nodes_after_run = len(current_graph.node_table)
+        assert num_nodes_after_run < num_nodes_right_now
         x_sol = np.array([(np.sqrt(5)-1)/2])
         y_sol = np.array([np.sqrt((-1+np.sqrt(5))/2)])
 
@@ -165,7 +190,13 @@ class TestImplicit(csdl_tests.CSDLTest):
         solver = csdl.nonlinear_solvers.GaussSeidel('gs_y')
         solver.add_state(y, residual_2, state_update=y_update)
         solver.add_state(x, residual_1, state_update=x_update)
+        
+        # Make sure nodes are deleted
+        current_graph = csdl.get_current_recorder().active_graph
+        num_nodes_right_now = len(current_graph.node_table)
         solver.run()
+        num_nodes_after_run = len(current_graph.node_table)
+        assert num_nodes_after_run < num_nodes_right_now
 
         x_sol = np.array([(np.sqrt(5)-1)/2])
         y_sol = np.array([np.sqrt((-1+np.sqrt(5))/2)])

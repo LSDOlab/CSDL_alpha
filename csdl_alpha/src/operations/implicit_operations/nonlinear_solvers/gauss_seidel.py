@@ -54,10 +54,10 @@ class GaussSeidel(NonlinearSolver):
         if state_update is not None:
             if not isinstance(state_update, Variable):
                 raise ValueError("State update must be a Variable")
+            self.add_intersection_target(state_update)
+
         self.add_state_metadata(state, 'state_update', state_update, is_input=False)
 
-        if isinstance(state_update, Variable):
-            self.add_intersection_target(state_update)
 
         # Check if user provided an initial value
         if initial_value is None:
