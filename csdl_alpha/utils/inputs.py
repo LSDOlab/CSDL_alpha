@@ -4,10 +4,12 @@ from .error_utils.error_utils import check_if_valid_shape
 def get_type_string(obj)-> str:
     return f'\'{type(obj).__name__}\''
 
-def ingest_value(value):
+def ingest_value(value, dtype=np.float64):
     if isinstance(value, (float, int, np.integer, np.floating)):
-        value = np.array([value], dtype=np.float64)
-    elif not isinstance(value, np.ndarray) and value is not None:
+        value = np.array([value], dtype=dtype)
+    elif isinstance(value, np.ndarray):
+        value = value.astype(dtype)
+    elif value is not None:
         raise TypeError(f"Value must be a numpy array, float or int. Value {value} of type {get_type_string(value)} given")
     return value
 
@@ -21,6 +23,22 @@ def scalarize(value):
         raise ValueError(f"Value must be a scalar. {value} given")
     else:
         return value
+
+
+def process_shape_and_value(shape, value, dtype=np.float64):
+    value = ingest_value(value, dtype=dtype)
+    if shape is not None:
+        check_if_valid_shape(shape)
+        if value is not None and shape != value.shape:
+            if value.shape == (1,):
+                value = value[0]*np.ones(shape)
+            else:
+                raise ValueError("Shape and value shape must match")
+    elif value is None:
+        raise ValueError("Shape or value must be provided")
+    else:
+        shape = value.shape
+    return shape, value
 
 
 def validate_and_variablize(value, raise_on_sparse = True):

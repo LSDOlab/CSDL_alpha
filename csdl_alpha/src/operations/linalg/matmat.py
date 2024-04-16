@@ -38,9 +38,9 @@ def matmat(A:VariableLike, B:VariableLike) -> Variable:
     >>> A = csdl.Variable(value = np.array([[1, 2], [3, 4], [5, 6]]))
     >>> B = csdl.Variable(value = np.array([[1, 2], [3, 4]]))
     >>> (A @ B).value
-    array([[ 7, 10],
-           [15, 22],
-           [23, 34]])
+    array([[ 7., 10.],
+           [15., 22.],
+           [23., 34.]])
     """
 
     A = validate_and_variablize(A, raise_on_sparse = False)

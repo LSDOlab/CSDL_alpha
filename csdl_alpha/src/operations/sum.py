@@ -78,7 +78,7 @@ def sum(*args, axes=None):
     >>> x = csdl.Variable(value = x_val)
     >>> y2 = csdl.sum(x, axes=(1,))
     >>> y2.value
-    array([ 3, 12])
+    array([ 3., 12.])
 
     Elementwise sum of multiple tensor variables
 

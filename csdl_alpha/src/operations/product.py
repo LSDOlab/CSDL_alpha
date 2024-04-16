@@ -78,7 +78,7 @@ def product(*args, axes=None):
     >>> x = csdl.Variable(value = x_val)
     >>> y2 = csdl.product(x, axes=(1,))
     >>> y2.value
-    array([  6, 120])
+    array([  6., 120.])
 
     Elementwise product of multiple tensor variables
 
