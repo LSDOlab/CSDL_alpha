@@ -66,16 +66,7 @@ class GaussSeidel(NonlinearSolver):
             self.add_state_metadata(state, 'initial_value', initial_value)
 
         # Check if user provided a tolerance
-        if tolerance is None:
-            self.add_state_metadata(state, 'tolerance', self.metadata['tolerance'])
-        else:
-            if isinstance(tolerance, Variable):
-                if tolerance.value.size != 1:
-                    raise ValueError(f"Tolerance must be a scalar. {tolerance.shape} given")
-            else:
-                tolerance = scalarize(tolerance)
-            self.add_state_metadata(state, 'tolerance', tolerance)
-
+        self.add_tolerance(state, tolerance)
 
     def _inline_solve_(self):
         """
@@ -117,17 +108,22 @@ class GaussSeidel(NonlinearSolver):
 
                 # get current residual and error
                 current_residual_value = current_residual.value
-                error = np.linalg.norm(current_residual_value.flatten())
+
+                # Uncomment to print iteration:
+                # error = np.linalg.norm(current_residual_value.flatten())
                 # print(f'iteration {iter}, {current_residual} error: {error}')
 
-                # if any of the residuals do not meet tolerance, no need to compute errors for other residuals
+                # compute tolerance:
                 tol = self.state_metadata[current_state]['tolerance']
                 if isinstance(tol, Variable):
                     tol = tol.value
 
-                if np.isnan(error):
+                if np.any(np.isnan(current_residual_value)):
                     raise ValueError(f'Residual is NaN for {current_residual.name}')
-                if error > tol:
+                
+                # if current_residual_value > tol:
+                # if any of the residuals do not meet tolerance, no need to compute errors for other residuals
+                if not self.check_run_time_tolerance(current_residual_value, tol):
                     converged = False
                     break
 
