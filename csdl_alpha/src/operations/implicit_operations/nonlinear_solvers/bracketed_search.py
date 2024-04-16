@@ -150,7 +150,7 @@ class BracketedSearch(NonlinearSolver):
         # I'm also going to record whether the sign of the lower is negative (True) or positive (False)
         compute(x_lower, r_lower)
         # compute(x_upper, r_upper)
-        r_sign = np.any(r_lower < 0, axis=0)
+        r_sign = r_lower < 0
 
         # Now, I need to iterate until the bracket is small enough
         while True:
@@ -159,7 +159,7 @@ class BracketedSearch(NonlinearSolver):
             compute(x_mid, r_update)
 
             # check if the midpoint is the new upper or lower bound
-            lower_mask = np.any(r_update < 0 and r_sign, axis=0)
+            lower_mask = (r_update < 0) and r_sign
 
             x_lower[lower_mask] = x_mid[lower_mask]
             x_upper[~lower_mask] = x_mid[~lower_mask]
