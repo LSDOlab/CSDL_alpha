@@ -44,7 +44,6 @@ class TestImplicit(csdl_tests.CSDLTest):
             ],
         )
 
-
     def test_double_state_nest1(self):
         self.prep()
 
@@ -102,7 +101,6 @@ class TestImplicit(csdl_tests.CSDLTest):
                 csdl_tests.TestingPair(x, x_sol, tag = 'state_x', decimal = 11),
             ],
         )
-
 
     def test_double_state_nest2(self):
         self.prep()
