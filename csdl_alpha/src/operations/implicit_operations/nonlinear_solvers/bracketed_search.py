@@ -159,7 +159,7 @@ class BracketedSearch(NonlinearSolver):
             compute(x_mid, r_update)
 
             # check if the midpoint is the new upper or lower bound
-            lower_mask = (r_update < 0) and r_sign
+            lower_mask = (r_update < 0) & r_sign
 
             x_lower[lower_mask] = x_mid[lower_mask]
             x_upper[~lower_mask] = x_mid[~lower_mask]
