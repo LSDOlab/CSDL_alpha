@@ -230,6 +230,43 @@ class Graph():
 
         self.check_self()
 
+    def get_difference(self, node1, node2):
+        """
+        Returns the difference between node1 and node2 if it is constant, else returns None
+        """
+        node1_index = self.node_table[node1]
+        node2_index = self.node_table[node2]
+
+
+
+
+
+        # case 1: node1 is a descendant of node2
+        descendants = rx.descendants(self.rxgraph, node2_index)
+        if node1_index in descendants:
+            return -1*_get_descendant_difference(node1, node2)
+        
+        # case 2: node2 is a descendant of node1
+        descendants = rx.descendants(self.rxgraph, node1_index)
+        if node2_index in descendants:
+            return _get_descendant_difference(node2, node1)
+        
+        # case 3: they descend from a common ancestor
+        node1_ancestors = rx.ancestors(self.rxgraph, node1_index)
+        node2_ancestors = rx.ancestors(self.rxgraph, node2_index)
+
+        
+
+
+        # case 4: they are not connected
+        return None
+
+    def _get_descendant_difference(self, node1, node2):
+        
+        
+        return node1.value - node2.value
+
+
     def _get_intersection(
             self,
             sources,

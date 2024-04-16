@@ -8,6 +8,7 @@ class LoopSlicer(Slicer):
 
     def __getitem__(self, keys):
         from csdl_alpha.src.graph.variable import Variable
+        from csdl_alpha.api import get_current_recorder
 
         # tuplify keys if not already a tuple
         if isinstance(keys, self.valid_types):
@@ -29,6 +30,17 @@ class LoopSlicer(Slicer):
             if isinstance(k, Variable): #integer
                 self.add_to_mapping_list(k, mapping_list, var2maplist_index, i)
             elif isinstance(k, slice): # slice
+                if isinstance(k.start, Variable) and isinstance(k.stop, Variable):
+                    # Need to parse the graph between these to variables to see if their difference is constant
+                    graph = get_current_recorder().active_graph
+                    nodes_between = graph._get_intersection([k.start], [k.stop], check_sources=False, check_targets=False)
+                    if len(nodes_between) == 0:
+                        nodes_between = graph._get_intersection([k.stop], [k.start], check_sources=False, check_targets=False)
+                    
+
+
+
+
                 if isinstance(k.start, Variable):
                     raise TypeError("Slice start cannot be a CSDL variable")
                     self.add_to_mapping_list(k.start, mapping_list, var2maplist_index, (i, 's'))
