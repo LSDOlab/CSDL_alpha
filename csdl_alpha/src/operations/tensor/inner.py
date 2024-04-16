@@ -44,11 +44,11 @@ def inner(x:VariableLike,y:VariableLike)->Variable:
     >>> x = csdl.Variable(value = np.array([1, 2, 3]))
     >>> y = csdl.Variable(value = np.array([4, 5, 6]))
     >>> csdl.inner(x, y).value
-    array([32])
+    array([32.])
     >>> a = csdl.Variable(value = np.array([[1, 2], [3, 4]]))
     >>> b = csdl.Variable(value = np.array([[5, 6], [7, 8]]))
     >>> csdl.inner(a, b).value
-    array([70])
+    array([70.])
     """
     x = variablize(x)
     y = variablize(y)

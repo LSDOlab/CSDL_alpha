@@ -5,6 +5,7 @@ from csdl_alpha.utils.inputs import ingest_value, get_shape, process_shape_and_v
 
 class Variable(Node):
     __array_priority__ = 1000
+    dtype = np.float64
     def __init__(
         self,
         shape: tuple = None, 
@@ -239,18 +240,18 @@ class Variable(Node):
         >>> x[0].shape # removes the first dimension in the output
         (3,)
         >>> x[0].value
-        array([0, 1, 2])
+        array([0., 1., 2.])
         >>> x[1,2].shape # returns a single element
         (1,)
         >>> x[1,2].value
-        array([5])
+        array([5.])
 
         Slicing allows a selection of a range of elements in a dimension using slice notation and keeps that dimension in the output.
 
         >>> x[1:2].shape # keeps the first dimension in the output
         (1, 3)
         >>> x[1:2].value
-        array([[3, 4, 5]])
+        array([[3., 4., 5.]])
         >>> x[:].shape
         (2, 3)
         >>> np.all(x[:].value == x.value)
@@ -258,19 +259,19 @@ class Variable(Node):
         >>> x[1:2,:-1].shape
         (1, 2)
         >>> x[1:2,:-1].value
-        array([[3, 4]])
+        array([[3., 4.]])
 
         Integer lists allows for selecting a coordinate of elements across multiple dimensions and compresses them to one one dimension.
         
         >>> x[[0,1]].shape
         (2, 3)
         >>> x[[0,1]].value
-        array([[0, 1, 2],
-               [3, 4, 5]])
+        array([[0., 1., 2.],
+               [3., 4., 5.]])
         >>> x[[0,1],[0,1]].shape # outputs x[0,0] and x[1,1] in a 1D array
         (2,)
         >>> x[[0,1],[0,1]].value # outputs x[0,0] and x[1,1] in a 1D array
-        array([0, 4])
+        array([0., 4.])
 
         All three types of indexing can be combined.
 
@@ -278,13 +279,13 @@ class Variable(Node):
         >>> x[[0,1],1:].shape
         (2, 1, 3)
         >>> x[[0,1],1:].value
-        array([[[ 3,  4,  5]],
+        array([[[ 3.,  4.,  5.]],
         <BLANKLINE>
-               [[ 9, 10, 11]]])
+               [[ 9., 10., 11.]]])
         >>> x[0,[0,1],[1,0]].shape
         (2,)
         >>> x[0,[0,1],[1,0]].value
-        array([1, 3])
+        array([1., 3.])
         """
 
         from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as loop_slice
