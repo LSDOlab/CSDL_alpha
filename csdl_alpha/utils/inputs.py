@@ -23,6 +23,22 @@ def scalarize(value):
         return value
 
 
+def process_shape_and_value(shape, value):
+    value = ingest_value(value)
+    if shape is not None:
+        check_if_valid_shape(shape)
+        if value is not None and shape != value.shape:
+            if value.shape == (1,):
+                value = value[0]*np.ones(shape)
+            else:
+                raise ValueError("Shape and value shape must match")
+    elif value is None:
+        raise ValueError("Shape or value must be provided")
+    else:
+        shape = value.shape
+    return shape, value
+
+
 def validate_and_variablize(value, raise_on_sparse = True):
     """Must be called on all variables that are inputs to operations
 

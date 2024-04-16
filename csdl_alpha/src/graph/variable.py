@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.node import Node
 import numpy as np
 from typing import Union
-from csdl_alpha.utils.inputs import ingest_value, get_shape
+from csdl_alpha.utils.inputs import ingest_value, get_shape, process_shape_and_value
 
 class Variable(Node):
     __array_priority__ = 1000
@@ -53,10 +53,10 @@ class Variable(Node):
         self.names = []
         self.name = None
 
-        value = ingest_value(value)
-        shape = get_shape(shape, value)
-
+        shape, value = process_shape_and_value(shape, value)
+        self.value = value
         self.shape = shape
+        
         if len(shape) == 0:
             raise ValueError("Shape must have at least one dimension")
         if len(shape) == 1:
@@ -65,7 +65,7 @@ class Variable(Node):
             self.size = np.prod(shape)
         if name is not None:
             self.add_name(name)
-        self.value = value
+
         if tags is None:
             self.tags = []
         else:
@@ -91,8 +91,14 @@ class Variable(Node):
         self.hierarchy = hierarchy
 
     def set_value(self, value: Union[np.ndarray, float, int]):
-        self.value = ingest_value(value)
-        self.shape = get_shape(self.shape, self.value)
+        """Sets the value of a variable.
+
+        Parameters
+        ----------
+        value : Union[np.ndarray, float, int]
+            Value for the variable
+        """
+        _, self.value = process_shape_and_value(self.shape, value)
 
     # TODO: add checks for parents
     def set_as_design_variable(self, upper: float = None, lower: float = None, scalar: float = None):
