@@ -75,6 +75,27 @@ def test_loop_slice():
     assert var_slice.evaluate(2) == (slice(3,2),)
     assert var_slice.evaluate(1) == (slice(2,1),)
 
+    # Stepped slicing 1
+    v2 = int_var+6
+    var_slice = _loop_slice[int_var:v2:2]
+    assert tuple(var_slice.slices) == (slice(int_var,v2, 2),)
+    assert var_slice.evaluate(2) == (slice(2,8,2),)
+    assert var_slice.evaluate(1) == (slice(1,7,2),)
+
+    # Stepped slicing 2
+    v2 = int_var-6
+    var_slice = _loop_slice[v2:int_var:2]
+    assert tuple(var_slice.slices) == (slice(v2,int_var, 2),)
+    assert var_slice.evaluate(2) == (slice(2,8,2),)
+    assert var_slice.evaluate(1) == (slice(1,7,2),)
+
+    # Combined slicing
+    v2 = int_var-6
+    other_int = csdl.Variable(name='other_int', value=2.0)
+    var_slice = _loop_slice[v2:int_var:2, other_int]
+    assert tuple(var_slice.slices) == (slice(v2,int_var, 2),other_int)
+    assert var_slice.evaluate(2,3) == (slice(2,8,2), 3)
+    assert var_slice.evaluate(1,5) == (slice(1,7,2), 5)
 
     # ====TODO: maybe add feature for later. NO SLICING W/ CSDL VARIABLES FOR NOW!
     # NOTE: Added var:var slicing, no const:var/var:const/x:x:var slicing
@@ -315,37 +336,27 @@ if __name__ == '__main__':
     # test_slices_int_variable()
     test_loop_slice()
     test_slices()
-    exit()
-    test_valid_indexing_integers()
-    test_valid_indexing_slices()
-    test_valid_indexing_lists()
-    exit()
-
-    import numpy as np
-    # x = np.zeros((10,9,8))
-    # x[18,2,3]
-    # print(x.shape)
-
-    # x = np.arange(18).reshape((3,2,3))
-    # print(x)
-    # print(x[0:2,])
-    # print(x[0:2])
-    # print()
-    # print(x.shape)
-    # print(x[0:2,].shape)
-    # print(x[0:2].shape)
-
-    x = np.ones((10,))
-    print(x[[1,2,3]])
-    print(x[1,2,3])
-    exit()
 
 
-    from slice import _slice
-    _slice[0,0,0]
-    _slice[(0,0,0)]
-    exit()
+    # TODO: Change loop slices to have correct variable inputs
+    # import csdl_alpha as csdl
+    # rec = csdl.Recorder(inline = True)
+    # rec.start()
+    # import numpy as np
+    # x_val = np.arange(210).reshape(5,6,7)
+    # x = csdl.Variable(value = x_val)
+    # int_var = csdl.Variable(value = 2)
+    # int_1 = int_var*int_var
+    # int_2 = int_1+1
 
+    # x_indexed = x[int_1:int_2:2, int_2, int_1]
+    # print(x_indexed.value)
+    # print(x_val[4:5:2,5,4] - x_indexed.value)
 
-    # test_valid_indexing_integers()
-    test_valid_indexing_slices()
+    # int_var.value = int_var.value-1.0
+    # rec.execute()
+    # rec.visualize_graph()
+    # print(x_indexed.value)
+    # print(x_val[1:2:2,2,1] - x_indexed.value)
+
+    # rec.visualize_graph()
