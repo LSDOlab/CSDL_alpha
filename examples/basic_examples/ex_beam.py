@@ -1,4 +1,6 @@
-
+'''
+Cantilever Beam model:
+'''
 import numpy as np
 import csdl_alpha as csdl
 from csdl_alpha.src.operations.linalg.vdot import vdot
