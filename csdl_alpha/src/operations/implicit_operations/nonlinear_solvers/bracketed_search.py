@@ -1,4 +1,4 @@
-from csdl_alpha.src.operations.implicit_operations.nonlinear_solvers.nonlinear_solver import NonlinearSolver
+from csdl_alpha.src.operations.implicit_operations.nonlinear_solvers.nonlinear_solver import NonlinearSolver, check_variable_shape_compatibility, check_run_time_tolerance
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
 import numpy as np
@@ -90,15 +90,7 @@ class BracketedSearch(NonlinearSolver):
         self.add_state_metadata(state, 'bracket', bracket)
 
         # check if tolerance is valid and store it
-        if tolerance is not None:
-            if isinstance(tolerance, (Variable, np.ndarray)):
-                if not (tolerance.shape == (1,) or tolerance.shape == state.shape):
-                    raise ValueError(f"Tolerance shape must be scalar or match state shape. {tolerance.shape} given")
-            elif not isinstance(tolerance, (float, int)):
-                raise TypeError(f"Invalid tolerance type, got {type(tolerance)}")
-            self.add_state_metadata(state, 'tolerance', tolerance)
-        else:
-            self.add_state_metadata(state, 'tolerance', self.metadata['tolerance'])
+        self.add_tolerance(state, tolerance)
 
     def _inline_solve_(self):
         iter = 0
@@ -129,6 +121,8 @@ class BracketedSearch(NonlinearSolver):
         def to_array(x):
             if isinstance(x, Variable):
                 return x.value
+            elif isinstance(x, np.ndarray):
+                return x
             elif isinstance(x, (float, int)):
                 return np.array([x])
 
@@ -165,7 +159,7 @@ class BracketedSearch(NonlinearSolver):
             x_upper[~lower_mask] = x_mid[~lower_mask]
 
             # check if the bracket is small enough
-            if np.all(np.abs(r_update) <= tolerance):
+            if check_run_time_tolerance(r_update, tolerance):
                 converged = True
                 break
 

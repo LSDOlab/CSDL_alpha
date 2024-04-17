@@ -60,21 +60,6 @@ class NonlinearSolver(object):
             self.meta_input_variables.add(datum)
         self.state_metadata[state][key] = datum
 
-    def check_run_time_tolerance(self, residual:np.ndarray, tol:np.ndarray):
-        """Given a residual and a tolerance array, check if all the residuals are within tolerance.
-
-        Parameters
-        ----------
-        residual : np.ndarray
-        tol : np.ndarray
-
-        Returns
-        -------
-        bool
-            True if all residuals are within tolerance, False otherwise.
-        """
-        return np.all(np.abs(residual) < tol)
-
     def add_tolerance(
             self,
             state:Variable,
@@ -93,15 +78,14 @@ class NonlinearSolver(object):
             self.add_state_metadata(state, 'tolerance', self.metadata['tolerance'])
         else:
             if isinstance(tolerance, Variable):
-                if tolerance.size == 1:
-                    from csdl_alpha.src.operations import expand
-                    tolerance = expand(tolerance.flatten(), state.shape)
-                elif tolerance.shape != state.shape:
-                    raise ValueError(f"Tolerance shape must match state shape. {tolerance.shape} given, {state.shape} expected.")
+                try:
+                    tolerance = check_variable_shape_compatibility(tolerance, state)
+                except Exception as e:
+                    raise ValueError(f"Error with tolerance argument: {e}")
             else:
                 tolerance = ingest_value(tolerance)
                 if tolerance.size == 1:
-                    tolerance = np.ones(state.shape) * tolerance
+                    tolerance = np.ones(state.shape) * tolerance.flatten()
                 elif tolerance.shape != state.shape:
                     raise ValueError(f"Tolerance shape must match state shape. {tolerance.shape} given, {state.shape} expected.")
             self.add_state_metadata(state, 'tolerance', tolerance)
@@ -269,4 +253,43 @@ class NonlinearSolver(object):
 
         self._inline_solve_()
 
-        
+def check_variable_shape_compatibility(
+        var_to_check:Variable, 
+        var_reference:Variable,
+    )->Variable:
+    """_summary_
+
+    Parameters
+    ----------
+    var_to_check : Variable
+        the variable to check
+    
+    var_reference : Variable
+        the variable to compare against
+
+    Returns
+    -------
+    Variable
+        the variable to check (expanded if necessary)
+    """
+    if var_to_check.size == 1:
+        from csdl_alpha.src.operations import expand
+        var_to_check = expand(var_to_check.flatten(), var_reference.shape)
+    elif var_to_check.shape != var_reference.shape:
+        raise ValueError(f"Variable shapes are incompatible. {var_to_check.shape} given, {var_reference.shape} expected.")
+    return var_to_check
+
+def check_run_time_tolerance(residual:np.ndarray, tol:np.ndarray):
+    """Given a residual and a tolerance array, check if all the residuals are within tolerance.
+
+    Parameters
+    ----------
+    residual : np.ndarray
+    tol : np.ndarray
+
+    Returns
+    -------
+    bool
+        True if all residuals are within tolerance, False otherwise.
+    """
+    return np.all(np.abs(residual) <= tol)

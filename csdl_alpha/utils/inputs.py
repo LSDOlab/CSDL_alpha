@@ -33,7 +33,7 @@ def process_shape_and_value(shape, value, dtype=np.float64):
             if value.shape == (1,):
                 value = value[0]*np.ones(shape)
             else:
-                raise ValueError("Shape and value shape must match")
+                raise ValueError(f"Shape and value shape must match. Shape {shape} given but value has shape {value.shape}")
     elif value is None:
         raise ValueError("Shape or value must be provided")
     else:

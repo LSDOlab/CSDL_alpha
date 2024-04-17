@@ -1,4 +1,4 @@
-from csdl_alpha.src.operations.implicit_operations.nonlinear_solvers.nonlinear_solver import NonlinearSolver
+from csdl_alpha.src.operations.implicit_operations.nonlinear_solvers.nonlinear_solver import NonlinearSolver, check_variable_shape_compatibility, check_run_time_tolerance
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import scalarize, ingest_value
 import numpy as np
@@ -63,6 +63,16 @@ class GaussSeidel(NonlinearSolver):
         if initial_value is None:
             self.add_state_metadata(state, 'initial_value', state.value)
         else:
+            if isinstance(initial_value, Variable):
+                try:
+                    initial_value = check_variable_shape_compatibility(initial_value, state)
+                except Exception as e:
+                    raise ValueError(f"Error with initial value argument. {e}")
+            else:
+                try:
+                    initial_value = ingest_value(initial_value)
+                except Exception as e:
+                    raise ValueError(f"Error with initial value. {e}")
             self.add_state_metadata(state, 'initial_value', initial_value)
 
         # Check if user provided a tolerance
@@ -123,7 +133,7 @@ class GaussSeidel(NonlinearSolver):
                 
                 # if current_residual_value > tol:
                 # if any of the residuals do not meet tolerance, no need to compute errors for other residuals
-                if not self.check_run_time_tolerance(current_residual_value, tol):
+                if not check_run_time_tolerance(current_residual_value, tol):
                     converged = False
                     break
 

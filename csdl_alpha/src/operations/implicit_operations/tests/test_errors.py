@@ -20,6 +20,30 @@ class TestErrors(csdl_tests.CSDLTest):
         with pytest.raises(ValueError):
             solver.add_state(x, y, state_update=1)
             solver.run()
+        with pytest.raises(ValueError):
+            solver = csdl.nonlinear_solvers.GaussSeidel()
+            x = csdl.ImplicitVariable((1,), value=0.34)
+            y = x*1.0
+            solver.add_state(x, y, tolerance=csdl.Variable(value=np.ones((3,))))
+            solver.run()
+        with pytest.raises(ValueError):
+            solver = csdl.nonlinear_solvers.GaussSeidel()
+            x = csdl.ImplicitVariable((1,), value=0.34)
+            y = x*1.0
+            solver.add_state(x, y, tolerance=np.ones((3,)))
+            solver.run()
+        with pytest.raises(ValueError):
+            solver = csdl.nonlinear_solvers.GaussSeidel()
+            x = csdl.ImplicitVariable((3,), value=0.34)
+            y = x*1.0
+            solver.add_state(x, y, initial_value = csdl.Variable(value=np.ones((2,))))
+            solver.run()
+        with pytest.raises(ValueError):
+            solver = csdl.nonlinear_solvers.GaussSeidel()
+            x = csdl.ImplicitVariable((3,), value=0.34)
+            y = x*1.0
+            solver.add_state(x, y, initial_value=np.ones((2,)))
+            solver.run()
 
     def test_bracket(self):
         self.prep()
