@@ -11,17 +11,6 @@ examples page.
 ```{toctree}
 :maxdepth: 1
 
-../_temp/examples/basic_examples/compare_old_new
 ../_temp/examples/basic_examples/ex_custom_operation
-../_temp/examples/basic_examples/ex_paraboloid
-../_temp/examples/basic_examples/example_add
-../_temp/examples/basic_examples/example_indexing
-../_temp/examples/basic_examples/example_many_ops
-../_temp/examples/basic_examples/example_mdo
-../_temp/examples/basic_examples/example_ops
-../_temp/examples/basic_examples/simple_example
-../_temp/examples/basic_examples/simple_model
-
-
-
+../_temp/examples/basic_examples/ex_beam
 ```

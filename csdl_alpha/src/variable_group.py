@@ -28,6 +28,7 @@ class VariableGroup:
     def _check_pamaeters(self, name, value):
         if name in self._metadata:
             if self._metadata[name]['variablize']:
+                # NOTE: variablize now turns things into Constant objects, idk if this is the desired behavior
                 value = variablize(value)
             if self._metadata[name]['type'] is not None:
                 if type(value) != self._metadata[name]['type']:
@@ -89,14 +90,14 @@ class VariableGroup:
             Tag to add to the Variables.
         """
         for key, val in self.__dict__.items():
-            if type(val) == Variable or type(val) == VariableGroup:
+            if isinstance(val, (Variable, VariableGroup)):
                 val.add_tag(tag)
 
     def save(self):
         """saves any Variables in the group or subgroups.
         """
         for key, val in self.__dict__.items():
-            if type(val) == Variable or type(val) == VariableGroup:
+            if isinstance(val, (Variable, VariableGroup)):
                 val.save()
 
     # def print_all(self):

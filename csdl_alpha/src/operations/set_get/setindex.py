@@ -142,16 +142,20 @@ class TestSet(csdl_tests.CSDLTest):
         # set a tensor slice with a tensor variable
         z4 = z.set(slice[0:-1:1], t)
         z4_v = z.set([ind_0, ind_0+1], t_val)
+        z4_var = z.set(slice[ind_0:ind_0+2:1], t_val)
         compare_values += [csdl_tests.TestingPair(z4, t2)]
         compare_values += [csdl_tests.TestingPair(z4_v, t2)]
+        compare_values += [csdl_tests.TestingPair(z4_var, t2)]
 
         t = csdl.Variable(name = 't', value = 2.0*np.ones((2,1)))
         # set a tensor slice with a tensor variable
         z5 = z.set((slice[0:-1, 1:2]), t)
+        z5_var = z.set((slice[0:-1, ind_1:ind_1+1]), t)
         z5_v = z.set(slice[0:-1, [ind_1,ind_1]], t_val) #strange...
         t3 = np.array([[3.,2.],[3.,2.],[3.,3.]])
         compare_values += [csdl_tests.TestingPair(z5, t3)]
         compare_values += [csdl_tests.TestingPair(z5_v, t3)]
+        compare_values += [csdl_tests.TestingPair(z5_var, t3)]
 
         t = csdl.Variable(name = 't', value = 2.0*np.ones((2,)))
         # set a tensor slice at specific indices with a tensor variable
@@ -172,10 +176,13 @@ class TestSet(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(z8, t3)]
         compare_values += [csdl_tests.TestingPair(z8_v, t3)]
 
+        # fixed/var and var step errors
         with pytest.raises(TypeError):
-            z8_v = z.set(slice[[ind_0,1], ind_1:ind_1], 2.0)
+            z.set(slice[0:-1:ind_1], t)
         with pytest.raises(TypeError):
-            z8_v = z.set(slice[ind_1:ind_1], 2.0)
+            z.set(slice[0:ind_1:1], 2.0)
+        with pytest.raises(TypeError):
+            z.set(slice[ind_0:-1:1], t)
 
         self.run_tests(compare_values = compare_values,turn_off_recorder=False)
 

@@ -71,11 +71,11 @@ def validate_and_variablize(value, raise_on_sparse = True):
     return var
 
 def variablize(variable):
-    from csdl_alpha.src.graph.variable import Variable
+    from csdl_alpha.src.graph.variable import Variable, Constant
     if isinstance(variable, Variable):
         return variable
     else:
-        var = Variable(value = ingest_value(variable))
+        var = Constant(value = ingest_value(variable))
         return var
 
 def get_shape(shape, value):
