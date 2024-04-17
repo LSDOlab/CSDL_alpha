@@ -134,7 +134,7 @@ class VarSlice(Slice):
         if map[1][0] == 's':
             self.slices[map[0]] = slice(arg_int, arg_int+map[1][1], cur_slice.step)
         elif map[1][0] == 'e':
-            self.slices[map[0]] = slice(arg_int+map[1][1], arg_int, cur_slice.step)
+            self.slices[map[0]] = slice(arg_int-map[1][1], arg_int, cur_slice.step)
 
 
     def evaluate_zeros(self):
