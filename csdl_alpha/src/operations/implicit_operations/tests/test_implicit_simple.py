@@ -30,6 +30,13 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases = []
         self.prep()
         cases.append((csdl.nonlinear_solvers.GaussSeidel, {}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'tolerance': 1e-10}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'tolerance': csdl.Variable(value=1e-8)}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'tolerance': csdl.Variable(value=np.ones((2,))*1e-8)}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': csdl.Variable(value=0.27)}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': 0.28}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': csdl.Variable(value=0.28), 'tolerance': 1e-10}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': 0.27, 'tolerance': csdl.Variable(value=1e-8)}))
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0, 4)}))
 
         compare_values = []

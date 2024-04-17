@@ -142,7 +142,7 @@ class Variable(Node):
         >>> recorder = csdl.Recorder(inline = True)
         >>> recorder.start()
         >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
-        >>> x1 = x.set(0, 0.0)
+        >>> x1 = x.set(csdl.slice[0], 0.0)
         >>> x1.value
         array([0., 2., 3.])
 
@@ -196,8 +196,9 @@ class Variable(Node):
         if isinstance(slices, Slice):
             return set_index(self, slices,value)
         else:
+            import warnings 
+            warnings.warn('We will be deprecating the use of providing indices directly through the set method. Please use csdl.slice instead: x = x.set(csdl.slice[...], val)') 
             return set_index(self, loop_slice[slices], value)
-
 
     def save(self):
         """Sets variable to be saved
