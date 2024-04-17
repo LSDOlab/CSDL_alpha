@@ -10,9 +10,9 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('../csdl_alpha/core'))     # for autodoc
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))     # for autodoc
 
 # -- Project information -----------------------------------------------------
 
@@ -30,9 +30,11 @@ version = '0.1'
 # ones.
 extensions = [
     "sphinx_rtd_theme",
-    "autoapi.extension",
-    "numpydoc", 
-    "sphinx.ext.autodoc.typehints",             
+    # "autoapi.extension",
+    "numpydoc",
+    # "sphinx.ext.napoleon",
+    # "sphinx.ext.autodoc.typehints",             
+    # "sphinx.ext.autodoc",             
     "sphinx_copybutton",            # allows copying code embedded in the docs rendered from .md or .ipynb files
     "myst_nb",                      # renders .md, .myst, .ipynb files
     "sphinx.ext.viewcode",          # adds the source code for classes and functions in auto generated api ref
@@ -41,6 +43,7 @@ extensions = [
 ]
 
 autodoc_typehints = 'none'
+# autosummary_generate = False
 
 # import sphinx as aa
 # print(aa.__version__)
@@ -56,17 +59,38 @@ myst_title_to_header = True
 myst_enable_extensions = ["dollarmath", "amsmath", "tasklist"]
 nb_execution_mode = 'off'
 
-# autoapi options
-autoapi_dirs = ["../csdl_alpha/src"]
-autoapi_root = 'src/autoapi'
-autoapi_type = 'python'
-autoapi_file_patterns = ['*.py', '*.pyi']
-autoapi_options = [ 'members', 'undoc-members', 'private-members', 'show-inheritance', 
-                   'show-module-summary', 
-                   'special-members', 'imported-members', ]
-autoapi_add_toctree_entry = False
-autoapi_member_order = 'groupwise'
-autoapi_python_class_content = 'class' # 'both' or '__init'
+# napoleon options
+# napoleon_use_ivar = False
+# napoleon_use_param = False
+
+# # autoapi options
+# autoapi_dirs = ["../csdl_alpha/src"]
+# autoapi_root = 'src/autoapi'
+# autoapi_type = 'python'
+# autoapi_file_patterns = ['*.py', '*.pyi']
+# autoapi_options = [ 'members', 'undoc-members', 'private-members', 'show-inheritance', 
+#                    'show-module-summary', 
+#                    'special-members', 'imported-members', ]
+# autoapi_add_toctree_entry = False
+# autoapi_member_order = 'groupwise'
+# autoapi_python_class_content = 'class' # 'both' or '__init'
+# # autoapi_template_directory = '_templates/autoapi'
+# # autoapi_keep_files=True
+# autoapi_generate_api_docs=False
+# autoapi_ignore = ['*old_examples*']
+
+
+# def skip_stdop_modules(app, what, name, obj, skip, options):
+#     if name.startswith('csdl_alpha.src.operations.') and what == 'module':
+#         print(app, what, name, obj, skip, options)
+#         skip = True
+#     # if name == 'csdl_alpha.src.operations':
+#     #     skip = True
+#     return skip
+
+
+# def setup(sphinx):
+#     sphinx.connect("autoapi-skip-member", skip_stdop_modules)
 
 root_doc = 'index'
 
@@ -76,7 +100,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['README.md', '_build', 'Thumbs.db', '.DS_Store', 'src/welcome.md']
+exclude_patterns = ['README.md', '_build', 'Thumbs.db', '.DS_Store', 'src/welcome.md', 'src/_temp/examples/old_examples/*']
 
 
 # -- Options for HTML output -------------------------------------------------

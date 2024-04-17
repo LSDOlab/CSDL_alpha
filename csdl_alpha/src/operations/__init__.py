@@ -29,7 +29,7 @@ from .trig import sin, cos, tan, arcsin, arccos, arctan
 from .cross import cross
 
 # Linear algebra operations
-from .linalg.block_matrix import blockmat
+from .linalg.blockmat import blockmat
 from .linalg.norm import norm
 from .linalg.vdot import vdot
 from .linalg.matvec import matvec
