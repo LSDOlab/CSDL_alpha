@@ -136,7 +136,6 @@ class StatesComp():
 
         for ind in csdl.frange(1, num_elements):
             j = j_offset + (ind-1) * 12
-            ind1 = 2 * ind
             K = K_local[ind, :, :]
 
             # NW quadrant gets summed with previous connected element.
@@ -146,10 +145,10 @@ class StatesComp():
             data = data.set(csdl.slice[indices2], data[indices2] + K[1, :2])
 
             # NE quadrant
-            data = data.set(csdl.slice[[j, j+1, j+2, j+3]], K[:2, 2:].flatten())
+            data = data.set(csdl.slice[j:j+4], K[:2, 2:].flatten())
 
             # SE and SW quadrants together
-            data = data.set(csdl.slice[[j+4, j+5, j+6, j+7, j+8, j+9, j+10, j+11]], K[2:, :].flatten())
+            data = data.set(csdl.slice[j+4:j+12], K[2:, :].flatten())
 
         data = data.set(csdl.slice[-4:], 1.0)
         rows[-4] = 2 * num_nodes
@@ -217,4 +216,4 @@ beam_model = BeamModel(E, L, b, num_elements)
 d, compliance, volume = beam_model.evaluate(force_vector, h)
 print(d.value, compliance.value, volume.value)
 recorder.stop()
-recorder.visualize_graph()
+recorder.visualize_graph('beam_graph')
