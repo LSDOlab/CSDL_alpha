@@ -173,10 +173,10 @@ class Graph():
         """
         from csdl_alpha.src.graph.node import Node
         for node_index in nodes:
-            if node_index in self.node_table:
-                if isinstance(node_index, Node):
-                    node_index = self.node_table[node_index]
-                self.rxgraph.remove_node(node_index)
+            if isinstance(node_index, Node):
+                node_index = self.node_table[node_index]
+            self.rxgraph.remove_node(node_index)
+
         self.update_node_table()
 
     def _replace_node(self, old_node, new_node):

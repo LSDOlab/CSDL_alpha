@@ -170,8 +170,12 @@ class NonlinearSolver(object):
         implicit_operation.finalize_and_return_outputs()
 
         # print(f'UPDATING DOWNSTREAM:  {self.name}')
-        G.update_downstream(implicit_operation)
-
+        recorder = csdl.get_current_recorder()
+        if recorder.inline:
+            G.update_downstream(implicit_operation)
+        
+        # For debugging:
+        # self.residual_graph.visualize(f'inner_graph_{self.name}')
         # recorder.active_graph.visualize(f'top_level_{self.name}_after')
         
 
