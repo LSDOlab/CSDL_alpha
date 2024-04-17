@@ -25,9 +25,9 @@ def test_with_namespacing():
     recorder = csdl.Recorder()
     recorder.start()
     a = csdl.Variable((1,), name='a')
-    with csdl.Namespace('test1'):
+    with csdl.namespace('test1'):
         b = csdl.Variable((1,), name='b')
-        with csdl.Namespace('test2'):
+        with csdl.namespace('test2'):
             c = csdl.Variable((1,), name='c')
         d = csdl.Variable((1,), name='d')
     e = csdl.Variable((1,), name='e')

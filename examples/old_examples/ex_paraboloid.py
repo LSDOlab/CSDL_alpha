@@ -40,7 +40,7 @@ if __name__ == '__main__':
             csdl.Variable
                 The result of evaluating the paraboloid function at the given values of x and y.
             """
-            with csdl.Namespace(name):
+            with csdl.namespace(name):
                 f = csdl.square(x - self.a) + x * y + csdl.square(y + self.b) - self.c
                 f.add_name('f')  # This gives f the name '...paraboloid.f'
             return f

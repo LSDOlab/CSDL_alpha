@@ -22,23 +22,23 @@ class BeamModel():
 
         moment_of_inertia_comp = MomentOfInertiaComp(b=b)
 
-        with csdl.Namespace('inertia'):
+        with csdl.namespace('inertia'):
             I = moment_of_inertia_comp.evaluate(h=h)
 
         local_stiffness_matrix_comp = LocalStiffnessMatrixComp(num_elements=num_elements, E=E, L=L)
-        with csdl.Namespace('stiffness'):
+        with csdl.namespace('stiffness'):
             K_local = local_stiffness_matrix_comp.evaluate(I=I)
 
         states_comp = StatesComp(num_elements=num_elements)
-        with csdl.Namespace('states'):
+        with csdl.namespace('states'):
             d = states_comp.evaluate(K_local=K_local, force_vector=force_vector)
 
         compliance_comp = ComplianceComp()
-        with csdl.Namespace('compliance'):
+        with csdl.namespace('compliance'):
             compliance = compliance_comp.evaluate(d=d[:-2], force_vector=force_vector)
 
         volume_comp = VolumeComp(num_elements=num_elements, L=L)
-        with csdl.Namespace('volume'):
+        with csdl.namespace('volume'):
             volume = volume_comp.evaluate(h=h, b=b)
 
         return d, compliance, volume
