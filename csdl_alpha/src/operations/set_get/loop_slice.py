@@ -33,13 +33,18 @@ class LoopSlicer(Slicer):
                 if isinstance(k.start, Variable) and isinstance(k.stop, Variable):
                     # Need to parse the graph between these to variables to see if their difference is constant
                     graph = get_current_recorder().active_graph
-                    nodes_between = graph._get_intersection([k.start], [k.stop], check_sources=False, check_targets=False)
-                    if len(nodes_between) == 0:
-                        nodes_between = graph._get_intersection([k.stop], [k.start], check_sources=False, check_targets=False)
+                    try:
+                        difference = graph.get_difference(k.stop, k.start)
+                    except Exception as e:
+                        raise ValueError(f"Incompatible operation between slice start and stop variables: {e}")
+
+
+                    if difference is None:
+                        raise ValueError("Difference between slice start and stop must be constant")
+                    if not int(difference) == difference:
+                        raise TypeError("Difference between slice start and stop must be an integer")
                     
-
-
-
+                    print(difference)
 
                 if isinstance(k.start, Variable):
                     raise TypeError("Slice start cannot be a CSDL variable")

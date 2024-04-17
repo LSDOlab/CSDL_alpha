@@ -431,3 +431,6 @@ class SparseMatrix(Variable):
     def post_init(self):
         if len(self.shape) != 2:
             raise ValueError("SparseMatrix must have 2 dimensions")
+        
+class Constant(Variable):
+    pass
