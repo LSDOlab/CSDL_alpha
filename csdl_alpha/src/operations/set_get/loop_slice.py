@@ -8,6 +8,7 @@ class LoopSlicer(Slicer):
 
     def __getitem__(self, keys):
         from csdl_alpha.src.graph.variable import Variable
+        from csdl_alpha.api import get_current_recorder
 
         # tuplify keys if not already a tuple
         if isinstance(keys, self.valid_types):
@@ -29,12 +30,30 @@ class LoopSlicer(Slicer):
             if isinstance(k, Variable): #integer
                 self.add_to_mapping_list(k, mapping_list, var2maplist_index, i)
             elif isinstance(k, slice): # slice
-                if isinstance(k.start, Variable):
-                    raise TypeError("Slice start cannot be a CSDL variable")
-                    self.add_to_mapping_list(k.start, mapping_list, var2maplist_index, (i, 's'))
-                if isinstance(k.stop, Variable):
-                    raise TypeError("Slice stop cannot be a CSDL variable")
-                    self.add_to_mapping_list(k.stop, mapping_list, var2maplist_index, (i, 'e'))
+                if isinstance(k.start, Variable) and isinstance(k.stop, Variable):
+                    # Need to parse the graph between these to variables to see if their difference is constant
+                    graph = get_current_recorder().active_graph
+                    try:
+                        difference = graph.get_difference(k.stop, k.start)
+                    except Exception as e:
+                        raise ValueError(f"Incompatible operation between slice start and stop variables: {e}")
+
+                    if difference is None:
+                        raise ValueError("Difference between slice start and stop must not depend on other variables")
+                    if not int(difference) == difference:
+                        raise TypeError("Difference between slice start and stop must be an integer")
+                    
+                    if difference > 0:
+                        self.add_to_mapping_list(k.start, mapping_list, var2maplist_index, (i, ('s', int(difference))))
+                    elif difference < 0:
+                        self.add_to_mapping_list(k.stop, mapping_list, var2maplist_index, (i, ('e', int(difference))))
+                    else:
+                        raise ValueError("Slice start and stop must be different")
+                    
+                elif isinstance(k.start, Variable):
+                    raise TypeError("Slice start with constant stop cannot be a CSDL variable")
+                elif isinstance(k.stop, Variable):
+                    raise TypeError("Slice stop with constant start cannot be a CSDL variable")
                 if isinstance(k.step, Variable):
                     raise TypeError("Slice step cannot be a CSDL variable")
             elif isinstance(k, list): # list
@@ -92,7 +111,7 @@ class VarSlice(Slice):
                 if isinstance(map, int): # integer
                     current_arg_map.append((self.map2int, (map)))
                 else:
-                    if isinstance(map[1], str):
+                    if isinstance(map[1], tuple):
                         current_arg_map.append((self.map2slice, map))
                     elif isinstance(map[1], int):
                         current_arg_map.append((self.map2list, map))
@@ -110,12 +129,12 @@ class VarSlice(Slice):
     def map2list(self, map:tuple[int,int], arg_int):
         self.slices[map[0]][map[1]] = arg_int
 
-    def map2slice(self, map:tuple[int,str], arg_int):
+    def map2slice(self, map:tuple[int,tuple[str, int]], arg_int):
         cur_slice = self.slices[map[0]]
-        if map[1] == 's':
-            self.slices[map[0]] = slice(arg_int, cur_slice.stop, cur_slice.step)
-        elif map[1] == 'e':
-            self.slices[map[0]] = slice(cur_slice.start, arg_int, cur_slice.step)
+        if map[1][0] == 's':
+            self.slices[map[0]] = slice(arg_int, arg_int+map[1][1], cur_slice.step)
+        elif map[1][0] == 'e':
+            self.slices[map[0]] = slice(arg_int-map[1][1], arg_int, cur_slice.step)
 
 
     def evaluate_zeros(self):

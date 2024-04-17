@@ -63,22 +63,28 @@ def test_loop_slice():
     assert var_slice.evaluate(4,1) == ([4, 0 ,1],4, slice(0,10,2),4)
     assert var_slice.vars == (int_var2, temp1)
 
+    # Forward variable slicing
+    var_slice = _loop_slice[int_var:temp2]
+    assert tuple(var_slice.slices) == (slice(int_var,temp2),)
+    assert var_slice.evaluate(2) == (slice(2,3),)
+    assert var_slice.evaluate(1) == (slice(1,2),)
+
+    # Backward variable slicing
+    var_slice = _loop_slice[temp2:int_var]
+    assert tuple(var_slice.slices) == (slice(temp2,int_var),)
+    assert var_slice.evaluate(2) == (slice(3,2),)
+    assert var_slice.evaluate(1) == (slice(2,1),)
+
+
     # ====TODO: maybe add feature for later. NO SLICING W/ CSDL VARIABLES FOR NOW!
+    # NOTE: Added var:var slicing, no const:var/var:const/x:x:var slicing
     with pytest.raises(TypeError):
         var_slice = _loop_slice[0:int_var]
 
     # ==== maybe add feature for later. NO SLICING W/ CSDL VARIABLES FOR NOW!
     with pytest.raises(TypeError):
-        var_slice = _loop_slice[int_var2, int_var:temp2]
+        _loop_slice[0,1,int_var:temp2:int_var2]
 
-    # ==== maybe add feature for later. NO SLICING W/ CSDL VARIABLES FOR NOW!
-    with pytest.raises(TypeError):
-        _loop_slice[0,1,int_var2:int_var2:int_var2]
-
-    # ==== maybe add feature for later. NO SLICING W/ CSDL VARIABLES FOR NOW!
-    with pytest.raises(TypeError):
-        _loop_slice[[int_var2, 0 ,int_var], temp1:temp2:2]
-        
     return
 
     var_slice = _loop_slice[0:int_var]

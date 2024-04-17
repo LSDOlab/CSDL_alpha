@@ -172,6 +172,14 @@ class Variable(Node):
         array([[11.,  2., 11.],
                [11.,  5., 11.]])
 
+        Slicing with CSDL variables is also supported in some cases when the slice size is constant.
+
+        >>> start = csdl.Variable(value = 0)
+        >>> x1 = x.set(csdl.slice[start:start+2, 1], 10.0)
+        >>> x1.value
+        array([[ 1., 10.,  3.],
+               [ 4., 10.,  6.]])
+
         Get the same behaviour of in-place modification by returning the same variable (it is recommended to combine slices to one .set call when possible to reduce the number of operations).
         
         >>> x = x.set(csdl.slice[0,0], 10.0)
@@ -432,3 +440,6 @@ class SparseMatrix(Variable):
     def post_init(self):
         if len(self.shape) != 2:
             raise ValueError("SparseMatrix must have 2 dimensions")
+        
+class Constant(Variable):
+    pass

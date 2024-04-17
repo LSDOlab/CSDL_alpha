@@ -36,6 +36,7 @@ setup(
     platforms=['any'],
     install_requires=[
         'numpy',
+        'sympy',
         'pytest',
         'scipy',
         'rustworkx',

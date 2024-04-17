@@ -2,6 +2,7 @@ import rustworkx as rx
 from rustworkx.visualization import graphviz_draw
 import numpy as np
 import csdl_alpha.utils.error_utils as error_utils
+import sympy as sp
 # from csdl_alpha.utils.error_utils import GraphError
 
 class Graph():
@@ -230,6 +231,63 @@ class Graph():
 
         self.check_self()
 
+    def get_difference(self, node1, node2):
+        """
+        Returns the difference between node1 and node2 if it is constant, else returns None
+        """
+        from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
+
+        graph = self.rxgraph
+
+        node1_index = self.node_table[node1]
+        node2_index = self.node_table[node2]
+        
+        # case 3: they descend from a common ancestor
+        node1_ancestors = rx.ancestors(graph, node1_index)
+        node2_ancestors = rx.ancestors(graph, node2_index)
+
+        diff = node1_ancestors.symmetric_difference(node2_ancestors)
+
+        if not diff:
+            return None
+
+        subgraph = graph.subgraph(list(diff))
+
+
+        vars_dict = {node1: sp.symbols(f'_{node1_index}_'), node2: sp.symbols(f'_{node2_index}_')}
+        for node_index in rx.topological_sort(subgraph):
+            node = subgraph[node_index]
+            if is_operation(node):
+                input_nodes = node.inputs
+                inputs = []
+                for input_node in input_nodes:
+                    if is_constant(input_node):
+                        inputs.append(input_node.value[0])
+                    elif is_variable(input_node):
+                        if input_node in vars_dict:
+                            inputs.append(vars_dict[input_node])
+                        else:
+                            inputs.append(sp.symbols(f'_{self.node_table[node]}_'))
+                            vars_dict[input_node] = inputs[-1]
+                if isinstance(node, ComposedOperation):
+                    outputs = node.evaluate_composed(*inputs)
+                else:
+                    outputs = node.compute_inline(*inputs)
+                if not isinstance(outputs, tuple):
+                    outputs = (outputs,)
+                for output, output_node in zip(outputs, node.outputs):
+                    vars_dict[output_node] = output
+
+        difference = vars_dict[node1] - vars_dict[node2]
+
+        if isinstance(difference, sp.Integer):
+            return int(difference)
+        if isinstance(difference, sp.Float):
+            return float(difference)
+        
+        return None
+
+
     def _get_intersection(
             self,
             sources,
@@ -446,6 +504,10 @@ def is_operation(x):
 def is_variable(x):
     from csdl_alpha.src.graph.variable import Variable
     return isinstance(x, Variable)
+
+def is_constant(x):
+    from csdl_alpha.src.graph.variable import Constant
+    return isinstance(x, Constant)
 
 
 def get_node_info_string(node, graph):
