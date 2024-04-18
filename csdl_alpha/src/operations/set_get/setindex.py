@@ -3,7 +3,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.src.operations.set_get.slice import Slice
 from csdl_alpha.src.operations.set_get.loop_slice import VarSlice
 import pytest

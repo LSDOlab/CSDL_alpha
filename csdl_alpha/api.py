@@ -6,6 +6,7 @@ from .src.operations.custom.custom import CustomExplicitOperation
 from .src.variable_group import VariableGroup
 from .manager import RecManager
 from .src.operations.loops.loop import frange
+from .utils.parameters import check_parameter
 import warnings
 
 manager = RecManager()

@@ -1,4 +1,4 @@
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 import pytest
 
 class Testfrange(csdl_tests.CSDLTest):

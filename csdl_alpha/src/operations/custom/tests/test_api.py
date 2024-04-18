@@ -1,5 +1,5 @@
 import csdl_alpha as csdl
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 import pytest
 
 # basic custom explicit
