@@ -109,6 +109,29 @@ class TestGet(csdl_tests.CSDLTest):
         x8 = y[0:2, [1, 1, 1],[1, 2, 3], 0:2]
         compare_values += [csdl_tests.TestingPair(x8, y_val[0:2, [1, 1, 1],[1, 2, 3], 0:2])]
 
+        # slicing with CSDL variables
+        int_1 = csdl.Variable(value = 2.0)
+        int_2 = int_1+3
+        x9 = y.get(csdl.slice[int_1:int_2, [1, 1, 1],[1, 2, 3], 0:2])
+        compare_values += [csdl_tests.TestingPair(x9, y_val[2:5, [1, 1, 1],[1, 2, 3], 0:2])]
+        x9 = y[int_1:int_2, [1, 1, 1],[1, 2, 3], 0:2]
+        compare_values += [csdl_tests.TestingPair(x9, y_val[2:5, [1, 1, 1],[1, 2, 3], 0:2])]
+
+        x10 = y.get(csdl.slice[int_1:int_2, [1, 1, 1],[1, 2, 3], int_2:int_2+2])
+        compare_values += [csdl_tests.TestingPair(x10, y_val[2:5, [1, 1, 1],[1, 2, 3], 5:7])]
+        x10 = y[int_1:int_2, [1, 1, 1],[1, 2, 3], int_2:int_2+2]
+        compare_values += [csdl_tests.TestingPair(x10, y_val[2:5, [1, 1, 1],[1, 2, 3], 5:7])]
+
+        x11 = y.get(csdl.slice[int_1:int_2, [int_1, 1, 1],[int_2, int_2, int_1], int_2:int_2+2])
+        compare_values += [csdl_tests.TestingPair(x11, y_val[2:5, [2, 1, 1],[5, 5, 2], 5:7])]
+        x11 = y[int_1:int_2, [int_1, 1, 1],[int_2, int_2, int_1], int_2:int_2+2]
+        compare_values += [csdl_tests.TestingPair(x11, y_val[2:5, [2, 1, 1],[5, 5, 2], 5:7])]
+
+        x12 = y.get(csdl.slice[0:1, [int_1, 1, 1],[int_2, int_2, int_1], int_2:int_2+2])
+        compare_values += [csdl_tests.TestingPair(x12, y_val[0:1, [2, 1, 1],[5, 5, 2], 5:7])]
+        x12 = y[0:1, [int_1, 1, 1],[int_2, int_2, int_1], int_2:int_2+2]
+        compare_values += [csdl_tests.TestingPair(x12, y_val[0:1, [2, 1, 1],[5, 5, 2], 5:7])]
+
         with pytest.raises(IndexError):
             x_error = y[0:2, [1, 1, 1],[1, 2], 0:2]
         with pytest.raises(IndexError):
@@ -119,11 +142,22 @@ class TestGet(csdl_tests.CSDLTest):
             x_error = y[[1, 1],ind_var:2]
         with pytest.raises(TypeError):
             x_error = y[0:2:ind_var]
+        with pytest.raises(ValueError):
+            x_error = y[int_1:csdl.sin(int_1)]
+        with pytest.raises(ValueError):
+            x_error = y[int_1:int_1*int_1]
+        with pytest.raises(ValueError):
+            x_error = y[int_1:int_1]
+        with pytest.raises(ValueError):
+            x_error = y[int_1:int_1/2]
+        with pytest.raises(TypeError):
+            x_error = y[int_1:int_1+0.5]
         self.run_tests(compare_values = compare_values, turn_off_recorder=False)
 
         compare_values = []
         ind_var.value = ind_var.value + 1
         ind_var2.value = ind_var2.value + 1
+        int_1.value = int_1.value - 1
         current_graph = csdl.get_current_recorder().active_graph
         current_graph.execute_inline()
 
@@ -135,6 +169,11 @@ class TestGet(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(x6, x_val[0:2,[3,1,1], 3])]
         compare_values += [csdl_tests.TestingPair(x7, y_val[0:2, [1, 1, 1],[1, 2, 3], 3])]
         compare_values += [csdl_tests.TestingPair(x8, y_val[0:2, [1, 1, 1],[1, 2, 3], 0:2])]
+        compare_values += [csdl_tests.TestingPair(x9, y_val[1:4, [1, 1, 1],[1, 2, 3], 0:2])]
+        compare_values += [csdl_tests.TestingPair(x10, y_val[1:4, [1, 1, 1],[1, 2, 3], 4:6])]
+        compare_values += [csdl_tests.TestingPair(x11, y_val[1:4, [1, 1, 1],[4, 4, 1], 4:6])]
+        compare_values += [csdl_tests.TestingPair(x12, y_val[0:1, [1, 1, 1],[4, 4, 1], 4:6])]
+
         self.run_tests(compare_values = compare_values)
 
 

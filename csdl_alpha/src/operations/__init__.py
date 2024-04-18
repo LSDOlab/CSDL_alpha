@@ -29,7 +29,7 @@ from .trig import sin, cos, tan, arcsin, arccos, arctan
 from .cross import cross
 
 # Linear algebra operations
-from .linalg.block_matrix import blockmat
+from .linalg.blockmat import blockmat
 from .linalg.norm import norm
 from .linalg.vdot import vdot
 from .linalg.matvec import matvec
@@ -45,6 +45,9 @@ from .tensor.transpose import transpose
 from .tensor.expand import expand
 from .tensor.reorder_axes import reorder_axes
 from .tensor.einsum import einsum
+
+# Sparse operations are in sparse submodule
+from . import sparse
 
 # Special operations
 from .special.bessel import bessel
