@@ -327,11 +327,11 @@ class Recorder:
         self.active_graph_node = parent_graph_node
         self.active_graph = parent_graph_node.value
 
-    def visualize_graph(self, filename: str = 'image'):
+    def visualize_graph(self, filename: str = 'image', trim_loops = False):
         """
         Visualizes the graph.
         """
-        self.active_graph.visualize(filename)
+        self.active_graph.visualize(filename, trim_loops=trim_loops)
 
     def visualize_adjacency_matrix(self):
         """
