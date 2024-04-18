@@ -1,4 +1,4 @@
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable 
 
 class TestVariable(csdl_tests.CSDLTest):

@@ -4,7 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
 from csdl_alpha.utils.typing import VariableLike
 
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 import csdl_alpha.utils.error_utils as error_utils
 import numpy as np
 

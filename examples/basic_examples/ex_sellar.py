@@ -18,28 +18,28 @@ x = csdl.Variable(name = 'x', value = 0.0)
 y2 = csdl.ImplicitVariable(name = 'y2', value = 1.0)
 
 # Define each "component" from the example
-with csdl.Namespace('Discipline 1'):
+with csdl.namespace('Discipline 1'):
     y1 = z1**2 + z2 + x - 0.2*y2
     y1.add_name('y1')
 
-with csdl.Namespace('Discipline 2'):
+with csdl.namespace('Discipline 2'):
     residual = csdl.sqrt(y1) + z1 + z2 - y2
     residual.add_name('residual')
 
-with csdl.Namespace('Objective'):
+with csdl.namespace('Objective'):
     f = x**2 + z2 + y1 + csdl.exp(-y2)
     f.add_name('f')
 
-with csdl.Namespace('Constraint 1'):
+with csdl.namespace('Constraint 1'):
     g1 = 3.16 - y1
     g1.add_name('g1')
 
-with csdl.Namespace('Constraint 2'):
+with csdl.namespace('Constraint 2'):
     g2 = y2 - 24.0
     g2.add_name('g2')
 
 # Specifiy coupling
-with csdl.Namespace('Couple'):
+with csdl.namespace('Couple'):
     solver = csdl.nonlinear_solvers.GaussSeidel()
     solver.add_state(y2, residual, state_update=y2+residual, tolerance=1e-8)
     solver.run()

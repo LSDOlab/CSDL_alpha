@@ -1,7 +1,7 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 from csdl_alpha.src.graph.operation import set_properties 
 from csdl_alpha.utils.inputs import validate_and_variablize
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 
 @set_properties(linear=True)
 class Neg(ElementwiseOperation):

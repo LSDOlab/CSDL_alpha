@@ -6,6 +6,9 @@ from .src.operations.custom.custom import CustomExplicitOperation
 from .src.variable_group import VariableGroup
 from .manager import RecManager
 from .src.operations.loops.loop import frange
+from .utils.parameters import check_parameter
+import warnings
+
 manager = RecManager()
 
 def get_current_recorder():
@@ -17,8 +20,16 @@ def build_new_recorder(inline = False, debug = False, expand_ops = False, auto_h
     from .src.recorder import Recorder
     return Recorder(inline = inline, debug=debug, expand_ops=expand_ops, auto_hierarchy=auto_hierarchy)
 
-class Namespace:
+
+class namespace:
     def __init__(self, namespace: str):
+        """Namespacing context manager.
+
+        Parameters
+        ----------
+        namespace : str
+            The name of the namespace to enter.
+        """
         self.namespace = namespace
         self.recorder = get_current_recorder()
 
@@ -27,6 +38,18 @@ class Namespace:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         exit_namespace()
+
+class Namespace(namespace):
+    def __init__(self, namespace: str):
+        """Depricated: use namespace instead. Namespacing context manager.
+
+        Parameters
+        ----------
+        namespace : str
+            The name of the namespace to enter.
+        """
+        warnings.warn("Namespace is depricated. Use namespace instead.", DeprecationWarning)
+        super().__init__(namespace)
 
 def enter_namespace(namespace: str):
     """

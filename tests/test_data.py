@@ -1,5 +1,5 @@
 import pytest
-from csdl_alpha.utils.test_utils import CSDLTest
+from csdl_alpha.utils.testing_utils import CSDLTest
 
 class TestData(CSDLTest):
     def test_data(self):

@@ -1,5 +1,5 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties 
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import pytest
