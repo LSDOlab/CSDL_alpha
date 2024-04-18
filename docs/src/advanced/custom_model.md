@@ -9,11 +9,22 @@ import csdl_alpha as csdl
 
 # custom paraboloid model
 class Paraboloid(csdl.CustomExplicitOperation):
-    def initialize(self):
-        self.a = self.parameters.declare('a')
-        self.b = self.parameters.declare('b')
-        self.c = self.parameters.declare('c')
-        self.return_g = self.parameters.declare('return_g', default=False)
+
+        def __init__(self, a, b, c, return_g=False):
+            """Paraboloid function implemented as a custom explicit operation."""
+            super().__init__()
+            
+            # define any checks for the parameters
+            csdl.check_parameter(a, 'a', types=(float, int))
+            csdl.check_parameter(b, 'b', types=(float, int))
+            csdl.check_parameter(c, 'c', types=(float, int))
+            csdl.check_parameter(return_g, 'return_g', types=bool)
+            
+            # assign parameters to the class
+            self.a = a
+            self.b = b
+            self.c = c
+            self.return_g = return_g
 
     def evaluate(self, inputs: csdl.VariableGroup):
         # assign method inputs to input dictionary
@@ -81,19 +92,29 @@ recorder.stop()
 ```
 
 
-## initialize
+## Initialization
 
-The initialize method is used to declare the parameters of the custom operation. The `initialize` method is called when the custom operation is created, and can be used to take any non-csdl arguments that modify the operation. Input parameters are checked for any criteria given when declared.
+The __init__ method can optionally be used to take in parameters for the custom operation. The user must call `super().__init__()` so the custom operation is initialized properly. `csdl.check_parameters` can be used to apply value and type checks to the parameters.
 
 ```python
-def initialize(self):
-    self.a = self.parameters.declare('a')
-    self.b = self.parameters.declare('b')
-    self.c = self.parameters.declare('c')
-    self.return_g = self.parameters.declare('return_g', default=False)
+def __init__(self, a, b, c, return_g=False):
+    """Paraboloid function implemented as a custom explicit operation."""
+    super().__init__()
+    
+    # define any checks for the parameters
+    csdl.check_parameter(a, 'a', types=(float, int))
+    csdl.check_parameter(b, 'b', types=(float, int))
+    csdl.check_parameter(c, 'c', types=(float, int))
+    csdl.check_parameter(return_g, 'return_g', types=bool)
+    
+    # assign parameters to the class
+    self.a = a
+    self.b = b
+    self.c = c
+    self.return_g = return_g
 ```
 
-## evaluate
+## Evaluate
 
 The evaluate method defines the inputs and outputs of the operation, as well as any derivative parameters. The arguments to the evaluate method can be Variables, VariableGroups, or any other object. However, every `Variable` input to the model must be declared and assigned a string using the `declare_input()` method. Similarly, the `create_output()` method is used to create the output variables of the model, and assign them a string. These outputs can be optionally packaged into a `VariableGroup` object or any other object, and returned from the evaluate method.
 
@@ -124,7 +145,7 @@ def evaluate(self, inputs: csdl.VariableGroup):
 ```
 
 
-## compute
+## Compute
 
 The compute method is used to calculate the output of the model. The `input_vals` dictionary contains the values of the input variables as numpy arrays, and the `output_vals` dictionary is used to store the output values. The `compute` method should assign the output values to the `output_vals` dictionary. The keys of these dictionaries correspond to the strings given in the `declare_input()` and `create_output()` methods.
 
@@ -140,7 +161,7 @@ def compute(self, input_vals, output_vals):
         output_vals['g'] = output_vals['f']*z
 ```
 
-## compute_derivatives
+## Compute Derivatives
 
 The `compute_derivatives` method is used to calculate the derivatives of the output variables with respect to the input variables. The `input_vals` dictionary contains the values of the input variables, the `output_vals` dictionary contains the values of the output variables, and the `derivatives` dictionary is used to store the derivative values. The keys of the `derivatives` dictionary are tuples of the form `(output_name, input_name)`, where `output_name` and `input_name` are the strings given in the `create_output()` and `declare_input()` methods.
 
