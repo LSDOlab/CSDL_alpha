@@ -43,7 +43,8 @@ extensions = [
 ]
 
 autodoc_typehints = 'none'
-# autosummary_generate = False
+autosummary_generate = True
+# add_module_names = False
 
 # import sphinx as aa
 # print(aa.__version__)
