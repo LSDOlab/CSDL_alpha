@@ -339,6 +339,17 @@ class Recorder:
         """
         self.active_graph.visualize_n2()
         
+    def save_graph(self, filename: str = 'graph'):
+        """Saves the graph to file
+
+        Parameters
+        ----------
+        filename : str, optional
+            filename to save to, by default 'graph'
+        """
+        self.active_graph.save(filename)
+
+
     def get_root_graph(self):
         """
         Gets the root graph.
