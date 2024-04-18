@@ -45,6 +45,7 @@
     csdl_alpha.reorder_axes
     csdl_alpha.einsum
     csdl_alpha.bessel
+    csdl_alpha.src.operations.sparse.sparse_matvec.matvec
 
 ```
 
@@ -133,5 +134,7 @@
 .. autofunction:: csdl_alpha.einsum
 
 .. autofunction:: csdl_alpha.bessel
+
+.. autofunction:: csdl_alpha.src.operations.sparse.sparse_matvec.matvec
 
 ```

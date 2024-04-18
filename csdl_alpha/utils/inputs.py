@@ -10,7 +10,7 @@ def ingest_value(value, dtype=np.float64):
     elif isinstance(value, np.ndarray):
         value = value.astype(dtype)
     elif value is not None:
-        raise TypeError(f"Value must be a numpy array, float or int. Value {value} of type {get_type_string(value)} given")
+        raise TypeError(f"Value must be a numpy array, float or int. Type {get_type_string(value)} given")
     return value
 
 def scalarize(value):

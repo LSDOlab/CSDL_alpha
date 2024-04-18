@@ -46,5 +46,8 @@ from .tensor.expand import expand
 from .tensor.reorder_axes import reorder_axes
 from .tensor.einsum import einsum
 
+# Sparse operations are in sparse submodule
+from . import sparse
+
 # Special operations
 from .special.bessel import bessel

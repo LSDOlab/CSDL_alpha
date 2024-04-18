@@ -176,6 +176,32 @@ class TestSet(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(z8, t3)]
         compare_values += [csdl_tests.TestingPair(z8_v, t3)]
 
+        # slicing with CSDL variables
+        shape_2 = (10,9,8,7,6)
+        w_val = np.arange(np.prod(shape_2)).reshape(shape_2)
+        w = csdl.Variable(name = 'w', value = w_val)
+        int_1 = csdl.Variable(value = 2.0)
+        int_2 = int_1+3
+        x9 = w.set(csdl.slice[int_1:int_2, [1, 1, 1],[1, 2, 3], 0:2], 4.0)
+        x9_val = w_val.copy()
+        x9_val[2:5, [1, 1, 1],[1, 2, 3], 0:2] = 4.0
+        compare_values += [csdl_tests.TestingPair(x9, x9_val)]
+
+        x10 = w.set(csdl.slice[int_1:int_2, [1, 1, 1],[1, 2, 3], int_2:int_2+2], 11.0)
+        x10_val = w_val.copy()
+        x10_val[2:5, [1, 1, 1],[1, 2, 3], 5:7] = 11.0
+        compare_values += [csdl_tests.TestingPair(x10, x10_val)]
+
+        x11 = w.set(csdl.slice[int_1:int_2, [int_1, 1, 1],[int_2, int_2, int_1], int_2:int_2+2], 15)
+        x11_val = w_val.copy()
+        x11_val[2:5, [2, 1, 1],[5, 5, 2], 5:7] = 15
+        compare_values += [csdl_tests.TestingPair(x11, x11_val)]
+
+        x12 = w.set(csdl.slice[0:1, [int_1, 1, 1],[int_2, int_2, int_1], int_2:int_2+2],7.0)
+        x12_val = w_val.copy()
+        x12_val[0:1, [2, 1, 1],[5, 5, 2], 5:7] = 7.0
+        compare_values += [csdl_tests.TestingPair(x12, x12_val)]
+
         # fixed/var and var step errors
         with pytest.raises(TypeError):
             z.set(slice[0:-1:ind_1], t)
@@ -189,6 +215,7 @@ class TestSet(csdl_tests.CSDLTest):
         # change indices values to make sure they are updated.
         compare_values = []
         ind_1.value = ind_1.value - 1
+        int_1.value = int_1.value - 1
         current_graph = csdl.get_current_recorder().active_graph
         current_graph.execute_inline()
         t3 = np.array([[2.,3.],[2.,3.],[3.,3.]])
@@ -196,6 +223,23 @@ class TestSet(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(z6_v, t3)]
         compare_values += [csdl_tests.TestingPair(z7_v, t3)]
         compare_values += [csdl_tests.TestingPair(z8_v, t3)]
+
+        comp_val = w_val.copy().astype(float)
+        comp_val[1:4, [1, 1, 1],[1, 2, 3], 0:2] = 4.0
+        compare_values += [csdl_tests.TestingPair(x9, comp_val)]
+
+        comp_val = w_val.copy()
+        comp_val[1:4, [1, 1, 1],[1, 2, 3], 4:6] = 11.0
+        compare_values += [csdl_tests.TestingPair(x10, comp_val)]
+        
+        comp_val = w_val.copy()
+        comp_val[1:4, [1, 1, 1],[4, 4, 1], 4:6] = 15
+        compare_values += [csdl_tests.TestingPair(x11, comp_val)]
+        
+        comp_val = w_val.copy()
+        comp_val[0:1, [1, 1, 1],[4, 4, 1], 4:6] = 7.0
+        compare_values += [csdl_tests.TestingPair(x12, comp_val)]
+
         self.run_tests(compare_values = compare_values,)
 
     def test_example(self,):
