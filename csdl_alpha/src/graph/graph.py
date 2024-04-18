@@ -2,6 +2,7 @@ import rustworkx as rx
 from rustworkx.visualization import graphviz_draw
 import numpy as np
 import csdl_alpha.utils.error_utils as error_utils
+from csdl_alpha.src.operations.loops.loop import Loop
 import sympy as sp
 # from csdl_alpha.utils.error_utils import GraphError
 
@@ -355,9 +356,9 @@ class Graph():
         S = S.union(pred_succ_vars)
         return S
 
-    def visualize(self, filename = 'image'):
+    def visualize(self, filename = 'image', trim_loops = False):
         from csdl_alpha.src.graph.variable import Variable
-        inverse_node_table = {v: k for k, v in self.node_table.items()}
+        # inverse_node_table = {v: k for k, v in self.node_table.items()}
 
         # def name_node(node_index):
         #     print(node_index)
@@ -370,7 +371,7 @@ class Graph():
         #     return attr_dict
 
 
-        dot = self.to_dot(node_attr_fn=self.name_node)
+        dot = self.to_dot(node_attr_fn=self.name_node, trim_loops=trim_loops)
         dot.write_svg(f'{filename}.svg')
 
 
@@ -383,13 +384,13 @@ class Graph():
         self.rxgraph = graph.rxgraph
         self.update_node_table()
 
-    def to_dot(self, node_attr_fn=None):
+    def to_dot(self, node_attr_fn=None, trim_loops=False):
         import pydot
 
 
         dot = pydot.Dot(graph_type='digraph')
 
-        # Create a dictionary to store subgraphs
+        # Create a dictionary to store subgraphs (namespaces)
         subgraphs = {}
 
         # For each node in the graph
@@ -412,20 +413,33 @@ class Graph():
                         subgraphs[namespace_obj.parent] = pydot.Cluster(parent_name, label=parent_name)
                     subgraphs[namespace_obj.parent].add_subgraph(subgraphs[namespace_obj])
 
+            # optionally trim loop outputs that aren't used
+            node_index = self.node_table[node]
+            if trim_loops and is_variable(node):
+                predecessors = self.rxgraph.predecessors(node_index)
+                if len(predecessors) == 1:
+                    predecessors = predecessors[0]
+                if isinstance(predecessors, Loop) and not self.rxgraph.successors(node_index):
+                    # print(f"Trimming {node.name} from graph")
+                    continue
+            
             # Create a new node for the dot graph
             dot_node = pydot.Node(str(node), **node_attr_fn(node))
 
             # Add the node to the corresponding subgraph
             subgraphs[namespace_obj].add_node(dot_node)
 
-        # Add all edges to the dot graph
-        for edge_tuple in self.rxgraph.edge_index_map().values():
-            dot.add_edge(pydot.Edge(str(self.rxgraph[edge_tuple[0]]), str(self.rxgraph[edge_tuple[1]])))
+            # Add upstream edges to the dot graph
+            for parent in self.rxgraph.predecessors(node_index):
+                edge = pydot.Edge(str(parent), str(node))
+                dot.add_edge(edge)
+
+        # # Add all edges to the dot graph
+        # for edge_tuple in self.rxgraph.edge_index_map().values():
+        #     dot.add_edge(pydot.Edge(str(self.rxgraph[edge_tuple[0]]), str(self.rxgraph[edge_tuple[1]])))
 
         # add subgraphs to subgraphs to reflect namespace tree
         
-
-
         # Add all subgraphs to the dot graph
         for namespace, subgraph in subgraphs.items():
             if namespace.parent is None:
@@ -434,11 +448,20 @@ class Graph():
         return dot
 
     def name_node(self, node):
+        from csdl_alpha.src.graph.variable import Variable
+        import numpy as np
         attr_dict = {}
         if node.name is None:
             attr_dict['label'] = 'var'
         else:
             attr_dict['label'] = node.name
+
+        if isinstance(node, Variable):
+            attr_dict['shape'] = 'ellipse'
+            if node.value is not None:
+                attr_dict['tooltip'] = f'{np.min(node.value):.3e}, {np.max(node.value):.3e}, {np.mean(node.value):.3e}, {node.shape}'
+        else:
+            attr_dict['shape'] = 'rectangle'
         return attr_dict
 
     def create_n2(self):

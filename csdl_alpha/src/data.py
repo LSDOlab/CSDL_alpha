@@ -17,13 +17,13 @@ def inline_save(filename:str):
     inline_grp = f.create_group('inline')
     recorder = get_current_recorder()
     name_counter_dict = {}
-    for key in recorder.node_graph_map.keys():
+    for key, index in recorder.active_graph.node_table.items():
         if isinstance(key, Variable):
             if key._save:
                 savename = _get_savename(key, name_counter_dict)
                 dset = inline_grp.create_dataset(savename, data=key.value)
                 # The shape is already stored in the value
-                # dset.attrs['shape'] = key.shape
+                dset.attrs['index'] = index
                 if key.tags:
                     dset.attrs['tags'] = key.tags
                 if key.hierarchy is not None:
