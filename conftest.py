@@ -10,6 +10,7 @@ additional_modules = list((package_loc / "csdl_alpha" / "src" / "operations").gl
 additional_modules += list((package_loc / "csdl_alpha" / "src" / "operations" / "set_get").glob("*.py"))
 additional_modules += list((package_loc / "csdl_alpha" / "src" / "operations" / "linalg").glob("*.py"))
 additional_modules += list((package_loc / "csdl_alpha" / "src" / "operations" / "tensor").glob("*.py"))
+additional_modules += list((package_loc / "csdl_alpha" / "src" / "operations" / "sparse").glob("*.py"))
 
 def pytest_collect_file(file_path, path, parent):
     if file_path in additional_modules:
