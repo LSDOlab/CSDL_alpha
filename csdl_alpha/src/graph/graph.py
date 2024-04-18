@@ -373,9 +373,12 @@ class Graph():
 
         dot = self.to_dot(node_attr_fn=self.name_node, trim_loops=trim_loops)
         dot.write_svg(f'{filename}.svg')
-
-
+        # dot.write_dot(f'{filename}.dot')
         # graphviz_draw(self, node_attr_fn = self.name_node, filename= 'graph.png')
+
+    def save(self, filename):
+        dot = self.to_dot(node_attr_fn=self.name_node)
+        dot.write_dot(f'{filename}.dot')
 
     def replace(self, graph):
         """
@@ -451,6 +454,7 @@ class Graph():
         from csdl_alpha.src.graph.variable import Variable
         import numpy as np
         attr_dict = {}
+        attr_dict['id'] = self.node_table[node]
         if node.name is None:
             attr_dict['label'] = 'var'
         else:

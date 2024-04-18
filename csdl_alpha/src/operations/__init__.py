@@ -16,6 +16,7 @@ from .minimum import minimum
 from .absolute import absolute
 from .neg import negate
 from .copyvar import copyvar
+from .linear_combination import linear_combination
 
 # getting and setting
 from .set_get.setindex import set_index

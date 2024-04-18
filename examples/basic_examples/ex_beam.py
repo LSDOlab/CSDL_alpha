@@ -198,7 +198,7 @@ b = 0.1
 num_elements = 1000
 force_vector = np.zeros(2 * (num_elements + 1))
 force_vector[-2] = -1.
-h = csdl.Variable(value=np.ones(num_elements) * 0.5)
+h = csdl.Variable(value=np.ones(num_elements) * 0.5, name='height vector')
 # h = np.array(
 # [0.14915751, 0.14764323, 0.14611341, 0.14456713, 0.14300423, 0.14142421,
 #  0.13982606, 0.13820962, 0.13657403, 0.13491857, 0.13324265, 0.1315453,
@@ -217,3 +217,4 @@ d, compliance, volume = beam_model.evaluate(force_vector, h)
 print(d.value, compliance.value, volume.value)
 recorder.stop()
 recorder.visualize_graph('beam_graph', trim_loops=True)
+recorder.save_graph('beam_graph')
