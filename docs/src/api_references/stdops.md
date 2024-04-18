@@ -45,6 +45,7 @@
     csdl_alpha.src.operations.tensor.reorder_axes.reorder_axes
     csdl_alpha.src.operations.tensor.einsum.einsum
     csdl_alpha.src.operations.special.bessel.bessel
+    csdl_alpha.src.operations.sparse.sparse_matvec.matvec
 
 ```
 
@@ -135,5 +136,7 @@
 .. autofunction:: csdl_alpha.src.operations.tensor.einsum.einsum
 
 .. autofunction:: csdl_alpha.src.operations.special.bessel.bessel
+
+.. autofunction:: csdl_alpha.src.operations.sparse.sparse_matvec.matvec
 
 ```

@@ -21,7 +21,7 @@ class SparseMatVec(Operation):
 
 # TODO: A will be variablized to sparse csdl matrix in the future
 def matvec(A:sp.sparray, x:Variable) -> Variable:
-    """sparse matrix-vector multiplication A*x for Andrew.
+    """(TEMPORARY) sparse matrix-vector multiplication A*x for Andrew.
     The number of columns of A must be equal to the number of rows of x.
 
     Parameters
