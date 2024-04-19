@@ -1,5 +1,5 @@
 import pytest
-from csdl_alpha.utils.test_utils.csdl_test import CSDLTest, TestingPair
+from csdl_alpha.utils.testing_utils.csdl_test import CSDLTest, TestingPair
 import numpy as np
 import csdl_alpha as csdl
 

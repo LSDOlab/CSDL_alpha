@@ -50,7 +50,7 @@ def sub(x:VariableLike,y:VariableLike)->Variable:
         op = Sub(x,y)
         return op.finalize_and_return_outputs()
 
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 class TestSub(csdl_tests.CSDLTest):
     
     def test_functionality(self,):

@@ -1,5 +1,5 @@
 import pytest
-from csdl_alpha.utils.test_utils import CSDLTest
+from csdl_alpha.utils.testing_utils import CSDLTest
 
 class TestData(CSDLTest):
     def test_data(self):
@@ -65,9 +65,12 @@ class TestData(CSDLTest):
 if __name__ == '__main__':
     import csdl_alpha as csdl
     from csdl_alpha import Variable
+    import numpy as np
     recorder = csdl.Recorder(inline=True)
     recorder.start()
-    with csdl.Namespace('test0'):
+    matrix = csdl.Variable(value=np.array([[1, 2], [3, 4]]), name='matrix')
+    tensor = csdl.Variable(value=np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]), name='tensor')
+    with csdl.namespace('test0'):
         a = Variable(value=2, name='a')
         a.add_tag('test')
         a.hierarchy = 1
@@ -87,10 +90,14 @@ if __name__ == '__main__':
         constraint.set_as_constraint()
         objective.set_as_objective()
 
-    csdl.save_optimization_variables()
 
-    csdl.inline_csv_save('test_data')
-    csdl.inline_save('test_data')
+
+
+    csdl.save_optimization_variables()
+    recorder.visualize_graph('test_data')
+
+    csdl.inline_csv_save('test_data_2')
+    csdl.inline_save('test_data_2')
 
 
         

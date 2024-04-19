@@ -5,7 +5,7 @@ from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 from csdl_alpha.src.operations.set_get.loop_slice import VarSlice
 from csdl_alpha.src.operations.set_get.slice import Slice
 
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 import numpy as np
 import pytest
 

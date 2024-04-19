@@ -1,4 +1,5 @@
 from csdl_alpha.src.operations.set_get.slice import Slicer, Slice
+import numpy as np
 
 class LoopSlicer(Slicer):
     def __init__(self):
@@ -148,8 +149,10 @@ class VarSlice(Slice):
         for arg_index, arg_value in enumerate(args):
             # arg_index is the index of the CSDL variable
             # arg_value is the value of that CSDL variable
-
-            arg_int = int(arg_value) # value that has been cast to an integer to replace slice variable
+            if isinstance(arg_value, np.ndarray):
+                arg_int = int(arg_value[0]) # value that has been cast to an integer to replace slice variable
+            else:
+                arg_int = int(arg_value) # value that has been cast to an integer to replace slice variable
 
             maps = self.var2slicemap[arg_index]
             for map in maps:

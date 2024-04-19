@@ -1,9 +1,178 @@
 from typing import Dict, Any
 
+"""
+Parameter checking function
+Adapted from CSDL Parameters class, which was adapted from OpenMDAO OptionsDictionary class
+"""
+
+def check_parameter(
+        value,
+        name,
+        values=None,
+        types=None,
+        upper=None,
+        lower=None,
+        check_valid=None,
+        allow_none=False,
+    ):
+    r"""
+    Check value and type of value.
+
+    The value of the parameter must satisfy the following:
+    1. If values only was given when declaring, value must be in values.
+    2. If types only was given when declaring, value must satisfy isinstance(value, types).
+    3. It is an error if both values and types are given.
+
+    Parameters
+    ----------
+
+    value : object
+        value of the parameter to be checked
+    name : str
+        Name of the parameter (shown in errors).
+    default : object or Null
+        Optional default value that must be valid under the above 3 conditions.
+    values : set or list or tuple or None
+        Optional list of acceptable parameter values.
+    types : type or tuple of types or None
+        Optional type or list of acceptable parameter types.
+    upper : float or None
+        Maximum allowable value.
+    lower : float or None
+        Minimum allowable value.
+    check_valid : function or None
+        User-supplied function with arguments (name, value) that raises an exception
+        if the value is not valid.
+    allow_none : bool
+        If True, allow None as a value regardless of values or types.
+    """
+
+    if values is not None and not isinstance(values,
+                                                (set, list, tuple)):
+        _raise(
+            "In declaration of option '%s', the 'values' arg must be of type None,"
+            " list, or tuple - not %s." % (name, values),
+            exc_type=TypeError)
+
+    if types is not None and not isinstance(
+            types, (type, set, list, tuple)):
+        _raise(
+            "In declaration of option '%s', the 'types' arg must be None, a type "
+            "or a tuple - not %s." % (name, types),
+            exc_type=TypeError)
+
+    if types is not None and values is not None:
+        _raise(
+            "'types' and 'values' were both specified for option '%s'."
+            % name)
+
+    if types is bool:
+        values = (True, False)
+
+
+    meta = {
+        'values': values,
+        'types': types,
+        'upper': upper,
+        'lower': lower,
+        'check_valid': check_valid,
+        'allow_none': allow_none,
+        'name': name,
+    }
+
+    _assert_valid(value, meta)
+
+def _assert_valid(value, meta):
+    """
+    Check whether the given value is valid, where the key has already been declared.
+
+    The optional checks consist of ensuring: the value is one of a list of acceptable values,
+    the type of value is one of a list of acceptable types, value is not less than lower,
+    value is not greater than upper, and value satisfies check_valid.
+
+    **Parameters**
+
+    value : object
+        The default or user-set value to check for value, type, lower, and upper.
+    meta : dict
+        Dictionary of metadata for the parameter.
+    """
+    values = meta['values']
+    types = meta['types']
+    lower = meta['lower']
+    upper = meta['upper']
+    name = meta['name']
+
+    if not (value is None and meta['allow_none']):
+        # If only values is declared
+        if values is not None:
+            if value not in values:
+                if isinstance(value, str):
+                    value = "'{}'".format(value)
+                _raise(
+                    "Value ({}) of parameter '{}' is not one of {}.".
+                    format(value, name, values), ValueError)
+        # If only types is declared
+        elif types is not None:
+            if not isinstance(value, types):
+                vtype = type(value).__name__
+
+                if isinstance(value, str):
+                    value = "'{}'".format(value)
+
+                if isinstance(types, (set, tuple, list)):
+                    typs = tuple(
+                        [type_.__name__ for type_ in types])
+                    _raise(
+                        "Value ({}) of parameter '{}' has type '{}', but one of "
+                        "types {} was expected.".format(
+                            value, name, vtype, typs),
+                        exc_type=TypeError)
+                else:
+                    _raise(
+                        "Value ({}) of parameter '{}' has type '{}', but type '{}' "
+                        "was expected.".format(
+                            value, name, vtype, types.__name__),
+                        exc_type=TypeError)
+
+        if upper is not None:
+            if value > upper:
+                _raise(
+                    "Value ({}) of parameter '{}' "
+                    "exceeds maximum allowed value of {}.".format(
+                        value, name, upper),
+                    exc_type=ValueError)
+        if lower is not None:
+            if value < lower:
+                _raise(
+                    "Value ({}) of parameter '{}' "
+                    "is less than minimum allowed value of {}.".
+                    format(value, name, lower),
+                    exc_type=ValueError)
+
+    # General function test
+    if meta['check_valid'] is not None:
+        meta['check_valid'](name, value)
+
+def _raise(msg, exc_type=RuntimeError):
+    """
+    Raise the given exception type, with parent's name prepended to the message.
+
+    **Parameters**
+
+    msg : str
+        The error message.
+    exc_type : class
+        The type of the exception to be raised.
+    """
+    full_msg = msg
+    raise exc_type(full_msg)
+
+
+
 """Define the OptionsDictionary class."""
 
 _UNDEFINED = object()
-
 
 #
 # Template for `check_valid` function

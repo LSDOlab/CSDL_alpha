@@ -4,14 +4,19 @@ from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.utils.inputs import variablize, get_type_string, ingest_value
 from csdl_alpha.src.graph.node import Node
 from csdl_alpha.utils.typing import VariableLike
+import warnings
 import numpy as np
+
+# warnings.simplefilter("always")
 
 class CustomOperation(Operation):
     def __init__(self, *args, **kwargs):
-        self.parameters = Parameters()
-        self.parameters.hold(kwargs)
-        self.initialize()
-        self.parameters.check(kwargs)
+        if hasattr(self, 'initialize'):
+            warnings.warn('The initialize method is deprecated. Use __init__ and check_parameter instead.', DeprecationWarning)
+            self.parameters = Parameters()
+            self.parameters.hold(kwargs)
+            self.initialize()
+            self.parameters.check(kwargs)
 
         self.input_dict = {}
         self.output_dict = {}
@@ -67,6 +72,9 @@ def postprocess_custom_outputs(given_outputs:dict, declared_outputs:dict):
 class CustomExplicitOperation(CustomOperation):
 
     def __init__(self, *args, **kwargs):
+        """Wraps the evaluate method. No input arguments are required. 
+        """
+
         super().__init__(*args, **kwargs)
 
         self.evaluate = self._wrap_evaluate(self.evaluate)
@@ -74,7 +82,7 @@ class CustomExplicitOperation(CustomOperation):
 
     def initialize(self):
         """
-        Declare parameters here.
+        Depricated, use __init__ instead.
         """
         pass
 
@@ -88,18 +96,12 @@ class CustomExplicitOperation(CustomOperation):
         raise NotImplementedError('not implemented')
 
     def _wrap_evaluate(self, evaluate):
-        
         def new_evaluate(*args, **kwargs):
-
             # If the evaluate method is called multiple times, raise an error
             if self.locked:
                 raise RuntimeError('Cannot call evaluate multiple times on the same CustomExplicitOperation object. Create a new object instead.')
             self.locked = True
 
-            # Node.__init__(self)
-            # self.name = self.__class__.__name__
-
-            # self.recorder._add_node(self)
             eval_outputs = evaluate(*args, **kwargs)
             Operation.__init__(self, *list(self.input_dict.values()))
 

@@ -3,7 +3,7 @@ from typing import Union
 from dataclasses import dataclass
 from csdl_alpha.src.variable_group import VariableGroup
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.test_utils import CSDLTest, TestingPair
+from csdl_alpha.utils.testing_utils import CSDLTest, TestingPair
 import numpy as np
 
 

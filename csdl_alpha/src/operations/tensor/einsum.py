@@ -2,7 +2,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, get_type_string
 from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
-import csdl_alpha.utils.test_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
 
 import numpy as np
