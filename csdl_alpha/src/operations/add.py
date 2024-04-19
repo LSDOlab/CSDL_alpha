@@ -33,7 +33,7 @@ class Add(ElementwiseOperation):
     def evaluate_jacobian(self, x, y):
         return csdl.Constant(x.size, val = 1), csdl.Constant(y.size, val = 1)
 
-    def evaluate_jvp(self, x, y, vx, vy):
+    def evaluate_jvp(self, x, y, var_seeds):
         # do we to flatten the inputs vx and vy (since they are already vectors)?
         return add(vx.flatten(), vy.flatten())
 
