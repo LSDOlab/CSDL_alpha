@@ -89,6 +89,13 @@ class Variable(Node):
         self.tags.append(tag)
 
     def set_hierarchy(self, hierarchy: int):
+        """
+        
+        Warnings
+        --------
+        This function should not need to be called by the user
+        """
+
         self.hierarchy = hierarchy
 
     def set_value(self, value: Union[np.ndarray, float, int]):

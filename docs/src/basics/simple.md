@@ -1,6 +1,6 @@
 # Building Simple Models
 
-This section will show you how to build simple models in CSDL. We will start by creating a `Recorder` object, and then create some variables and perform operations on them. Finally, we will stop the recorder and access the values of our variables. The full script is shown below, after which we will break down each part of the script.
+This section will show you how to build simple models in CSDL. We will start by creating a [`Recorder`](../api_references/recorder.md) object, and then create some variables and perform operations on them. Finally, we will stop the recorder and access the values of our variables. The full script is shown below, after which we will break down each part of the script.
 
 ```python
 import csdl_alpha as csdl
@@ -38,7 +38,7 @@ $ python3 ex_simple.py
 
 ## Starting the recorder
 
-The first step in creating a CSDL model is to create a `Recorder` object. The `Recorder` class will compile your CSDL code into a `Graph` object, and can also execute the graph to get the output values of your variables. Without a `Recorder` object, your CSDL code will not do anything. You can also pass in arguments to the recorder, such as `inline=True` to execute the graph inline.
+The first step in creating a CSDL model is to create a [`Recorder`](../api_references/recorder.md) object. The [`Recorder`](../api_references/recorder.md) class will compile your CSDL code into a `Graph` object, and can also execute the graph to get the output values of your variables. Without a [`Recorder`](../api_references/recorder.md) object, your CSDL code will not do anything. You can also pass in arguments to the recorder, such as `inline=True` to execute the graph inline.
 
 ```python
 import csdl_alpha as csdl

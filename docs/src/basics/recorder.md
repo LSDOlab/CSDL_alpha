@@ -12,7 +12,7 @@ This section will overview how CSDL works, and introduce the Recorder, Graph, an
 
 ## Building Graphs
 
-When using CSDL, you will mainly be working with CSDL variables and operations, which are both CSDL `Node` objects. While CSDL code is written in a similar way to regular python code, CSDL code is compiled to a CSDL `Graph` object by the `Recorder` class, that can be optimized and executed efficiently. This means that operations are not executed immediately, and variables may not have a set value until the graph is executed. However, the `Recorder` class provides a way to execute CSDL code inline, which can be useful for debugging and testing. Inline values can be accessed by the `value` attribute of the variable.
+When using CSDL, you will mainly be working with CSDL variables and operations, which are both CSDL `Node` objects. While CSDL code is written in a similar way to regular python code, CSDL code is compiled to a CSDL `Graph` object by the [`Recorder`](../api_references/recorder.md) class, that can be optimized and executed efficiently. This means that operations are not executed immediately, and variables may not have a set value until the graph is executed. However, the [`Recorder`](../api_references/recorder.md) class provides a way to execute CSDL code inline, which can be useful for debugging and testing. Inline values can be accessed by the `value` attribute of the variable.
 
 For example, the following code snippet
 
@@ -24,7 +24,7 @@ y = x * 2
 z = y*x
 recorder.stop()
 ```
-becomes the following graph represented in the `Recorder`:
+becomes the following graph represented in the [`Recorder`](../api_references/recorder.md):
 
 
 ```{figure} /src/images/basic_graph.svg
@@ -42,7 +42,7 @@ CSDL graphs are directed acyclic graphs (DAGs), meaning that they have no cycles
 
 ## Subgraphs
 
-To simplify the graph, CSDL collapses parts of the graph into single operation nodes, which themselves contain a graph. For example, a subtraction operation is represented by a single node in the graph, which itself contains a graph with a negation and an addition operation. This allows for more efficient optimization and execution of the graph. The `Recorder` keeps track of the subgraphs via a tree structure, where each node represents a subgraph.
+To simplify the graph, CSDL collapses parts of the graph into single operation nodes, which themselves contain a graph. For example, a subtraction operation is represented by a single node in the graph, which itself contains a graph with a negation and an addition operation. This allows for more efficient optimization and execution of the graph. The [`Recorder`](../api_references/recorder.md) keeps track of the subgraphs via a tree structure, where each node represents a subgraph.
 
 ```{figure} /src/images/sub_composite.svg
 :figwidth: 60 %
