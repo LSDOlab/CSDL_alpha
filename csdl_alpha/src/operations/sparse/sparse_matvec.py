@@ -2,6 +2,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
+from csdl_alpha.src.operations.linalg.utils import process_matA_vecb
 
 import numpy as np
 import scipy.sparse as sp
@@ -10,7 +11,7 @@ import pytest
 @set_properties(supports_sparse=True)
 class SparseMatVec(Operation):
 
-    def __init__(self, x:Variable, sparse_matrix) -> 'MatVec':
+    def __init__(self, sparse_matrix:sp.sparray, x:Variable) -> 'MatVec':
         super().__init__(x)
         self.name = 'sp_matvec'
         self.A = sparse_matrix
@@ -58,18 +59,12 @@ def matvec(A, x:Variable) -> Variable:
         raise TypeError(f"A must be a scipy sparse matrix. Got {type(A)}")
     x_vec = validate_and_variablize(x)
 
-    if len(x_vec.shape) != 2:
-        raise ValueError(f"x must be a 2D vector. Got {len(x_vec.shape)} dimensions")
-    if len(A.shape) != 2:
-        raise ValueError(f"A must be a 2D matrix. Got {len(A.shape)} dimensions")
+    output = SparseMatVec(*process_matA_vecb(A, x_vec)).finalize_and_return_outputs()
 
-    if A.shape[1] != x_vec.shape[0]:
-        raise ValueError(f"Number of columns of A ({A.shape[1]}) must be equal to the number of rows of x ({x_vec.shape[0]})")
-    if x_vec.shape[1] != 1:
-        raise ValueError(f"x must be a column vector. Got {x_vec.shape[1]} columns")
-
-    output = SparseMatVec(x_vec, sparse_matrix = A).finalize_and_return_outputs()
-    return output
+    if len(x.shape) == 2:
+        return output
+    if len(x.shape) == 1:
+        return output.reshape((output.size,))
 
 
 class TestSparseMatVec(csdl_tests.CSDLTest):
@@ -84,13 +79,18 @@ class TestSparseMatVec(csdl_tests.CSDLTest):
         row = np.array([0, 0, 1, 1, 2, 2])
         col = np.array([0, 1, 0, 1, 0, 1])
         A = sp.csr_matrix((data, (row, col)), shape=(3, 2))
-        x_val = np.array([[1], [2]])
+        x_val = np.array([1, 2])
         x = csdl.Variable(value = x_val)
         
         y = csdl.sparse.matvec(A, x)
         compare_values = []
         compare_values += [csdl_tests.TestingPair(y, A@x_val)]
 
+        x_val = np.array([[1], [2]])
+        x = csdl.Variable(value = x_val)
+        y = csdl.sparse.matvec(A, x)
+        compare_values = []
+        compare_values += [csdl_tests.TestingPair(y, A@x_val)]
 
         self.run_tests(compare_values = compare_values,)
 
