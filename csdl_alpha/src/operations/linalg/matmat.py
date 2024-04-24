@@ -25,7 +25,7 @@ def matmat(A:VariableLike, B:VariableLike) -> Variable:
     A : Variable
         2D matrix
     B : Variable
-        2D matrix
+        2D matrix (or 1D vector, in which case matvec is called instead)
 
     Returns
     -------
@@ -76,6 +76,7 @@ class TestMatMat(csdl_tests.CSDLTest):
 
         import csdl_alpha as csdl
         import numpy as np
+        import scipy.sparse as sp
 
         A_shape = (3,4)
         B_shape = (4,1)
@@ -120,6 +121,29 @@ class TestMatMat(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
         C =A_val@B
         compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
+
+        # matvec
+        A_shape = (3,4)
+        B_shape = (4,)
+        A_val = np.arange(np.prod(A_shape)).reshape(A_shape)
+        B_val = np.arange(np.prod(B_shape)).reshape(B_shape)
+        A = csdl.Variable(value = A_val)
+        B = csdl.Variable(value = B_val)
+        C = csdl.matmat(A,B)
+        compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
+        C = A@B
+        compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
+
+        # sparse matrix
+        # NOTE: temporary
+        A_data = np.array([1, 2, 3, 4, 5, 6])
+        row = np.array([0, 0, 1, 1, 2, 2])
+        col = np.array([0, 1, 0, 1, 0, 1])
+        A = sp.csr_matrix((A_data, (row, col)), shape=A_shape)
+        C = csdl.matmat(A,B)
+        compare_values += [csdl_tests.TestingPair(C, A@B_val)]
+        C = A@B
+        compare_values += [csdl_tests.TestingPair(C, A@B_val)]
 
         self.run_tests(compare_values = compare_values,)
 
