@@ -110,6 +110,7 @@ exclude_patterns = ['README.md', '_build', 'Thumbs.db', '.DS_Store', 'src/welcom
 # a list of builtin themes.
 html_theme = 'sphinx_rtd_theme' # other theme options: 'sphinx_book_theme', 'sphinx_rtd_theme', 
                                 # 'alabaster', 'classic', 'sphinxdoc', 'nature', 'bizstyle', ...
+#Change to book theme later?
 
 # html_theme_options for sphinx_rtd_theme
 html_theme_options = {

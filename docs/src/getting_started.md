@@ -29,7 +29,7 @@ $ pytest
 
 ## Writing CSDL Code
 
-Writing CSDL code is similar to writing regular python code. However, CSDL code is compiled to a graph representation by the `Recorder` class, that can be optimized and executed efficiently. This means that CSDL code is not executed immediately, but rather compiled to a graph that is executed by the CSDL backend. However, the CSDL frontend provides a way to execute CSDL code inline, which can be useful for debugging and testing. Inline values can be accessed by the `value` attribute of the variable.
+Writing CSDL code is similar to writing regular python code. However, CSDL code is compiled to a graph representation by the [`Recorder`](api_references/recorder.md) class, that can be optimized and executed efficiently. This means that CSDL code is not executed immediately, but rather compiled to a graph that is executed by the CSDL backend. However, the CSDL frontend provides a way to execute CSDL code inline, which can be useful for debugging and testing. Inline values can be accessed by the `value` attribute of the variable.
 
 ```{warning}
 No backends currently exist for CSDL. 
@@ -37,7 +37,7 @@ No backends currently exist for CSDL.
 
 ### Basic Example
 
-The following is an example of a simple CSDL code snippet that adds two variables `x` and `y` and stores the result in `z`. The code is executed inline by passing an argument to the `Recorder` class. All CSDL code should be enclosed within the `start()` and `stop()` methods of the `Recorder` class.
+The following is an example of a simple CSDL code snippet that adds two variables `x` and `y` and stores the result in `z`. The code is executed inline by passing an argument to the [`Recorder`](api_references/recorder.md) class. All CSDL code should be enclosed within the `start()` and `stop()` methods of the [`Recorder`](api_references/recorder.md) class.
 
 ```python
 import csdl_alpha as csdl

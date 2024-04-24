@@ -53,7 +53,20 @@ def reshape(x:Variable, shape: tuple[int]) -> Variable:
         error_utils.check_if_valid_shape(shape)
     except Exception as e:
         raise TypeError(f'Error with shape argument in reshape: {e}')
-    
+
+    # Translate -1 in shape to a valid shape
+    size = np.prod(x.shape)
+    new_shape = list(shape)
+    found_negative = False
+    for i in range(len(shape)):
+        if shape[i] == -1:
+            if found_negative:
+                raise ValueError(f'Only one element of new shape can be -1')
+            size_others = np.prod(shape)/(-1)
+            new_shape[i] = int(size/size_others)
+            found_negative = True
+    shape = tuple(new_shape)
+
     # shape must be compatible with shape of variable x
     if x.size == np.prod(shape):
         op = Reshape(x, shape = shape)
@@ -100,6 +113,15 @@ class TestReshape(csdl_tests.CSDLTest):
         y = y.reshape(y.shape)
         compare_values += [csdl_tests.TestingPair(y,x_val_large.reshape((1000,1)))]
 
+        y = y.reshape((1000,-1))
+        compare_values += [csdl_tests.TestingPair(y,x_val_large.reshape((1000,1)))]
+
+        y = y.reshape((-1,10, 10))
+        compare_values += [csdl_tests.TestingPair(y,x_val_large.reshape((10,10,10)))]
+
+        y = y.reshape((2,-1, 50))
+        compare_values += [csdl_tests.TestingPair(y,x_val_large.reshape((2,10,50)))]
+
         y = y.flatten()
         compare_values += [csdl_tests.TestingPair(y,x_val_large.flatten())]
 
@@ -129,6 +151,12 @@ class TestReshape(csdl_tests.CSDLTest):
 
         with pytest.raises(ValueError):
             y = csdl.reshape(x_large, (10, 100, 10))
+
+        with pytest.raises(ValueError):
+            y = csdl.reshape(x_large, (10, -1, -1))
+
+        with pytest.raises(ValueError):
+            y = csdl.reshape(x_large, (-1, 10, -1))
 
     def test_docstring(self):
         self.docstest(reshape)
