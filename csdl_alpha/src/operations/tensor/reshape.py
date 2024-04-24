@@ -55,7 +55,7 @@ def reshape(x:Variable, shape: tuple[int]) -> Variable:
         raise TypeError(f'Error with shape argument in reshape: {e}')
 
     # Translate -1 in shape to a valid shape
-    size = np.prod(x.value.shape)
+    size = np.prod(x.shape)
     new_shape = list(shape)
     found_negative = False
     for i in range(len(shape)):
