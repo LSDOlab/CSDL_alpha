@@ -3,6 +3,7 @@ import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import pytest
+import scipy.sparse as sp
 from csdl_alpha.utils.typing import VariableLike
 
 @set_properties()
@@ -42,6 +43,11 @@ def matmat(A:VariableLike, B:VariableLike) -> Variable:
            [15., 22.],
            [23., 34.]])
     """
+    from csdl_alpha.src.operations.linalg.matvec import matvec
+    from csdl_alpha.src.operations.sparse.sparse_matvec import matvec as sparse_matvec
+
+    if isinstance(A, sp.spmatrix):
+        return sparse_matvec(A, B)
 
     A = validate_and_variablize(A, raise_on_sparse = False)
     B = validate_and_variablize(B, raise_on_sparse = False)
@@ -52,11 +58,14 @@ def matmat(A:VariableLike, B:VariableLike) -> Variable:
     # - A.shape[1] == B.shape[0]
     if len(A.shape) != 2:
         raise ValueError(f"Matrix A must be 2D, but has shape {A.shape}")
-    if len(B.shape) != 2:
-        raise ValueError(f"Matrix B must be 2D, but has shape {B.shape}")
 
     if A.shape[1] != B.shape[0]:
         raise ValueError(f"Number of columns of A must be equal to the number of rows of B. {A.shape[1]} != {B.shape[0]}")
+    
+    if len(B.shape) == 1:
+        return matvec(A, B)
+    if len(B.shape) != 2:
+        raise ValueError(f"Matrix B must be 2D, but has shape {B.shape}")
 
     return MatMat(A, B).finalize_and_return_outputs()
 
