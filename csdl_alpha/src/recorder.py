@@ -58,7 +58,7 @@ class Recorder:
 
         self.active_graph_node = self.graph_tree
 
-        self.active_graph = self.active_graph_node.value
+        self.active_graph:Graph = self.active_graph_node.value
         self.active_namespace = self.namespace_tree
 
         self.node_graph_map = {}
@@ -97,6 +97,7 @@ class Recorder:
         information_dict = {}
         information_dict['names2nodes'] = {}
         information_dict['nodes2graphs'] = {}
+        information_dict['input_nodes'] = set()
         information_dict['graph_tree'] = {}
         information_dict['analytics'] = {
             'number of nodes': 0,
@@ -109,7 +110,8 @@ class Recorder:
 
         all_nodes = set()
 
-        graphs_to_process = [self.get_root_graph()]
+        root_graph = self.get_root_graph()
+        graphs_to_process = [root_graph]
         while len(graphs_to_process) > 0:
             # current graph
             current_graph = graphs_to_process.pop(0)
@@ -123,6 +125,8 @@ class Recorder:
             for node in current_graph.node_table:
                 information_dict['analytics']['number of nodes'] += 1
                 if isinstance(node, Variable):
+
+                    # store information about the variable once
                     if node not in all_nodes:
                         for name in node.names:
                             information_dict['names2nodes'][name] = node
@@ -130,6 +134,12 @@ class Recorder:
 
                     all_nodes.add(node)
 
+                    # track all input nodes of the RECORDER (not all subgraphs)
+                    if current_graph is root_graph:
+                        if len(current_graph.predecessors(node)) == 0:
+                            information_dict['input_nodes'].add(node)
+                        
+                    # track all graphs that the node is in
                     if node not in information_dict['nodes2graphs']:
                         information_dict['nodes2graphs'][node] = [current_graph]
                     else:
@@ -327,11 +337,11 @@ class Recorder:
         self.active_graph_node = parent_graph_node
         self.active_graph = parent_graph_node.value
 
-    def visualize_graph(self, filename: str = 'image', trim_loops = False):
+    def visualize_graph(self, filename: str = 'image', trim_loops = False, format = 'svg'):
         """
         Visualizes the graph.
         """
-        self.active_graph.visualize(filename, trim_loops=trim_loops)
+        self.active_graph.visualize(filename, trim_loops=trim_loops, format = format)
 
     def visualize_adjacency_matrix(self):
         """

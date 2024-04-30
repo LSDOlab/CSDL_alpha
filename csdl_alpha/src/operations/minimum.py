@@ -160,8 +160,7 @@ class TestMinimum(csdl_tests.CSDLTest):
         s6 = csdl.minimum(x_val, y_val, z_val)
         compare_values += [csdl_tests.TestingPair(s6, t5, tag = 's6', decimal=8)]
 
-        self.run_tests(compare_values = compare_values,)
-
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(minimum)

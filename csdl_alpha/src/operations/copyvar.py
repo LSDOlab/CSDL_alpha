@@ -15,6 +15,10 @@ class CopyVar(ElementwiseOperation):
     def compute_inline(self, x):
         return x.copy()
 
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[y])
+
 def copyvar(x:VariableLike)->Variable:
     """Return a copy of the input variable x.
 
@@ -30,7 +34,7 @@ def copyvar(x:VariableLike)->Variable:
     x = validate_and_variablize(x, raise_on_sparse=False)
     return CopyVar(x).finalize_and_return_outputs()
 
-class TestDiv(csdl_tests.CSDLTest):
+class TestCopy(csdl_tests.CSDLTest):
     
     def test_functionality(self,):
         self.prep()
@@ -47,4 +51,4 @@ class TestDiv(csdl_tests.CSDLTest):
         # Variables:
         z = csdl.copyvar(x)
         compare_values += [csdl_tests.TestingPair(z, x_val)]
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)

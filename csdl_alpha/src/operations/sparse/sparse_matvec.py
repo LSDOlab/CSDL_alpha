@@ -18,6 +18,11 @@ class SparseMatVec(Operation):
 
     def compute_inline(self, x):
         return self.A @ x
+    
+    def evaluate_vjp(self, cotangents, x, b):
+        import csdl_alpha as csdl
+        if cotangents.check(x):
+            cotangents.accumulate(x, csdl.sparse.matvec(self.A.T, cotangents[b]))
 
 # TODO: A will be variablized to sparse csdl matrix in the future
 def matvec(A:sp.sparray, x:Variable) -> Variable:
@@ -92,7 +97,7 @@ class TestSparseMatVec(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(y, A@x_val)]
 
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_errors(self):
         self.prep()

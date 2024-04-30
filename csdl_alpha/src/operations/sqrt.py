@@ -20,6 +20,10 @@ class Sqrt(ElementwiseOperation):
     def compute_inline(self, x):
         return np.sqrt(x)
     
+    def evaluate_vjp(self, cotangents, x, y):
+        import csdl_alpha as csdl
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[y] / (2*y))
 
 def sqrt(x:Union[Variable, np.ndarray]) -> Variable:
     """
@@ -56,7 +60,7 @@ class TestSqrt(csdl_tests.CSDLTest):
 
         recorder = csdl.build_new_recorder(inline = True)
         recorder.start()
-        x_val = 3.0*np.arange(6).reshape(2,3)
+        x_val = 3.0*np.arange(6).reshape(2,3)+0.05
         x = csdl.Variable(name = 'x', value = x_val)
 
         compare_values = []
@@ -74,8 +78,7 @@ class TestSqrt(csdl_tests.CSDLTest):
         t3 = np.array([np.sqrt(2.0)])
         compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
 
-        self.run_tests(compare_values = compare_values,)
-
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(sqrt)

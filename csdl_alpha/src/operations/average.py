@@ -4,6 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
 import csdl_alpha as csdl
+from csdl_alpha.src.operations.derivative.utils import get_uncontract_action
 
 import numpy as np
 
@@ -23,6 +24,19 @@ class Average(Operation):
             return np.average(x)
         else:
             return np.average(x, axis=self.axes)
+
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            import csdl_alpha as csdl
+            if self.axes is None:
+                cotangents.accumulate(x, csdl.expand(cotangents[y]/x.size, out_shape=x.shape))
+            else:
+                action = get_uncontract_action(x.shape, self.axes)
+                axis_size = 1
+                for axis in self.axes:
+                    axis_size *= x.shape[axis]
+                vy = cotangents[y] / axis_size
+                cotangents.accumulate(x, csdl.expand(vy, action = action, out_shape=x.shape))
 
 class ElementwiseAverage(ComposedOperation):
     '''
@@ -158,8 +172,28 @@ class TestAverage(csdl_tests.CSDLTest):
         s5 = csdl.average(x_val, y_val, z_val)
         compare_values += [csdl_tests.TestingPair(s5, t4, tag = 's5')]
 
-        self.run_tests(compare_values = compare_values,)
+        # Try more complicated tensors and averages
+        x_val = 3.0*np.arange(24).reshape(2,3,4)
+        x = csdl.Variable(value = x_val)
+        s3 = csdl.average(x, axes=(1,2))
+        t3 = np.average(x_val, axis=(1,2))
+        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
 
+        # Try more complicated tensors and averages
+        x_val = 3.0*np.arange(24).reshape(2,3,4)
+        x = csdl.Variable(value = x_val)
+        s3 = csdl.average(x, axes=(1,0))
+        t3 = np.average(x_val, axis=(1,0))
+        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
+
+        # Try more complicated tensors and averages
+        x_val = 3.0*np.arange(24).reshape(2,3,4)
+        x = csdl.Variable(value = x_val)
+        s3 = csdl.average(x, axes=(1,))
+        t3 = np.average(x_val, axis=(1,))
+        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
+
+        self.run_tests(compare_values = compare_values,verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(average)

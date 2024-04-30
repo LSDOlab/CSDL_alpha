@@ -73,7 +73,7 @@ class TestExp(csdl_tests.CSDLTest):
         t2 = np.array([np.exp(3.0)])
         compare_values += [csdl_tests.TestingPair(s2, t2, tag = 's2')]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
 
     def test_example(self,):

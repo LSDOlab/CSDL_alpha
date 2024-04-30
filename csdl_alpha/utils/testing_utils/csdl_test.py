@@ -20,6 +20,7 @@ class CSDLTest():
             self,
             compare_values = None,
             compare_derivatives = None,
+            verify_derivatives = False,
             turn_off_recorder = True,
         ):
         import csdl_alpha as csdl
@@ -38,23 +39,46 @@ class CSDLTest():
         # TODO: make compatible with sparse variables
         for ind, testing_pair in enumerate(compare_values):
             testing_pair.compare(ind+1)
+        
+        # Add derivatives to the graph and verify with finite difference if needed. Recorder needs to be re-started
+        if verify_derivatives:
+            recorder.start()
+            from csdl_alpha.src.operations.derivative.utils import verify_derivatives_inline
+            
+            graph_insights = recorder.gather_insights()
+            wrts_all = list(graph_insights['input_nodes'])
+            wrts = []
+            j = 0
+            for i, wrt in enumerate(wrts_all):
+                from csdl_alpha.src.graph.variable import Constant
+                # TODO: Find a deterministic way to skip certain constants
+                # if isinstance(wrt, Constant):
+                #     # check if i is even:
+                #     j+=1
+                #     if (j) % 3 == 0:
+                #         continue
+                wrts.append(wrt)
+            ofs = [testing_pair.csdl_variable for testing_pair in compare_values]
+            of_wrt_meta_data = {}
+            for testing_pair in compare_values:
+                tag = testing_pair.tag
+                if tag is None:
+                    tag = ''
+                rel_error = 10**(-testing_pair.decimal)
+                for wrt in wrts:
+                    of_wrt_meta_data[(testing_pair.csdl_variable, wrt)] = {
+                        'tag': tag,
+                        'max_rel_error': rel_error,   
+                    }
+            
+            verify_derivatives_inline(ofs, wrts, of_wrt_meta_data = of_wrt_meta_data)
+
+            recorder.stop()
 
         # run the graph again to make sure it actually runs twice.
         recorder.execute()
-        recorder.print_graph_structure()
-
-        # for variable, real_value in compare_values.items():
-        #     if not isinstance(variable, csdl.Variable):
-        #         raise ValueError(get_testing_error_string(f"compare_values key {variable} is not a csdl.Variable"))
-        #     if not isinstance(real_value, (np.ndarray)):
-        #         raise ValueError(get_testing_error_string(f"compare_values value {real_value} is not a numpy array"))
-            
-        #     # assert shapes:
-        #     assert variable.shape == real_value.shape
-
-        #     # assert values:
-        #     assertion_error_str = get_assertion_error_string(variable, real_value)
-        #     assert_array_equal(variable.value, real_value, err_msg=assertion_error_str)
+        # recorder.print_graph_structure()
+        # recorder.visualize_graph()
 
     def docstest(self, obj):
         # self.prep()

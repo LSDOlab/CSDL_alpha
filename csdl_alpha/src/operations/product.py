@@ -3,6 +3,7 @@ from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
+from csdl_alpha.src.operations.derivative.utils import get_uncontract_action
 
 import numpy as np
 
@@ -22,6 +23,42 @@ class Product(Operation):
             return np.prod(x)
         else:
             return np.prod(x, axis=self.axes)
+
+    def evaluate_vjp(self, cotangents, x, y):
+        import csdl_alpha as csdl
+        if self.axes is None:
+            if cotangents.check(x):
+                # Divide by zero error version:
+                # cotangents.accumulate(x, cotangents[y]*y/x)
+
+                # Avoid divide by zero error but less efficient:
+                log_prod_x = csdl.sum(csdl.log(csdl.absolute(x))) # replace inline later?
+                vjp = cotangents[y] * csdl.exp(log_prod_x - csdl.log(csdl.absolute(x)))
+                cotangents.accumulate(x, vjp)
+        else:
+            if cotangents.check(x):
+                # Divide by zero error version:
+                # expanded = csdl.expand(
+                #     cotangents[y]*y,
+                #     action=get_uncontract_action(x.shape, self.axes),
+                #     out_shape=x.shape,
+                # )
+                # cotangents.accumulate(x, expanded/x)
+
+                # Avoid divide by zero error but less efficient:
+                log_abs = csdl.log(csdl.absolute(x))
+                log_prod_x = csdl.sum(log_abs, axes=self.axes)
+                expanded = csdl.expand(
+                    cotangents[y],
+                    action=get_uncontract_action(x.shape, self.axes),
+                    out_shape=x.shape,
+                )
+                expanded_prod = csdl.expand(
+                    log_prod_x,
+                    action=get_uncontract_action(x.shape, self.axes),
+                    out_shape=x.shape,
+                )
+                cotangents.accumulate(x, expanded * csdl.exp(expanded_prod - log_abs))
 
 class ElementwiseProduct(ComposedOperation):
     '''
@@ -131,13 +168,20 @@ class TestProduct(csdl_tests.CSDLTest):
         x_val = 3.0*np.ones((2,3))
         y_val = 2.0*np.ones((2,3))
         z_val = np.ones((2,3))
+        w_val = np.arange(60).reshape((3, 4, 5))+1.0
+        u_val = np.arange(4).reshape((2, 2))
 
         x = csdl.Variable(name = 'x', value = x_val)
         y = csdl.Variable(name = 'y', value = y_val)
         z = csdl.Variable(name = 'z', value = z_val)
+        w = csdl.Variable(name = 'w', value = w_val)
 
         compare_values = []
         # product of a single tensor variable
+        s1 = csdl.product(u_val)
+        t1 = np.array([0.0])
+        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1', decimal=1)]
+
         s1 = csdl.product(x)
         t1 = np.array([729.0])
         compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
@@ -151,6 +195,22 @@ class TestProduct(csdl_tests.CSDLTest):
         t3 = np.array([27,27])
         compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
 
+        s1 = csdl.product(u_val, axes = (1,))
+        t1 = np.array([0.0, 6.0])
+        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1', decimal=2)]
+
+        s3w = csdl.product(w, axes=(0,2))
+        t3w = np.prod(w_val, axis=(0,2))
+        compare_values += [csdl_tests.TestingPair(s3w, t3w, tag = 's3w')]
+
+        s3w = csdl.product(w, axes=(2,1))
+        t3w = np.prod(w_val, axis=(2,1))
+        compare_values += [csdl_tests.TestingPair(s3w, t3w, tag = 's3w')]
+
+        s3w = csdl.product(w, axes=(1,))
+        t3w = np.prod(w_val, axis=(1,))
+        compare_values += [csdl_tests.TestingPair(s3w, t3w, tag = 's3w')]
+
         # elementwise product of multiple tensor variables
         s4 = csdl.product(x, y, z)
         t4 = 6.0*np.ones((2,3))
@@ -160,8 +220,7 @@ class TestProduct(csdl_tests.CSDLTest):
         s5 = csdl.product(x_val, y_val, z_val)
         compare_values += [csdl_tests.TestingPair(s5, t4, tag = 's5')]
 
-        self.run_tests(compare_values = compare_values,)
-
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(product)

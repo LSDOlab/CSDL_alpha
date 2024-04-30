@@ -11,7 +11,7 @@ import warnings
 
 manager = RecManager()
 
-def get_current_recorder():
+def get_current_recorder() -> Recorder:
     if manager.active_recorder is None:
         raise ValueError("No active recorder found. Start a new recorder by csdl.Recorder().start()")
     return manager.active_recorder

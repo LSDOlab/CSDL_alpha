@@ -22,8 +22,10 @@ class ScalarExpand(Operation):
     def compute_inline(self, x):
         return np.broadcast_to(x, self.out_shape)
     
-    def evaluate_jacobian(self, x):
-        return csdl.Constant((x.size,1), val = 1.)
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            import csdl_alpha as csdl
+            cotangents.accumulate(x, csdl.sum(cotangents[y]))
         
 @set_properties(linear=True)
 class TensorExpand(Operation):
@@ -44,8 +46,20 @@ class TensorExpand(Operation):
     def compute_inline(self, x):
         # NOTE : if csdl.einsum is implemented using csdl.[sum, expand, reorder_axes, mult] later,
         # then the line below should never call csdl.einsum since it just creates recursive calls.
+        # print(self.einsum_str, (self.ones_shape))
+        # exit()
         return np.einsum(self.einsum_str, x, np.ones(self.ones_shape))
     
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            import csdl_alpha as csdl
+            in_str, out_str = self.einsum_str.split('->')
+            in_str, ones_str = in_str.split(',')
+            
+            sum_str = out_str + '->' + in_str
+            vjp = csdl.einsum(cotangents[y], action=sum_str)
+            cotangents.accumulate(x, vjp)
+
     def evaluate_jacobian(self, x):
         # NOTE : if csdl.einsum is implemented using csdl.[sum, expand, reorder_axes, mult] later,
         # then the line below should never call csdl.einsum since it just creates recursive calls.
@@ -172,10 +186,11 @@ class TestExpand(csdl_tests.CSDLTest):
         recorder.start()
         x_val = 3.0
         y_val = np.array([1.0, 2.0, 3.0])
+        y_tensor_val = np.arange(60).reshape(3,4,5)
 
         x = csdl.Variable(name = 'x', value = x_val)
         y = csdl.Variable(name = 'y', value = y_val)
-
+        y_tensor = csdl.Variable(name = 'yt', value = y_tensor_val)
 
         compare_values = []
         # expand a scalar constant
@@ -187,6 +202,16 @@ class TestExpand(csdl_tests.CSDLTest):
         s2 = csdl.expand(x, out_shape=(2,3,4))
         compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
 
+        # expand a tensor variable
+        s3 = csdl.expand(y_tensor, out_shape=(4,3,4,2,5), action='ijk->aijbk')
+        t3 = np.einsum('ijk,aijbk->aijbk', y_tensor_val, np.ones((4,3,4,2,5)))
+        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
+
+        # expand a tensor variable
+        s3 = csdl.expand(y_tensor, out_shape=(5,2,3,1,4), action='ijk->kaibj')
+        t3 = np.einsum('ijk,kaibj->kaibj', y_tensor_val, np.ones((5,2,3,1,4)))
+        compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
+
         # expand a vector variable
         s3 = csdl.expand(y, out_shape=(3,4), action='j->jk')
         t3 = np.einsum('j,jk->jk', y_val, np.ones((3,4)))
@@ -197,7 +222,7 @@ class TestExpand(csdl_tests.CSDLTest):
         t4 = np.einsum('j,ijk->ijk', y_val, np.ones((2,3,4)))
         compare_values += [csdl_tests.TestingPair(s4, t4, tag = 's4')]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(expand)

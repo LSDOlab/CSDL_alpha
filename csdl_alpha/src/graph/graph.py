@@ -37,6 +37,13 @@ class Graph():
     def add_operation(self, operation):
         self.add_node(operation)
 
+    from csdl_alpha.src.graph.node import Node
+    def predecessors(self, node:Node) -> list[Node]:
+        """
+        Returns the predecessors of the node
+        """
+        return self.rxgraph.predecessors(self.node_table[node])
+
     def execute_inline(self, subset = None):
         """
         executes the graph inline
@@ -288,18 +295,22 @@ class Graph():
         
         return None
 
-
+    from csdl_alpha.src.graph.variable import Variable
     def _get_intersection(
-            self,
-            sources,
-            targets,
-            check_sources = True,
-            check_targets = True,
-        ):
+            self:'Graph',
+            sources:list[Variable],
+            targets:list[Variable],
+            check_sources:bool = True,
+            check_targets:bool = True,
+            add_hanging_input_variables:bool = True,
+            add_hanging_output_variables:bool = True,
+        )-> list[int]:
         """
         Returns all nodes between sources and targets.
         If check_sources is True, then checks to make sure all sources should affect atleast one target
         If check_targets is True, then checks to make sure all targets should be affected by atleast one source
+        If add_hanging_input_variables is True, then adds all input variables of ALL affected operations to the graph
+        If add_hanging_output_variables is True, then adds all output variables of ALL affected operations to the graph 
         """
 
         # D = Union of all source descendants
@@ -349,14 +360,16 @@ class Graph():
         for node_index in S:
             node = self.rxgraph[node_index]
             if is_operation(node):
-                for input_node in self.rxgraph.predecessors(self.node_table[node]):
-                    pred_succ_vars.add(self.node_table[input_node])
-                for output_node in self.rxgraph.successors(self.node_table[node]):
-                    pred_succ_vars.add(self.node_table[output_node])
+                if add_hanging_input_variables:
+                    for input_node in self.rxgraph.predecessors(self.node_table[node]):
+                        pred_succ_vars.add(self.node_table[input_node])
+                if add_hanging_output_variables:
+                    for output_node in self.rxgraph.successors(self.node_table[node]):
+                        pred_succ_vars.add(self.node_table[output_node])
         S = S.union(pred_succ_vars)
         return S
 
-    def visualize(self, filename = 'image', trim_loops = False):
+    def visualize(self, filename = 'image', trim_loops = False, format = 'svg'):
         from csdl_alpha.src.graph.variable import Variable
         # inverse_node_table = {v: k for k, v in self.node_table.items()}
 
@@ -372,9 +385,15 @@ class Graph():
 
 
         dot = self.to_dot(node_attr_fn=self.name_node, trim_loops=trim_loops)
-        dot.write_svg(f'{filename}.svg')
-        # dot.write_dot(f'{filename}.dot')
-        # graphviz_draw(self, node_attr_fn = self.name_node, filename= 'graph.png')
+
+        if format == 'svg':
+            dot.write_svg(f'{filename}.svg')
+        elif format == 'png':
+            # dot.write_dot(f'{filename}.dot')
+            dot.write_png(f'{filename}.png')
+            # graphviz_draw(self, node_attr_fn = self.name_node, filename= 'graph.png')
+        else:
+            raise ValueError(f"Invalid format {format}")
 
     def save(self, filename):
         dot = self.to_dot(node_attr_fn=self.name_node)

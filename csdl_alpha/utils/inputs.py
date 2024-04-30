@@ -74,6 +74,8 @@ def variablize(variable):
     from csdl_alpha.src.graph.variable import Variable, Constant
     if isinstance(variable, Variable):
         return variable
+    if variable is None:
+        raise ValueError("Variable/Value must not be None")
     else:
         var = Constant(value = ingest_value(variable))
         return var

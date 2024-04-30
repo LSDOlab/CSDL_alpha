@@ -145,7 +145,7 @@ class Operation(Node):
         raise NotImplementedError('not implemented')
 
     def evaluate_vjp(self, *args):
-        raise NotImplementedError('not implemented')
+        raise NotImplementedError(f'not implemented (operation: {self})')
     
 
 def set_properties(**kwargs):

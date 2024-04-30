@@ -16,6 +16,13 @@ class MatMat(Operation):
     def compute_inline(self, A, B):
         return A @ B
 
+    def evaluate_vjp(self, cotangents, A, B, C):
+        import csdl_alpha as csdl
+        if cotangents.check(B):
+            cotangents.accumulate(B, A.T()@cotangents[C])
+        if cotangents.check(A):
+            cotangents.accumulate(A, cotangents[C]@B.T())
+
 def matmat(A:VariableLike, B:VariableLike) -> Variable:
     """matrix-matrix multiplication A*B. The number of columns of A must be equal to the number of rows of x.
     
@@ -112,7 +119,7 @@ class TestMatMat(csdl_tests.CSDLTest):
         C =A_val@B
         compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_errors(self):
         self.prep()

@@ -18,6 +18,13 @@ class MatVec(Operation):
     def compute_inline(self, A, x):
         return A @ x
 
+    def evaluate_vjp(self, cotangents, A, x, b):
+        import csdl_alpha as csdl
+        if cotangents.check(x):
+            cotangents.accumulate(x, csdl.matvec(A.T(), cotangents[b]))
+        if cotangents.check(A):
+            cotangents.accumulate(A, csdl.outer(cotangents[b], x).reshape(A.shape))
+
 def matvec(A:VariableLike, x:VariableLike) -> Variable:
     """matrix-vector multiplication A*x. The number of columns of A must be equal to the number of rows of x.
     If x is 1D, reshaped to 2D. 
@@ -90,7 +97,7 @@ class TestMatVec(csdl_tests.CSDLTest):
         C = csdl.matvec(A_val,B)
         compare_values += [csdl_tests.TestingPair(C, A_val@B_val)]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values,verify_derivatives=True)
 
     def test_errors(self):
         self.prep()

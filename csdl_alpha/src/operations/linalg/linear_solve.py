@@ -19,6 +19,15 @@ class LinearSolve(Operation):
     def compute_inline(self, A, b):
         return np.linalg.solve(A, b)
     
+    def evaluate_vjp(self, cotangents, A, b, x):
+        import csdl_alpha as csdl
+
+        solved_system =  -csdl.solve_linear(A.T(), cotangents[x])
+        if cotangents.check(b):
+            cotangents.accumulate(b, solved_system)
+        if cotangents.check(A):
+            pass
+
 def solve_linear(
         A:VariableLike,
         b:VariableLike,
@@ -117,7 +126,7 @@ class TestLinear(csdl_tests.CSDLTest):
         x = csdl.solve_linear(A,b_val, solver = csdl.linear_solvers.DirectSolver())
         compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
     
     def test_errors(self,):
         self.prep()

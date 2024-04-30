@@ -3,6 +3,7 @@ from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
+from csdl_alpha.src.operations.derivative.utils import get_uncontract_action
 
 import numpy as np
 
@@ -22,6 +23,16 @@ class Sum(Operation):
             return np.sum(x)
         else:
             return np.sum(x, axis=self.axes)
+
+    def evaluate_vjp(self, cotangents, x, y):
+        import csdl_alpha as csdl
+        if self.axes is None:
+            if cotangents.check(x):
+                cotangents.accumulate(x, csdl.expand(cotangents[y], out_shape=x.shape))
+        else: 
+            if cotangents.check(x):
+                action = get_uncontract_action(x.shape, self.axes)
+                cotangents.accumulate(x, csdl.expand(cotangents[y], out_shape=x.shape, action = action))
 
 class ElementwiseSum(ComposedOperation):
     '''
@@ -130,10 +141,12 @@ class TestSum(csdl_tests.CSDLTest):
         x_val = 3.0*np.ones((2,3))
         y_val = 2.0*np.ones((2,3))
         z_val = np.ones((2,3))
+        w_val = np.arange(60).reshape((3, 4, 5))
 
         x = csdl.Variable(name = 'x', value = x_val)
         y = csdl.Variable(name = 'y', value = y_val)
         z = csdl.Variable(name = 'z', value = z_val)
+        w = csdl.Variable(name = 'w', value = w_val)
 
         compare_values = []
         # sum of a single tensor variable
@@ -144,6 +157,14 @@ class TestSum(csdl_tests.CSDLTest):
         # sum of a single tensor constant
         s2 = csdl.sum(x_val)
         compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
+
+        s3w = csdl.sum(w, axes=(0,2))
+        t3w = np.sum(w_val, axis=(0,2))
+        compare_values += [csdl_tests.TestingPair(s3w, t3w, tag = 's3w')]
+
+        s3w = csdl.sum(w, axes=(1,))
+        t3w = np.sum(w_val, axis=(1,))
+        compare_values += [csdl_tests.TestingPair(s3w, t3w, tag = 's3w')]
 
         # sum of a single tensor variable along specified axes
         s3 = csdl.sum(x, axes=(1,))
@@ -159,8 +180,7 @@ class TestSum(csdl_tests.CSDLTest):
         s5 = csdl.sum(x_val, y_val, z_val)
         compare_values += [csdl_tests.TestingPair(s5, t4, tag = 's5')]
 
-        self.run_tests(compare_values = compare_values,)
-
+        self.run_tests(compare_values = compare_values,verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(sum)

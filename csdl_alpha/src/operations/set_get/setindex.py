@@ -30,9 +30,21 @@ class SetVarIndex(Operation):
         self.slice = slice
 
     def compute_inline(self, x, y, *slice_args):
-        out = x.copy()
-        out[self.slice.evaluate(*slice_args)] = y
-        return out
+        x_updated = x.copy()
+        x_updated[self.slice.evaluate(*slice_args)] = y
+        return x_updated
+
+    def evaluate_vjp(self, cotangents, x, y, *slice_args_and_outputs):
+        import csdl_alpha as csdl
+        x_updated = slice_args_and_outputs[-1]
+        slice_args = slice_args_and_outputs[:-1]
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[x_updated].set(self.slice, 0.0))
+        if cotangents.check(y):
+            if y.size == 1:
+                cotangents.accumulate(y, csdl.sum(cotangents[x_updated][self.slice]))
+            else:
+                cotangents.accumulate(y, cotangents[x_updated][self.slice])
 
 class BroadcastSetIndex(SetVarIndex):
     '''
@@ -210,7 +222,7 @@ class TestSet(csdl_tests.CSDLTest):
         with pytest.raises(TypeError):
             z.set(slice[ind_0:-1:1], t)
 
-        self.run_tests(compare_values = compare_values,turn_off_recorder=False)
+        self.run_tests(compare_values = compare_values,turn_off_recorder=False, verify_derivatives=False)
 
         # change indices values to make sure they are updated.
         compare_values = []
@@ -240,7 +252,7 @@ class TestSet(csdl_tests.CSDLTest):
         comp_val[0:1, [1, 1, 1],[4, 4, 1], 4:6] = 7.0
         compare_values += [csdl_tests.TestingPair(x12, comp_val)]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=False)
 
     def test_example(self,):
         self.prep()
@@ -277,7 +289,7 @@ class TestSet(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(x2, t)]
         compare_values += [csdl_tests.TestingPair(x3, t)]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
 if __name__ == '__main__':
     test = TestSet()

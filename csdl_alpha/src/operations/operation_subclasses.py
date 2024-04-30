@@ -63,6 +63,9 @@ class ComposedOperation(SubgraphOperation):
     def __init__(self,*args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def evaluate_composed(self, *args):
+        raise NotImplementedError("Composed operations must implement the evaluate_composed method")
+
     def finalize_and_return_outputs(self):
         self.recorder._enter_subgraph(name = self.name)
         for input in self.inputs:
@@ -86,6 +89,100 @@ class ComposedOperation(SubgraphOperation):
     
     def set_inline_values(self):
         self.get_subgraph().execute_inline()
+
+    def evaluate_vjp(self, cotangents, *inputs_outputs):
+        # TODO: extremely messy and crappy. FIX!
+        # TODO: extremely messy and crappy. FIX!
+        # TODO: extremely messy and crappy. FIX!
+        # TODO: extremely messy and crappy. FIX!
+        # TODO: extremely messy and crappy. FIX!
+        # TODO: extremely messy and crappy. FIX!
+        # TODO: extremely messy and crappy. FIX!
+        # TODO: extremely messy and crappy. FIX!!!!
+        # TODO: extremely messy and crappy. FIX
+        # TODO: extremely messy and crappy. FIX!
+        # TODO: extremely messy and crappy. FIX!
+        # TODO: extremely messy and crappy. FIX!
+
+        # Created a new composed operation which inputs the same inputs as the original operation
+        # plus the cotangents. This composed operation just computes the single VJP operation.
+        inputs = inputs_outputs[:self.num_inputs]
+        outputs = inputs_outputs[self.num_inputs:]
+        import csdl_alpha as csdl
+
+        # Find all wrts.
+        wrts = []
+        for input_var in inputs:
+            if cotangents.check(input_var):
+                wrts.append(input_var)
+
+        # All the inputs we pass into the composed operation
+        composed_inputs = []
+        for of in outputs:
+            composed_inputs.append(cotangents[of]) # Cotangents we need to propagate by
+        for orig_input in inputs:
+            composed_inputs.append(orig_input) # All the original inputs
+        num_cots = len(outputs)
+
+        from csdl_alpha.src.operations.derivative.derivative import vjp
+        # This is the function that gets executed within the composed operation
+        # It takes the cotangents and the original inputs
+        # We first re-compute the composed operation and then compute the VJP again
+        def composed_vjp(*cotangets_and_inputs):
+            output_cotangents = cotangets_and_inputs[:num_cots]
+            original_inputs = cotangets_and_inputs[num_cots:]
+            # print(original_inputs)
+            outputs_again = self.evaluate_composed(*original_inputs)
+            if not isinstance(outputs_again, tuple):
+                outputs_again = (outputs_again,)
+
+            seeds = []
+            for i, output_var in enumerate(outputs_again):
+                seeds.append((output_var, output_cotangents[i]))
+            
+            rec = csdl.get_current_recorder()
+            
+            wrts_composed = vjp(seeds, wrts, rec.active_graph)
+            # rec.visualize_graph(format = 'png')
+            
+            outputs_composed = []
+            for wrt_composed, wrt_cotangent in wrts_composed.items():
+                outputs_composed.append(csdl.copyvar(wrt_cotangent))
+                # print('IBE', wrt_composed.shape, wrt_cotangent.shape)
+
+            outputs_composed = tuple(outputs_composed)
+            if len(outputs_composed) == 1:
+                return outputs_composed[0]
+            else:
+                return outputs_composed
+
+
+        rec = csdl.get_current_recorder()
+
+        name = self.name
+
+        class VJPInputsOutputs(ComposedOperation):
+            def __init__(self, *args):
+                super().__init__(*args)
+                self.name = f'vjp_{name}'
+            def evaluate_composed(self, *args):
+                outs = composed_vjp(*args)
+                # import csdl_alpha as csdl
+                # rec = csdl.get_current_recorder()
+                # rec.visualize_graph(format = 'png')
+                return outs
+            
+        wrt_derivs = VJPInputsOutputs(*composed_inputs).finalize_and_return_outputs()
+        if not isinstance(wrt_derivs, tuple):
+            wrt_derivs = (wrt_derivs, )
+
+        #rec.visualize_graph(format = 'png')
+        i = 0
+        for input_var in inputs:
+            if cotangents.check(input_var):
+                cotangents.accumulate(input_var, wrt_derivs[i])
+                i+=1
+
 
 # def expand_subgraph(evaluate_function):
     # """

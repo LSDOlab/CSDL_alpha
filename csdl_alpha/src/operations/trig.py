@@ -15,6 +15,10 @@ class Sin(ElementwiseOperation):
     def compute_inline(self, x):
         return np.sin(x)
 
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[y]*cos(x))
+
 @set_properties(linear=False)
 class ArcSin(ElementwiseOperation):
     def __init__(self,x):
@@ -24,6 +28,9 @@ class ArcSin(ElementwiseOperation):
     def compute_inline(self, x):
         return np.arcsin(x)
 
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[y]/(1.0 - x**2)**0.5)
 
 @set_properties(linear=False)
 class Cos(ElementwiseOperation):
@@ -33,6 +40,10 @@ class Cos(ElementwiseOperation):
 
     def compute_inline(self, x):
         return np.cos(x)
+    
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, -cotangents[y]*sin(x))
 
 @set_properties(linear=False)
 class ArcCos(ElementwiseOperation):
@@ -42,6 +53,10 @@ class ArcCos(ElementwiseOperation):
 
     def compute_inline(self, x):
         return np.arccos(x)
+    
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, -cotangents[y]/(1.0 - x**2)**0.5)
 
 @set_properties(linear=False)
 class Tan(ElementwiseOperation):
@@ -52,6 +67,10 @@ class Tan(ElementwiseOperation):
     def compute_inline(self, x):
         return np.tan(x)
 
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[y]/(cos(x)**2))
+
 @set_properties(linear=False)
 class ArcTan(ElementwiseOperation):
     def __init__(self,x):
@@ -60,6 +79,10 @@ class ArcTan(ElementwiseOperation):
 
     def compute_inline(self, x):
         return np.arctan(x)
+
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[y]/(1.0 + x**2))
 
 def sin(x:VariableLike) -> Variable:
     """Elementwise sine of a CSDL Variable
@@ -241,7 +264,7 @@ class TestTrig(csdl_tests.CSDLTest):
         t3 = np.tan(x_val).flatten()
         compare_values += [csdl_tests.TestingPair(s3, t3)]
 
-        compare_values = []
+        # compare_values = []
         # sin/cos/tan scalar variables
         s1a = csdl.arcsin(x)
         t1a = np.arcsin(x_val).flatten()
@@ -281,7 +304,7 @@ class TestTrig(csdl_tests.CSDLTest):
         t6a = np.arctan(y_val)
         compare_values += [csdl_tests.TestingPair(s6a, t6a)]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_examples(self):
         self.docstest(sin)
