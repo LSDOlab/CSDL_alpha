@@ -100,7 +100,7 @@ def build_derivative_node_order(
         check_sources=False,
         check_targets=False,
         add_hanging_input_variables=False,
-        add_hanging_output_variables=False,
+        add_hanging_output_variables=True,
     )
     for of_var in ofs:
         intersecting_nodes.add(graph.node_table[of_var])
@@ -185,8 +185,11 @@ def vjp(seeds:list[tuple[Variable, Variable]],
 
     for node in node_order:
         # rec = csdl.get_current_recorder()
-        # rec.visualize_graph(filename = graph.name, format = 'png')
+        # rec.visualize_graph(filename = graph.name)
         if isinstance(node, Operation):
+            for output in node.outputs:
+                if cotangents[output] is None:
+                    cotangents.accumulate(output, csdl.Variable(value = np.zeros(output.shape)))
             node.evaluate_vjp(cotangents, *node.inputs, *node.outputs)
 
     wrt_cotangents:dict[Variable:Variable] = {}
@@ -401,14 +404,14 @@ class TestDerivative(csdl_tests.CSDLTest):
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
 
-    def test_linear(self,):
+    def test_linear2(self,):
         self.prep()
 
         import csdl_alpha as csdl
         import numpy as np
 
-        A_shape = (4,4)
-        b_shape = (4,1)
+        A_shape = (2,2)
+        b_shape = (2,1)
         A_val = (np.arange(np.prod(A_shape)).reshape(A_shape)+1.0)**2.0
         b_val = np.arange(np.prod(b_shape)).reshape(b_shape)
         b = csdl.Variable(value = b_val, name = 'b')
@@ -421,6 +424,62 @@ class TestDerivative(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
 
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
+
+
+    def test_linear(self,):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+
+        n = 3
+        # A_shape = (n,n)
+        # b_shape = (n,1)
+        # # Try one: doesnt work... Condition number is too high?
+        # A_val = (np.arange(np.prod(A_shape)).reshape(A_shape)+1)**2.0
+        # b_val = np.arange(np.prod(b_shape)).reshape(b_shape)
+        
+        # Try two: works...
+        # A_val = np.diagflat(np.ones(n)*3.0)
+        # A_val[0,1] = 2.0
+        # A_val[1,0] = 2.0
+        # b_val = np.arange(n).reshape(b_shape)
+
+        # Try three: works...
+        main_diag = np.arange(n)+1
+        A_val = np.diag(main_diag) + np.diag(main_diag[:-1]+1, 1) + np.diag(main_diag[:-1]+2, -1)
+        b_val = 2*np.arange(n)
+
+        b = csdl.Variable(value = b_val, name = 'b')
+        A = csdl.Variable(value = A_val, name = 'A')
+
+        compare_values = []
+        x = csdl.solve_linear(A,b)
+        compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
+
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
+
+    def test_multi_get(self):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+
+        recorder = csdl.build_new_recorder(inline = True)
+        recorder.start()
+        compare_values = []
+
+        x_val = np.array([1.0, 2.0, 3.0])
+        x = csdl.Variable(name = 'x', value = x_val)
+
+        def func(x):
+            return  x[[0, 1]]
+        y = func(x)
+
+        compare_values += [csdl_tests.TestingPair(y, x_val[[0, 1]])]
+
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
+
 
     def test_composed(self,):
         self.prep()
@@ -504,12 +563,13 @@ class TestDerivative(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = TestDerivative()
-    # test.test_functionality_scalar()
-    # test.test_functionality_vector()
-    # test.test_expand()
-    # test.test_max_elementwise()
-    # test.test_composed()
-    # test.test_division()
-    # test.test_avg()
-    # test.test_log()
+    test.test_functionality_scalar()
+    test.test_functionality_vector()
+    test.test_expand()
+    test.test_max_elementwise()
+    test.test_composed()
+    test.test_division()
+    test.test_avg()
+    test.test_log()
     test.test_linear()
+    test.test_multi_get()

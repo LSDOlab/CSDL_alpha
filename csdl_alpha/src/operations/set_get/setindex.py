@@ -8,7 +8,7 @@ from csdl_alpha.src.operations.set_get.slice import Slice
 from csdl_alpha.src.operations.set_get.loop_slice import VarSlice
 import pytest
 from csdl_alpha.utils.typing import VariableLike
-
+import numpy as np
 @set_properties(linear=True,)
 class SetVarIndex(Operation):
     '''
@@ -33,6 +33,14 @@ class SetVarIndex(Operation):
         x_updated = x.copy()
         x_updated[self.slice.evaluate(*slice_args)] = y
         return x_updated
+
+        # # Set item could add over duplicate indices.
+        # # Maybe in the future?
+        # x_updated = x.copy()
+        # evaluated_slice = self.slice.evaluate(*slice_args)
+        # x_updated[evaluated_slice] = 0.0
+        # np.add.at(x_updated, evaluated_slice, y)
+        # return x_updated
 
     def evaluate_vjp(self, cotangents, x, y, *slice_args_and_outputs):
         import csdl_alpha as csdl
@@ -163,10 +171,8 @@ class TestSet(csdl_tests.CSDLTest):
         # set a tensor slice with a tensor variable
         z5 = z.set((slice[0:-1, 1:2]), t)
         z5_var = z.set((slice[0:-1, ind_1:ind_1+1]), t)
-        z5_v = z.set(slice[0:-1, [ind_1,ind_1]], t_val) #strange...
         t3 = np.array([[3.,2.],[3.,2.],[3.,3.]])
         compare_values += [csdl_tests.TestingPair(z5, t3)]
-        compare_values += [csdl_tests.TestingPair(z5_v, t3)]
         compare_values += [csdl_tests.TestingPair(z5_var, t3)]
 
         t = csdl.Variable(name = 't', value = 2.0*np.ones((2,)))
@@ -221,6 +227,8 @@ class TestSet(csdl_tests.CSDLTest):
             z.set(slice[0:ind_1:1], 2.0)
         with pytest.raises(TypeError):
             z.set(slice[ind_0:-1:1], t)
+        with pytest.raises(ValueError):
+            z.set(slice[[0,0]], t)
 
         self.run_tests(compare_values = compare_values,turn_off_recorder=False, verify_derivatives=False)
 
@@ -231,7 +239,6 @@ class TestSet(csdl_tests.CSDLTest):
         current_graph = csdl.get_current_recorder().active_graph
         current_graph.execute_inline()
         t3 = np.array([[2.,3.],[2.,3.],[3.,3.]])
-        compare_values += [csdl_tests.TestingPair(z5_v, t3)]
         compare_values += [csdl_tests.TestingPair(z6_v, t3)]
         compare_values += [csdl_tests.TestingPair(z7_v, t3)]
         compare_values += [csdl_tests.TestingPair(z8_v, t3)]
@@ -253,6 +260,48 @@ class TestSet(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(x12, comp_val)]
 
         self.run_tests(compare_values = compare_values, verify_derivatives=False)
+
+    def test_derivs(self):
+
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+        from csdl_alpha import slice
+        compare_values = []
+
+        shape_1 = (2,2,4)
+        x_val = np.arange(np.prod(shape_1)).reshape(shape_1)
+        x = csdl.Variable(name = 'x', value = x_val)
+
+        other = csdl.Variable(name = 'other', value = 2*np.ones((2,2)))
+        x6 = x.set(csdl.slice[0:2, [1, 0], 3], other)
+        x_val_temp = x_val.copy()
+        x_val_temp[0:2, [1, 0], 3] = 2.0
+        compare_values += [csdl_tests.TestingPair(x6, x_val_temp)]
+
+        other = csdl.Variable(name = 'other2', value = 2.0)
+        x6 = x.set(csdl.slice[[0, 1]], other)
+        x_val_temp = x_val.copy()
+        x_val_temp[[0, 1]] = 2.0
+        compare_values += [csdl_tests.TestingPair(x6, x_val_temp)]
+
+        x6 = x.set(csdl.slice[0:2, [1, 0, 0], [1, 0, 1]], value = 2*np.ones((2,3)))
+        x_val_temp = x_val.copy()
+        x_val_temp[0:2, [1, 0, 0], [1, 0, 1]] = 2.0
+        compare_values += [csdl_tests.TestingPair(x6, x_val_temp)]
+
+        x6 = x.set(csdl.slice[0:2, [1], [1, 0, 2]], value = 2*np.ones((2,3)))
+        x_val_temp = x_val.copy()
+        x_val_temp[0:2, [1], [1, 0, 2]] = 2.0
+        compare_values += [csdl_tests.TestingPair(x6, x_val_temp)]
+
+        x6 = x.set(csdl.slice[0:2, 1:2], value = 2)
+        x_val_temp = x_val.copy()
+        x_val_temp[0:2, 1:2] = 2.0
+        compare_values += [csdl_tests.TestingPair(x6, x_val_temp)]
+
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_example(self,):
         self.prep()
@@ -294,4 +343,5 @@ class TestSet(csdl_tests.CSDLTest):
 if __name__ == '__main__':
     test = TestSet()
     test.test_functionality()
-    test.test_example()
+    # test.test_example()
+    # test.test_derivs()

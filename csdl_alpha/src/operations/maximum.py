@@ -64,7 +64,8 @@ class Maximum(Operation):
         if cotangents.check(x):
             if self.axes is None:
                 rho = self.rho
-                vjp = cotangents[y] * csdl.exp(rho*(x)) / csdl.sum(csdl.exp(rho*(x)))
+                exp_x = csdl.exp(rho*(x) - y)
+                vjp = cotangents[y] * exp_x / csdl.sum(exp_x)
             else:
                 rho = self.rho
                 axes = self.axes

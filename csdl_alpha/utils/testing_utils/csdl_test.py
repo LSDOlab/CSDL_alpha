@@ -146,6 +146,10 @@ class TestingPair():
         else:
             self.tag = tag
 
+        # TODO: If inline, compare values as tesing pair is created?
+        # if self.csdl_variable is not None:
+        #     self.compare('inline')
+
     def compare(self, ind):
         """
         Tests the shapes and values of the csdl variable and the real value.

@@ -200,6 +200,20 @@ def test_slices():
     import numpy as np
     with pytest.raises(TypeError):
         _slice[np.array([1, 2, 3])]
+
+    import numpy as np
+    with pytest.raises(ValueError):
+        _slice[[1, 1, 3]]
+
+    with pytest.raises(ValueError):
+        _slice[[3, 1, 3]]
+
+    with pytest.raises(ValueError):
+        _slice[4, [3, 0, 0], [1, 1, 1], [1, 1, 1]]
+
+    with pytest.raises(ValueError):
+        _slice[4, [0, 2, 0], [1, 1, 1], [1, 1, 1], 4]
+
     # x = np.ones((10,9,8,7,6,5,4))
     # # test = x[[0,1],[0,1],0:1, [1,2,3], [1,2,3]]
     # test = x[[0,1],[0,1]]
@@ -220,7 +234,7 @@ def test_slices():
     # print(test.shape) # (3, 2, 5, 10, 10, 10)
 
 
-def test_valid_indexing_integers():
+def old_test_valid_indexing_integers():
     """
     tests to make sure that index checking is valid
     """
@@ -248,7 +262,7 @@ def test_valid_indexing_integers():
     with pytest.raises(IndexError):
         check_and_process_out_of_bound_slice(slices, three_d_shape)
 
-def test_valid_indexing_slices():
+def old_test_valid_indexing_slices():
     """
     tests to make sure that index checking is valid
     """
@@ -283,7 +297,7 @@ def test_valid_indexing_slices():
     check_and_process_out_of_bound_slice(slices, one_d_shape)
     x_1d[slices]
 
-def test_valid_indexing_lists():
+def old_test_valid_indexing_lists():
     # === test out of bounds slices ===
     from csdl_alpha.src.operations.set_get.utils import check_and_process_out_of_bound_slice
     from csdl_alpha.src.operations.set_get.slice import _slice

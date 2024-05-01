@@ -1,5 +1,5 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
-
+import numpy as np
 
 @set_properties(elementwise = True, diagonal_jacobian = True)
 class ElementwiseOperation(Operation):
@@ -124,6 +124,9 @@ class ComposedOperation(SubgraphOperation):
             composed_inputs.append(orig_input) # All the original inputs
         num_cots = len(outputs)
 
+        rec = csdl.get_current_recorder()
+        # rec.visualize_graph()
+
         from csdl_alpha.src.operations.derivative.derivative import vjp
         # This is the function that gets executed within the composed operation
         # It takes the cotangents and the original inputs
@@ -147,7 +150,11 @@ class ComposedOperation(SubgraphOperation):
             
             outputs_composed = []
             for wrt_composed, wrt_cotangent in wrts_composed.items():
-                outputs_composed.append(csdl.copyvar(wrt_cotangent))
+                if wrt_cotangent is None:
+                    zeros = csdl.Variable(value = np.zeros(wrt_composed.shape))
+                    outputs_composed.append(zeros)
+                else:
+                    outputs_composed.append(csdl.copyvar(wrt_cotangent))
                 # print('IBE', wrt_composed.shape, wrt_cotangent.shape)
 
             outputs_composed = tuple(outputs_composed)
@@ -155,9 +162,6 @@ class ComposedOperation(SubgraphOperation):
                 return outputs_composed[0]
             else:
                 return outputs_composed
-
-
-        rec = csdl.get_current_recorder()
 
         name = self.name
 

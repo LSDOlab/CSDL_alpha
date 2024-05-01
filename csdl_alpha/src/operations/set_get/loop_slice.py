@@ -23,6 +23,7 @@ class LoopSlicer(Slicer):
 
         var2maplist_index = {}
         current_list_length = None
+        list_start_end_index = [None, None]
         for i, k in enumerate(keys):
             # check to make sure types are correct
             current_list_length = self.check_axis_validity(k, return_keys, current_list_length)
@@ -58,14 +59,29 @@ class LoopSlicer(Slicer):
                 if isinstance(k.step, Variable):
                     raise TypeError("Slice step cannot be a CSDL variable")
             elif isinstance(k, list): # list
+                # If elements are variables, store a mapping of them
                 if len(k) == 1:
                     if isinstance(k[0], Variable):
                         self.add_to_mapping_list(k[0], mapping_list, var2maplist_index, i)
                 else:
+                    # Keep track of where the contiguous lists are given by the user
+                    if list_start_end_index[0] is None:
+                        list_start_end_index[0] = i
+                    list_start_end_index[1] = i
+
                     for j, l in enumerate(k):
                         if isinstance(l, Variable):
                             self.add_to_mapping_list(l, mapping_list, var2maplist_index, (i, j))
 
+        # Check to make sure lists are valid. No repeated coordinates
+        if list_start_end_index[0] is not None:
+            all_given_lists = return_keys[list_start_end_index[0]:list_start_end_index[1]+1]
+
+            coords = set()
+            for coord in zip(*all_given_lists):
+                if coord in coords:
+                    raise ValueError(f"Repeated coordinate {coord} in given coordinates")
+                coords.add(coord)
         return VarSlice((return_keys), tuple(mapping_list))
 
     def add_to_mapping_list(
@@ -136,7 +152,6 @@ class VarSlice(Slice):
             self.slices[map[0]] = slice(arg_int, arg_int+map[1][1], cur_slice.step)
         elif map[1][0] == 'e':
             self.slices[map[0]] = slice(arg_int-map[1][1], arg_int, cur_slice.step)
-
 
     def evaluate_zeros(self):
         """

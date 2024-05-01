@@ -33,7 +33,8 @@ class GetVarIndex(Operation):
         slice_args = slice_args_and_outputs[:-1]
         if cotangents.check(x):
             new_var = csdl.Variable(value = np.zeros(x.shape))
-            cotangents.accumulate(x, new_var.set(self.slice, cotangents[x_indexed]))
+            x_cot =  new_var.set(self.slice, cotangents[x_indexed])
+            cotangents.accumulate(x, x_cot)
 
 def get_index(x:Variable, slices: Slice, shape = None):
     """
@@ -92,20 +93,20 @@ class TestGet(csdl_tests.CSDLTest):
         x3 = x[[ind_var,0, ind_var2],[ind_var2,0, ind_var]]
         compare_values += [csdl_tests.TestingPair(x3, x_val[[1,0,2], [2,0,1]])]
 
-        x4 = x.get(csdl.slice[[ind_var2, ind_var, ind_var]])
-        compare_values += [csdl_tests.TestingPair(x4, x_val[[2,1,1]])]
-        x4 = x[[ind_var2, ind_var, ind_var]]
-        compare_values += [csdl_tests.TestingPair(x4, x_val[[2,1,1]])]
+        x4 = x.get(csdl.slice[[ind_var2, ind_var, ind_var+3]])
+        compare_values += [csdl_tests.TestingPair(x4, x_val[[2,1,4]])]
+        x4 = x[[ind_var2, ind_var, ind_var+3]]
+        compare_values += [csdl_tests.TestingPair(x4, x_val[[2,1,4]])]
 
-        x5 = x.get(csdl.slice[:, [ind_var, ind_var2, ind_var]])
-        compare_values += [csdl_tests.TestingPair(x5, x_val[:,[1,2,1]])]
-        x5 = x[:, [ind_var, ind_var2, ind_var]]
-        compare_values += [csdl_tests.TestingPair(x5, x_val[:,[1,2,1]])]
+        x5 = x.get(csdl.slice[:, [ind_var, ind_var2, ind_var+3]])
+        compare_values += [csdl_tests.TestingPair(x5, x_val[:,[1,2,4]])]
+        x5 = x[:, [ind_var, ind_var2, ind_var+3]]
+        compare_values += [csdl_tests.TestingPair(x5, x_val[:,[1,2,4]])]
 
-        x6 = x.get(csdl.slice[0:2, [ind_var2, 1, 1], 3])
-        compare_values += [csdl_tests.TestingPair(x6, x_val[0:2,[2,1,1], 3])]
-        x6 = x[0:2, [ind_var2, 1, 1], 3]
-        compare_values += [csdl_tests.TestingPair(x6, x_val[0:2,[2,1,1], 3])]
+        x6 = x.get(csdl.slice[0:2, [ind_var2, 1, 3], 3])
+        compare_values += [csdl_tests.TestingPair(x6, x_val[0:2,[2,1,3], 3])]
+        x6 = x[0:2, [ind_var2, 1, 3], 3]
+        compare_values += [csdl_tests.TestingPair(x6, x_val[0:2,[2,1,3], 3])]
 
         x7 = y.get(csdl.slice[0:2, [1, 1, 1],[1, 2, 3], 3])
         compare_values += [csdl_tests.TestingPair(x7, y_val[0:2, [1, 1, 1],[1, 2, 3], 3])]
@@ -146,6 +147,12 @@ class TestGet(csdl_tests.CSDLTest):
             x_error = y[0:2, [1, 1],[1, 2], 0:2, [1,1,2]]
         with pytest.raises(IndexError):
             x_error = y[100, [1, 1],[1, 2], 0:2]
+        with pytest.raises(ValueError):
+            x_error = y[0:2, [1, 1], 3]
+        with pytest.raises(ValueError):
+            x_error = y[0:2, [1, 1, 1], [0, 2, 0], 3]
+        with pytest.raises(ValueError):
+            x_error = y[0:2, [int_2, int_2, int_2], [0, 2, 0], 3]
         with pytest.raises(TypeError):
             x_error = y[[1, 1],ind_var:2]
         with pytest.raises(TypeError):
@@ -172,9 +179,9 @@ class TestGet(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(x1, np.array([x_val[2,0,3]]))]
         compare_values += [csdl_tests.TestingPair(x2, x_val[2,0])]
         compare_values += [csdl_tests.TestingPair(x3, x_val[[2,0,3], [3,0,2]])]
-        compare_values += [csdl_tests.TestingPair(x4, x_val[[3,2,2]])]
-        compare_values += [csdl_tests.TestingPair(x5, x_val[:,[2,3,2]])]
-        compare_values += [csdl_tests.TestingPair(x6, x_val[0:2,[3,1,1], 3])]
+        compare_values += [csdl_tests.TestingPair(x4, x_val[[3,2,5]])]
+        compare_values += [csdl_tests.TestingPair(x5, x_val[:,[2,3,5]])]
+        compare_values += [csdl_tests.TestingPair(x6, x_val[0:2,[3,1,3], 3])]
         compare_values += [csdl_tests.TestingPair(x7, y_val[0:2, [1, 1, 1],[1, 2, 3], 3])]
         compare_values += [csdl_tests.TestingPair(x8, y_val[0:2, [1, 1, 1],[1, 2, 3], 0:2])]
         compare_values += [csdl_tests.TestingPair(x9, y_val[1:4, [1, 1, 1],[1, 2, 3], 0:2])]
@@ -221,13 +228,10 @@ class TestGet(csdl_tests.CSDLTest):
         x6 = x[0:2, [2, 1], 3]
         compare_values += [csdl_tests.TestingPair(x6, x_val[0:2, [2,1], 3])]
 
-        x6 = x[0:2, [1, 1], 3]
-        compare_values += [csdl_tests.TestingPair(x6, x_val[0:2, [1,1], 3])]
-
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
 
 if __name__ == '__main__':
     test = TestGet()
-    # test.test_functionality()
+    test.test_functionality()
     test.test_deriv()
