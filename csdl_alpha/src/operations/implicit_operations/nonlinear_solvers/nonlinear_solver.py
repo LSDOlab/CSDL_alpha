@@ -6,7 +6,7 @@ from csdl_alpha.utils.error_utils import GraphError
 import numpy as np
 
 from csdl_alpha.utils.typing import VariableLike
-from typing import Union
+from typing import Union, Any
 
 class NonlinearSolver(object):
     def __init__(
@@ -22,13 +22,13 @@ class NonlinearSolver(object):
         self.metadata = {}
         
         # state variable -> residual variable
-        self.state_to_residual_map = {}
+        self.state_to_residual_map:dict[Variable:Variable] = {}
         
         # residual variable -> state variable
-        self.residual_to_state_map = {}
+        self.residual_to_state_map:dict[Variable:Variable] = {}
         
         # state variable -> any other information about the state such as initial value, tolerance, etc.
-        self.state_metadata = {}
+        self.state_metadata:dict[Variable:Any] = {}
         
         # CSDL variables that are "constants" from the perspective of the solver everytime it is ran
         # for example:
@@ -129,6 +129,12 @@ class NonlinearSolver(object):
     def add_intersection_target(self, target:Variable):
         self._intersection_targets.add(target)
 
+    def _preprocess_run(self):
+        """
+        Preprocesses the solver before running it.
+        """
+        pass
+
     def run(self):
         """
         Creates the implicit operation graph and runs the solver if inline is True
@@ -140,6 +146,8 @@ class NonlinearSolver(object):
             raise RuntimeError("Nonlinear solver has already been run. Cannot run again.")
 
         self.locked = True
+
+        self._preprocess_run()
 
         # Steps:
         # G is the current graph we are in
@@ -235,13 +243,39 @@ class NonlinearSolver(object):
             return f'nonlinear solver: {self.name} converged in {iter_num} iterations.'
         else:
             main_str = f'\nnonlinear solver: {self.name} did not converge in {iter_num} iterations.\n'
-            for state,residual in self.state_to_residual_map.items():
-                state_str = f'\t{state}\n'
-                state_str += f'\t\tname:  {state.name}\n'
-                state_str += f'\t\tval:    {state.value}\n'
-                state_str += f'\t\tres:    {residual.value}\n'
+            for i, (state,residual) in enumerate(self.state_to_residual_map.items()):
+                state_str  = f'    state {i}\n'
+                state_str += f'        name:     {state.name}\n'
+                state_str += f'        value:    {state.value}\n'
+                state_str += f'        residual: {residual.value}\n'
                 main_str += state_str
             return main_str
+
+    def _inline_check_converged(self,):
+        converged = True
+        for current_state, current_residual in self.state_to_residual_map.items():
+
+            # get current residual and error
+            current_residual_value = current_residual.value
+
+            # Uncomment to print iteration:
+            # error = np.linalg.norm(current_residual_value.flatten())
+            # print(f'iteration {iter}, {current_residual} error: {error}')
+
+            # compute tolerance:
+            tol = self.state_metadata[current_state]['tolerance']
+            if isinstance(tol, Variable):
+                tol = tol.value
+
+            if np.any(np.isnan(current_residual_value)):
+                raise ValueError(f'Residual is NaN for {current_residual.name}')
+            
+            # if current_residual_value > tol:
+            # if any of the residuals do not meet tolerance, no need to compute errors for other residuals
+            if not check_run_time_tolerance(current_residual_value, tol):
+                converged = False
+                break
+        return converged
 
     def solve_implicit_inline(self, *args):
         """

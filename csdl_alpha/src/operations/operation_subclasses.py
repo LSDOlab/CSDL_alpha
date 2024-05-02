@@ -119,6 +119,8 @@ class ComposedOperation(SubgraphOperation):
         # All the inputs we pass into the composed operation
         composed_inputs = []
         for of in outputs:
+            if cotangents[of] is None:
+                cotangents.accumulate(of, csdl.Variable(value = np.zeros(of.shape)))
             composed_inputs.append(cotangents[of]) # Cotangents we need to propagate by
         for orig_input in inputs:
             composed_inputs.append(orig_input) # All the original inputs

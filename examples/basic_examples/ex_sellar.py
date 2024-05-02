@@ -40,8 +40,8 @@ with csdl.namespace('Constraint 2'):
 
 # Specifiy coupling
 with csdl.namespace('Couple'):
-    solver = csdl.nonlinear_solvers.GaussSeidel()
-    solver.add_state(y2, residual, state_update=y2+residual, tolerance=1e-8)
+    solver = csdl.nonlinear_solvers.Newton()
+    solver.add_state(y2, residual, tolerance=1e-8)
     solver.run()
 
 # Verify values with OpenMDAO documentation:

@@ -187,9 +187,11 @@ def vjp(seeds:list[tuple[Variable, Variable]],
         # rec = csdl.get_current_recorder()
         # rec.visualize_graph(filename = graph.name)
         if isinstance(node, Operation):
-            for output in node.outputs:
-                if cotangents[output] is None:
-                    cotangents.accumulate(output, csdl.Variable(value = np.zeros(output.shape)))
+            # Moved to composed operation class for now
+            # for output in node.outputs:
+            #     if cotangents[output] is None:
+            #         cotangents.accumulate(output, csdl.Variable(value = np.zeros(output.shape)))
+            
             node.evaluate_vjp(cotangents, *node.inputs, *node.outputs)
 
     wrt_cotangents:dict[Variable:Variable] = {}
