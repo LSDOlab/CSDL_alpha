@@ -16,6 +16,13 @@ class VectorDot(Operation):
         import numpy as np
         return np.vdot(x, y)
 
+    def evaluate_vjp(self, cotangents, x, y, z):
+        import csdl_alpha as csdl
+        if cotangents.check(x):
+            cotangents.accumulate(x, (cotangents[z]*y).reshape(x.shape))
+        if cotangents.check(y):
+            cotangents.accumulate(y, (cotangents[z]*x).reshape(y.shape))
+
 def vdot(x:VariableLike,y:VariableLike)->Variable:
     """
     Dot product of two vectors x and y. The result is a scalar of shape (1,).
@@ -45,13 +52,15 @@ def vdot(x:VariableLike,y:VariableLike)->Variable:
     y = validate_and_variablize(y)
 
     # checks:
-    # - x must be 1D
-    # - y must be 1D
+    # - x must be 1D (I guess not)
+    # - y must be 1D (I guess not)
     # - x and y must have the same size
-    if len(x.shape) != 1:
-        raise ValueError(f"Vector x must be 1D, but has shape {x.shape}")
-    if len(y.shape) != 1:
-        raise ValueError(f"Vector y must be 1D, but has shape {y.shape}")
+
+    # For now, allow tensor for vdot
+    # if len(x.shape) != 1:
+    #     raise ValueError(f"Vector x must be 1D, but has shape {x.shape}")
+    # if len(y.shape) != 1:
+    #     raise ValueError(f"Vector y must be 1D, but has shape {y.shape}")
     if x.size != y.size:
         raise ValueError(f"Vectors x and y must have the same size. {x.size} != {y.size}")
     
@@ -73,7 +82,9 @@ class TestVDot(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(csdl.vdot(x,y), np.vdot(x_val, y_val).flatten())]
         compare_values += [csdl_tests.TestingPair(csdl.vdot(x_val,y), np.vdot(x_val, y_val).flatten())]
         compare_values += [csdl_tests.TestingPair(csdl.vdot(x,y_val), np.vdot(x_val, y_val).flatten())]
-        self.run_tests(compare_values = compare_values,)
+        compare_values += [csdl_tests.TestingPair(csdl.vdot(x.reshape((2,5)),y_val.reshape((2,5))), np.vdot(x_val, y_val).flatten())]
+        compare_values += [csdl_tests.TestingPair(csdl.vdot(x,y.reshape((10,1))), np.vdot(x_val, y_val).flatten())]
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_errors(self,):
         self.prep()

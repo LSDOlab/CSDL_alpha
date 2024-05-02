@@ -20,16 +20,23 @@ class ImplicitOperation(SubgraphOperation):
         inputs = inputs_and_outputs[:len(self.inputs)]
         outputs = inputs_and_outputs[len(self.inputs):]
 
-        import csdl_alpha as csdl
-
+        print('inputs           ', *(input.name for input in inputs))
         print('inputs           ', *(input.name for input in self.inputs))
         print('outputs          ', *(output.name for output in self.outputs))
+        assert [*(input.name for input in inputs)] == [*(input.name for input in self.inputs)]
+        assert [*(output.name for output in outputs)] == [*(output.name for output in self.outputs)]
 
+        import csdl_alpha as csdl
         inputs_to_accumulate = []
-        for input in self.inputs:
+        outputs_with_cotangents = []
+        for input in inputs:
             if cotangents.check(input):
                 inputs_to_accumulate.append(input)
-        
+        for output in outputs:
+            if cotangents.check(output):
+                outputs_with_cotangents.append(output)
+
         print('needed inputs    ', *(input.name for input in inputs_to_accumulate))
+        print('needed outputs   ', *(output.name for output in outputs_with_cotangents))
 
         raise NotImplementedError('Need to implement VJP for ImplicitOperation')

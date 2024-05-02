@@ -100,7 +100,7 @@ def build_derivative_node_order(
         check_sources=False,
         check_targets=False,
         add_hanging_input_variables=False,
-        add_hanging_output_variables=True,
+        add_hanging_output_variables=False,
     )
     for of_var in ofs:
         intersecting_nodes.add(graph.node_table[of_var])
@@ -191,7 +191,7 @@ def vjp(seeds:list[tuple[Variable, Variable]],
             # for output in node.outputs:
             #     if cotangents[output] is None:
             #         cotangents.accumulate(output, csdl.Variable(value = np.zeros(output.shape)))
-            
+
             node.evaluate_vjp(cotangents, *node.inputs, *node.outputs)
 
     wrt_cotangents:dict[Variable:Variable] = {}
