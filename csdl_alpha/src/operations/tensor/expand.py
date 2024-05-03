@@ -4,6 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
+import warnings
 
 import numpy as np
 
@@ -136,12 +137,12 @@ def expand(x, out_shape, action=None):
     if not isinstance(out_shape, tuple):
         raise ValueError('"out_shape" must be a tuple.')
 
-    if x.shape != (1,):
+    if x.size != 1:
         if action is None:
             raise ValueError('Cannot expand a tensor without "action" specified.')
         else:
             if not isinstance(action, str):
-                raise ValueError('"action" must be a string.')
+                raise TypeError('"action" must be a string.')
             if '->' not in action:
                 raise ValueError('Invalid action string. Use "->" to separate the input and output subscripts.')
             
@@ -151,7 +152,7 @@ def expand(x, out_shape, action=None):
                 raise ValueError('Input tensor shape does not match the input string in the action.')
             if len(out_str) != len(out_shape):
                 raise ValueError('Output tensor shape does not match the output string in the action.')
-            
+
             if not all(in_str.count(char) == 1 for char in in_str):
                 raise ValueError('Each character in the input string must appear exactly once.')
             if not all(out_str.count(char) == 1 for char in out_str):
@@ -170,7 +171,8 @@ def expand(x, out_shape, action=None):
 
     else:
         if action is not None:
-            raise ValueError('"action" cannot be specified for expanding a scalar.')
+            warnings.warn('"action" will have no effect when expanding a scalar.')
+
         op = ScalarExpand(x, out_shape)
     
     return op.finalize_and_return_outputs()

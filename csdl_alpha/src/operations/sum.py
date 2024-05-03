@@ -118,9 +118,11 @@ def sum(*args, axes=None):
         else:
             out_shape = tuple([x for i, x in enumerate(args[0].shape) if i not in axes])
             if len(out_shape) == 0:
-                raise ValueError('It is inefficient to sum a tensor Variable along all axes. \
-                                 Use sum(A) to find the sum of all tensor entries.')
-        
+                # raise ValueError('It is inefficient to sum a tensor Variable along all axes. \
+                #                  Use sum(A) to find the sum of all tensor entries.')
+                out_shape = (1,)
+                axes = None
+
         op = Sum(validate_and_variablize(args[0]), axes=axes, out_shape=out_shape)
     else:
         # axes is None for multiple variables
@@ -151,6 +153,11 @@ class TestSum(csdl_tests.CSDLTest):
         compare_values = []
         # sum of a single tensor variable
         s1 = csdl.sum(x)
+        t1 = np.array([18.0])
+        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
+
+        # sum of a single tensor variable
+        s1 = csdl.sum(x, axes=(0,1))
         t1 = np.array([18.0])
         compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
 

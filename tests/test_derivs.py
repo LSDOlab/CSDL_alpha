@@ -42,6 +42,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         x1.add_name('x1')
 
         y = csdl.norm(x0[[0,1], :]) - csdl.sin(x1)
+        # y = x0+x1
         y.add_name('y')
         with csdl.Namespace('deriv1'):
             dy_dx1 = csdl.derivative.reverse(y, [x1, x0])[x1]

@@ -99,12 +99,16 @@ def minimum(*args, axes=None, rho=20.):
             raise ValueError('Axes cannot have negative entries.')
 
     if len(args) == 1:
-        if axes is not None:
+        if axes is None:
+            out_shape = (1,)
+        else:
             out_shape = tuple([x for i, x in enumerate(args[0].shape) if i not in axes])
             if len(out_shape) == 0:
-                raise ValueError('It is inefficient to find the minimum of a tensor Variable along all axes. \
-                                 Use minimum(A) to find the minimum of all tensor entries.')
-        
+                # raise ValueError('It is inefficient to find the minimum of a tensor Variable along all axes. \
+                #                  Use minimum(A) to find the minimum of all tensor entries.')
+                out_shape = (1,)
+                axes = None
+
     args = [validate_and_variablize(x) for x in args]
     op = Minimum(*args, axes=axes, rho=rho)
     
@@ -134,6 +138,10 @@ class TestMinimum(csdl_tests.CSDLTest):
         # minimum of a single tensor variable
         s1 = csdl.minimum(x)
         t1 = np.array([0.0])
+        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
+
+        # sum of a single tensor variable
+        s1 = csdl.minimum(x, axes=(0,1))
         compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
 
         # minimum of a single tensor constant
