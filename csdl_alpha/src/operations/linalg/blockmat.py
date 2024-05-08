@@ -30,7 +30,6 @@ class BLockMatrix(Operation):
             current_arg_index = 0
             lower_index = 0
 
-            print(self.num_row_blocks)
             for cur_block_row_ind in range(len(self.num_row_blocks)):
                 arg = args[current_arg_index]
                 left_index = 0
