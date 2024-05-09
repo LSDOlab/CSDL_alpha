@@ -2,7 +2,7 @@ from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation,
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.graph import Graph
-from csdl_alpha.utils.inputs import variablize, validate_and_variablize
+from csdl_alpha.utils.inputs import variablize, validate_and_variablize, get_type_string
 import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
 
@@ -191,8 +191,15 @@ def vjp(seeds:list[tuple[Variable, Variable]],
             # for output in node.outputs:
             #     if cotangents[output] is None:
             #         cotangents.accumulate(output, csdl.Variable(value = np.zeros(output.shape)))
+            
+            # for output in node.outputs:
+            #     if cotangents[output] is None:
+            #         print(f"cotangents[{output}] is None")
+            try:
+                node.evaluate_vjp(cotangents, *node.inputs, *node.outputs)
+            except Exception as e:
+                raise ValueError(f"Error with VJP in operation {node.name}: {e}")
 
-            node.evaluate_vjp(cotangents, *node.inputs, *node.outputs)
 
     wrt_cotangents:dict[Variable:Variable] = {}
     for wrt_var in wrt_vars:
@@ -204,13 +211,21 @@ def vjp(seeds:list[tuple[Variable, Variable]],
         wrt_cotangents[wrt_var] = wrt_cotangent
     return wrt_cotangents
 
-def reverse(of: Variable, wrts: Union[Variable, list[Variable]])->dict[Variable]:
+def reverse(
+        of: Variable,
+        wrts: Union[Variable, list[Variable]],
+        graph:Graph = None,
+    )->dict[Variable]:
     of_var = validate_and_variablize(of)
     wrt_vars = listify_and_verify_variables(wrts)
     
     import csdl_alpha as csdl
-    graph = csdl.get_current_recorder().active_graph
 
+    if graph is None:
+        graph = csdl.get_current_recorder().active_graph
+    else:
+        if not isinstance(graph, Graph):
+            raise TypeError(f"Expected graph to be a Graph, but got {get_type_string(graph)}.")
     # Node order built in VJP for now..
     # node_order = build_derivative_node_order(graph, [of_var], wrt_vars)
 
@@ -221,6 +236,7 @@ def reverse(of: Variable, wrts: Union[Variable, list[Variable]])->dict[Variable]
         jacobians[wrt_var] = csdl.Variable(name = f'jacobian_{of.name}_wrt_{wrt_var.name}', value = np.zeros((of_var.size, wrt_var.size)))
 
     initial_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
+    
     # for row_index in csdl.frange(of_var.size):
     for row_index in range(of_var.size):
         current_output_seed = initial_output_seed.set(csdl.slice[row_index], 1.0)
@@ -236,21 +252,6 @@ def reverse(of: Variable, wrts: Union[Variable, list[Variable]])->dict[Variable]
             jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[row_index, :], wrt_cotangent.flatten())
             jacobians[wrt_var].add_name(f'jacobian_{of.name}_wrt_{wrt_var.name}')
         
-        # OLD:
-        # current_output_seed = initial_output_seed.set(csdl.slice[row_index], 1.0)
-        # current_output_seed = current_output_seed.reshape(of_var.shape)
-        # cotangents = VarTangents()
-        # cotangents.initialize(of_var)
-        # cotangents.accumulate(of_var, current_output_seed)
-
-        # for node in node_order:
-        #     if isinstance(node, Variable):
-        #         cotangents.initialize(node)
-
-        # for node in node_order:
-        #     if isinstance(node, Operation):
-        #         node.evaluate_vjp(cotangents, *node.inputs, *node.outputs)
-
     return jacobians
 
 class TestDerivative(csdl_tests.CSDLTest):

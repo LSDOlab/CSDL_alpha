@@ -5,6 +5,8 @@ import csdl_alpha.utils.error_utils as error_utils
 from csdl_alpha.utils.error_utils import GraphError
 import numpy as np
 
+from csdl_alpha.src.operations.derivative.derivative import VarTangents
+
 from csdl_alpha.utils.typing import VariableLike
 from typing import Union, Any
 
@@ -49,6 +51,10 @@ class NonlinearSolver(object):
 
         # block nonlinear solver from running more than once
         self.locked = False
+
+        # Attributes for derivatives:
+        self.full_residual_jacobian = None
+        self.total_state_size = 0
 
     def add_metadata(self, key, datum, is_input=True):
         if isinstance(datum, Variable) and is_input:
@@ -219,7 +225,130 @@ class NonlinearSolver(object):
         # For debugging:
         # self.residual_graph.visualize(f'inner_graph_{self.name}')
         # recorder.active_graph.visualize(f'top_level_{self.name}_after')
+    
+    def accumulate_cotangents(
+            self,
+            cotangents: VarTangents,
+            outputs_with_cotangents: list[Variable],
+            inputs_to_accumulate: list[Variable]
+            ):
+        # Steps
+        # 1) Preprocess cotangents of the states by accumulating them with exposed output cotangents
+        # 2) Solve adjoint system
+        # 3) Compute VJP of the adjoint residuals
+        # 4) Accumulate exposed output cotangents with the adjoint residuals
+        import csdl_alpha as csdl
+        recorder = csdl.get_current_recorder()
+
+        # Step 1
+        seeds:list[tuple[Variable, Variable]] = []
+        for exposed_outer_variable in outputs_with_cotangents:
+            # if exposed_outer_variable in self.state_to_residual_map:
+            #     continue
+            if exposed_outer_variable in self.state_to_residual_map:
+                continue
+            seeds.append((exposed_outer_variable, cotangents[exposed_outer_variable]))
         
+        wrts = []
+        wrts_set = set()
+        for input_variable in inputs_to_accumulate:
+            
+            if input_variable in self.meta_input_variables:
+                continue
+
+            wrts.append(input_variable)
+            wrts_set.add(input_variable)
+        for state in self.state_to_residual_map:
+            if state not in wrts_set:
+                wrts.append(state)
+
+        from csdl_alpha.src.operations.derivative.derivative import vjp
+        
+        # TODO: Should VJP function should be INSIDE or OUTSIDE the nonlinear solver?
+        # Compute vector-Jacobian product of the residuals in the residual graph
+        # recorder._enter_subgraph(graph = self.residual_graph)
+        # residual_graph = self.residual_graph
+        # for seed in seeds:
+        #     residual_graph.add_node(seed[0])
+        # recorder.visualize_graph('pre_step1_residual_graph')
+        # recorder.visualize_graph('post_step1_residual_graph')
+        # recorder._exit_subgraph()
+
+        # recorder.visualize_graph('pre_step1')
+        exposed_vjps = vjp(seeds, wrts, self.residual_graph)
+        for state in self.state_to_residual_map:
+            cotangents.initialize(state)
+            if exposed_vjps[state] is not None:
+                cotangents.accumulate(state, exposed_vjps[state])
+        # recorder.visualize_graph('post_step1')
+        
+        # step 2
+        full_residual_jacobian_T = self.get_full_residual_jacobian(for_deriv=True).T()
+        residual_vector = csdl.Variable(name = 'residual_vector', value = np.zeros((self.total_state_size,)))
+        for current_state in self.state_to_residual_map.keys():
+            il = self.state_metadata[current_state]['index_lower']
+            iu = self.state_metadata[current_state]['index_upper']
+            if cotangents[current_state] is not None:
+                residual_vector = residual_vector.set(csdl.slice[il:iu], cotangents[current_state].flatten())
+        psi = csdl.solve_linear(full_residual_jacobian_T, residual_vector)
+        # recorder.visualize_graph('post_step2')
+
+        # step 3
+        seeds:list[tuple[Variable, Variable]] = []
+        for current_state, current_residual in self.state_to_residual_map.items():
+            il = self.state_metadata[current_state]['index_lower']
+            iu = self.state_metadata[current_state]['index_upper']
+            seeds.append((current_residual, psi[il:iu]))
+        psi_vjps = vjp(seeds, list(wrts_set), self.residual_graph)
+        # recorder.visualize_graph('post_step3')
+
+        # step 4
+        for input_variable in inputs_to_accumulate:
+            # cotangents.accumulate(input_variable,  csdl.Variable(value = 0.01+np.zeros(input_variable.shape)))
+            if input_variable not in self.meta_input_variables:
+                if psi_vjps[input_variable] is not None:
+                    cotangents.accumulate(input_variable, -psi_vjps[input_variable])
+                if exposed_vjps[input_variable] is not None:
+                    cotangents.accumulate(input_variable, exposed_vjps[input_variable])
+            if cotangents[input_variable] is None:
+                cotangents.accumulate(input_variable, csdl.Variable(value = np.zeros(input_variable.shape)))
+        # recorder.visualize_graph('post_step4')
+        
+        pass
+
+    def get_full_residual_jacobian(
+            self, 
+            for_deriv = False,    
+        )-> Variable:
+        import csdl_alpha as csdl
+        if self.full_residual_jacobian is None:
+            states_list = list(self.state_to_residual_map.keys())
+
+            block_mat = []
+            for residual in self.residual_to_state_map:
+                state = self.residual_to_state_map[residual]
+                # Create block matrix for linear system
+                current_residual_block = []
+
+                if for_deriv:
+                    deriv = csdl.derivative.reverse(residual, states_list, graph = self.residual_graph)
+                else:
+                    deriv = csdl.derivative.reverse(residual, states_list)
+
+                for _state in states_list:
+                    current_residual_block.append(deriv[_state])
+                    # self.add_intersection_target(deriv[state])
+                block_mat.append(current_residual_block)
+            
+                # Keep track of indices for each state
+                self.add_state_metadata(state, 'index_lower', self.total_state_size)
+                self.total_state_size += state.size
+                self.add_state_metadata(state, 'index_upper', self.total_state_size)
+
+            self.full_residual_jacobian = csdl.blockmat(block_mat)
+            return self.full_residual_jacobian
+        else:
+            return self.full_residual_jacobian
 
     def _inline_solve_(self):
         raise NotImplementedError("Solve method must be implemented by subclass")

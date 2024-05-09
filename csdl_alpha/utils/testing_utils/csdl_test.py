@@ -21,6 +21,9 @@ class CSDLTest():
             compare_values = None,
             compare_derivatives = None,
             verify_derivatives = False,
+            ignore_derivative_fd_error:set = None,
+            step_size = 1e-6,
+            ignore_constants = False,
             turn_off_recorder = True,
         ):
         import csdl_alpha as csdl
@@ -42,6 +45,9 @@ class CSDLTest():
         
         # Add derivatives to the graph and verify with finite difference if needed. Recorder needs to be re-started
         if verify_derivatives:
+            if ignore_derivative_fd_error is None:
+                ignore_derivative_fd_error = set()
+
             recorder.start()
             from csdl_alpha.src.operations.derivative.utils import verify_derivatives_inline
             
@@ -57,6 +63,8 @@ class CSDLTest():
                 #     j+=1
                 #     if (j) % 3 == 0:
                 #         continue
+                if ignore_constants and isinstance(wrt, Constant):
+                    continue
                 wrts.append(wrt)
             ofs = [testing_pair.csdl_variable for testing_pair in compare_values]
             of_wrt_meta_data = {}
@@ -66,12 +74,14 @@ class CSDLTest():
                     tag = ''
                 rel_error = 10**(-testing_pair.decimal)
                 for wrt in wrts:
+                    if (wrt in ignore_derivative_fd_error) or (testing_pair.csdl_variable in ignore_derivative_fd_error):
+                        rel_error = 2.0
                     of_wrt_meta_data[(testing_pair.csdl_variable, wrt)] = {
                         'tag': tag,
                         'max_rel_error': rel_error,   
                     }
             
-            verify_derivatives_inline(ofs, wrts, of_wrt_meta_data = of_wrt_meta_data)
+            verify_derivatives_inline(ofs, wrts, step_size, of_wrt_meta_data = of_wrt_meta_data)
 
             recorder.stop()
 

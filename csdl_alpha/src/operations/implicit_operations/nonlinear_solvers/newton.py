@@ -73,30 +73,8 @@ class Newton(FixedPoint):
         """
         Preprocess the solver before running
         """
-        import csdl_alpha as csdl
-        self.residual_jacobian_blocks = []
-        states_list = list(self.state_to_residual_map.keys())
-
-        block_mat = []
-        self.total_state_size = 0
-        for residual in self.residual_to_state_map:
-            state = self.residual_to_state_map[residual]
-            # Create block matrix for linear system
-            current_residual_block = []
-
-            deriv = csdl.derivative.reverse(residual, states_list)
-
-            for _state in states_list:
-                current_residual_block.append(deriv[_state])
-                # self.add_intersection_target(deriv[state])
-            block_mat.append(current_residual_block)
-        
-            # Keep track of indices for each state
-            self.add_state_metadata(state, 'index_lower', self.total_state_size)
-            self.total_state_size += state.size
-            self.add_state_metadata(state, 'index_upper', self.total_state_size)
-
-        self.full_residual_jacobian = csdl.blockmat(block_mat)
+        full_residual_jacobian = self.get_full_residual_jacobian()
+        self.add_intersection_target(full_residual_jacobian)
 
     def _inline_update_states(self):
         # get residuals

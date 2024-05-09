@@ -13,7 +13,7 @@ class Neg(ElementwiseOperation):
     def compute_inline(self, x):
         return -x
 
-    def evaluate_vjp(self,cotangents, x, neg_x):
+    def evaluate_vjp(self, cotangents, x, neg_x):
         if cotangents.check(x):
             cotangents.accumulate(x, -cotangents[neg_x])
 
