@@ -122,9 +122,9 @@ class frange():
             # enter new graph
             from csdl_alpha.api import manager
             self._recorder = manager.active_recorder
-            self._recorder._enter_subgraph(add_missing_variables=True)
+            self._recorder._enter_subgraph(add_missing_variables=True, name = 'loop')
             self._graph = self._recorder.active_graph
-            self._graph_node = self._recorder.active_graph_node
+            # self._graph_node = self._recorder.active_graph_node
 
             # initialize iteration variable:
             self.iteration_variable = IterationVariable(self.vals)
