@@ -254,8 +254,125 @@ def reverse(
         
     return jacobians
 
+
+def derivative(
+    ofs:Union[Variable, list[Variable]],
+    wrts:Union[Variable, list[Variable]],
+    mode:str = 'reverse',
+    as_block:bool = False,
+    graph:Graph = None)->Union[dict[Variable], dict[Variable,Variable], Variable]:
+    """Computes the derivatives of the output variables with respect to the input variables in CSDL.
+
+    Parameters
+    ----------
+    ofs : Union[Variable, list[Variable]]
+        Variables to take derivatives of.
+    wrts : Union[Variable, list[Variable]]
+        Variables to take derivatives with respect to.
+    mode : str, optional
+        'forward' or 'reverse' to forward or reverse mode differentiation, by default 'reverse'
+    graph : Graph, optional
+        Which graph to take derivatives of, by default the current active graph
+
+    Returns
+    -------
+    Union[dict[Variable], dict[Variable,Variable], Variable]
+        Returns the derivatives as CSDL variables. 
+        - If both ofs and wrts are lists, returns a dictionary of dictionaries.
+        - If only one is a list, returns a dictionary.
+        - If neither are lists, returns a single variable.
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = 3.0)
+    >>> y = csdl.Variable(value = 4.0)
+    >>> z = x*y
+    >>> dz = csdl.derivative(ofs = z, wrts = [x, y])
+    >>> dz_dx, dz_dy = dz[x], dz[y]
+    >>> dz_dx.value
+    array([[4.]])
+    >>> dz_dy.value
+    array([[3.]])
+
+    Take derivatives of derivatives
+
+    >>> dz2_dx2 = csdl.derivative(ofs = dz_dx, wrts = x)
+    >>> dz2_dx2.value
+    array([[0.]])
+    """
+    of_is_list = True
+    wrt_is_list = True
+    if not isinstance(ofs, (list, tuple)):
+        ofs = [ofs]
+        of_is_list = False
+    if not isinstance(wrts, (list, tuple)):
+        wrts = [wrts]
+        wrt_is_list = False
+
+    if mode == 'reverse':
+        output_dict = {}
+        for of in ofs:
+            deriv_of = reverse(of, wrts, graph)
+            for wrt in deriv_of:
+                output_dict[of, wrt] = deriv_of[wrt]
+    elif mode == 'forward':
+        raise NotImplementedError("Forward mode not implemented yet.")
+    else:
+        raise ValueError(f"Derivative mode {mode} not recognized.")
+
+    if as_block:
+        if len(ofs) == 1 and len(wrts) == 1:
+            return output_dict[ofs[0], wrts[0]]
+        else:
+            block_mat_list = []
+            for of in ofs:
+                row_list = []
+                for wrt in wrts:
+                    row_list.append(output_dict[of, wrt])
+                block_mat_list.append(row_list)
+
+            from csdl_alpha.src.operations.linalg.blockmat import blockmat
+            return blockmat(block_mat_list)
+
+    if of_is_list and wrt_is_list:
+        return_dict =  CustomDict(
+            output_dict,
+            error_message='indexing requires a tuple of Variable objects: derivatives[<of>, <wrt>]',
+        )
+    elif wrt_is_list:
+        return_dict = CustomDict(
+            {wrt: output_dict[ofs[0], wrt] for wrt in wrts},
+            error_message='indexing requires a Variable object: derivatives[<wrt>]'
+        )
+    elif of_is_list:
+        return_dict = CustomDict(
+            {of: output_dict[of, wrts[0]] for of in ofs},
+            error_message='indexing requires a Variable object: derivatives[<of>]'
+        )
+    else:
+        return_dict = output_dict[ofs[0], wrts[0]]
+
+    return return_dict
+
+
+class CustomDict(dict):
+    def __init__(self, *args, error_message = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.error_message = error_message
+
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError as e:
+            raise KeyError(f"{self.error_message}: {e}")
+
 class TestDerivative(csdl_tests.CSDLTest):
     
+    def test_docstring(self):
+        self.docstest(derivative)
+
     def test_functionality_scalar(self,):
         self.prep()
 
@@ -271,12 +388,12 @@ class TestDerivative(csdl_tests.CSDLTest):
         z = xy+x
         z.add_name('z2')
 
-        dz_dx = csdl.derivative.reverse(of = z, wrts = x)[x]
+        dz_dx = csdl.derivative(ofs = z, wrts = x)
         dz_dx.add_name('dz_dx')
         print(dz_dx.value) 
         print((y+1.0).value) 
 
-        dz2_dxy = csdl.derivative.reverse(of = dz_dx, wrts = y)[y]
+        dz2_dxy = csdl.derivative(ofs = dz_dx, wrts = y)
         print(dz2_dxy.value) # 1.0
 
         # recorder = csdl.get_current_recorder()
@@ -297,12 +414,12 @@ class TestDerivative(csdl_tests.CSDLTest):
         z = xy+x
         z.add_name('z2')
 
-        dz_dx = csdl.derivative.reverse(of = z, wrts = x)[x]
+        dz_dx = csdl.derivative(ofs = z, wrts = x)
         dz_dx.add_name('dz_dx')
         # print(dz_dx.value) 
         # print(np.diagflat((y+1.0).value)) 
 
-        dz2_dxy = csdl.derivative.reverse(of = dz_dx, wrts = y)[y]
+        dz2_dxy = csdl.derivative(ofs = dz_dx, wrts = y)
         # print(dz2_dxy.value) # 1.0
 
         # recorder = csdl.get_current_recorder()
@@ -402,7 +519,7 @@ class TestDerivative(csdl_tests.CSDLTest):
         s3 = csdl.average(x, axes=(1,2))
         t3 = np.average(x_val, axis=(1,2))
         compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
-        print(csdl.derivative.reverse(of = s3, wrts = x)[x].value)
+        print(csdl.derivative(ofs = s3, wrts = x).value)
 
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
@@ -422,7 +539,7 @@ class TestDerivative(csdl_tests.CSDLTest):
 
         compare_values = []
         x = csdl.solve_linear(A,b)
-        deriv = csdl.derivative.reverse(of = x, wrts = [b])[b]
+        deriv = csdl.derivative(ofs = x, wrts = [b])[b]
         print(deriv.value)
         compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
 
@@ -502,7 +619,7 @@ class TestDerivative(csdl_tests.CSDLTest):
         s1 = csdl.sub(x,y)
         s1.add_name('s1')
         t1 = np.array([x_val - y_val])
-        # csdl.derivative.reverse(of = s1, wrts = [x,y])
+        # csdl.derivative(ofs = s1, wrts = [x,y])
         compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's3')]
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
@@ -535,34 +652,33 @@ class TestDerivative(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(z, x_val/y_val[0,0])]
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
-    def issue(self,):
-        # Define variables: using openmdao solved optimization values
-        import csdl_alpha as csdl
-        z1 = csdl.Variable(name = 'z1', value = 1.97763888)
-        z2 = csdl.Variable(name = 'z2', value = 8.83056605e-15)
-        x = csdl.Variable(name = 'x', value = 0.0)
-        y2 = csdl.ImplicitVariable(name = 'y2', value = 1.0)
+    # def issue(self,):
+    #     # Define variables: using openmdao solved optimization values
+    #     import csdl_alpha as csdl
+    #     z1 = csdl.Variable(name = 'z1', value = 1.97763888)
+    #     z2 = csdl.Variable(name = 'z2', value = 8.83056605e-15)
+    #     x = csdl.Variable(name = 'x', value = 0.0)
+    #     y2 = csdl.ImplicitVariable(name = 'y2', value = 1.0)
 
-        # Define each "component" from the example
-        with csdl.namespace('Discipline 1'):
-            y1 = z1**2 + z2 + x - 0.2*y2
-            y1.add_name('y1')
+    #     # Define each "component" from the example
+    #     with csdl.namespace('Discipline 1'):
+    #         y1 = z1**2 + z2 + x - 0.2*y2
+    #         y1.add_name('y1')
 
-        with csdl.namespace('Discipline 2'):
-            residual = csdl.sqrt(y1) + z1 + z2 - y2
-            residual.add_name('residual')
+    #     with csdl.namespace('Discipline 2'):
+    #         residual = csdl.sqrt(y1) + z1 + z2 - y2
+    #         residual.add_name('residual')
 
-        # Specifiy coupling
-        with csdl.namespace('Couple'):
-            solver = csdl.nonlinear_solvers.GaussSeidel()
-            solver.add_state(y2, residual, state_update=y2+residual, tolerance=1e-8)
-            solver.run()
+    #     # Specifiy coupling
+    #     with csdl.namespace('Couple'):
+    #         solver = csdl.nonlinear_solvers.GaussSeidel()
+    #         solver.add_state(y2, residual, state_update=y2+residual, tolerance=1e-8)
+    #         solver.run()
 
-        dy1dx = csdl.derivative.reverse(of = y1, wrt = x) # What should this value be???? Should this go through the nonlinear solver?? or stay inside the residual function???
+    #     dy1dx = csdl.derivative(ofs = y1, wrt = x) # What should this value be???? Should this go through the nonlinear solver?? or stay inside the residual function???
         # dy1dx is not part of the residual function graph so it should be IFTed
 
-    # def test_docstring(self):
-    #     self.docstest(add)
+
 
 if __name__ == '__main__':
     test = TestDerivative()

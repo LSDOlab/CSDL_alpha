@@ -63,7 +63,7 @@ def verify_derivatives_inline(
     analytical_derivative_values = {}
     start = time.time()
     for of in ofs:
-        deriv = csdl.derivative.reverse(of, wrts=wrts)
+        deriv = csdl.derivative(ofs = of, wrts=wrts)
         for wrt in wrts:
             analytical_derivative_values[(of, wrt)] = deriv[wrt].value
             # print(f"Analytical derivative of {of.name} with respect to {wrt.name}: \n{deriv.value}\n")

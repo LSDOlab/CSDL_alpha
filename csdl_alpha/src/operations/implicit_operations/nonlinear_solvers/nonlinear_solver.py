@@ -331,9 +331,9 @@ class NonlinearSolver(object):
                 current_residual_block = []
 
                 if for_deriv:
-                    deriv = csdl.derivative.reverse(residual, states_list, graph = self.residual_graph)
+                    deriv = csdl.derivative(residual, states_list, graph = self.residual_graph)
                 else:
-                    deriv = csdl.derivative.reverse(residual, states_list)
+                    deriv = csdl.derivative(residual, states_list)
 
                 for _state in states_list:
                     current_residual_block.append(deriv[_state])

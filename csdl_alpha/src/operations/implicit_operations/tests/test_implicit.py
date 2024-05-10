@@ -191,7 +191,7 @@ class TestImplicit(csdl_tests.CSDLTest):
         y_sol = np.array([np.sqrt((-1+np.sqrt(5))/2)])
 
         with csdl.namespace('total_deriv'):
-            deriv = csdl.derivative.reverse(sum_states, [param])
+            deriv = csdl.derivative(sum_states, [param])
 
         self.run_tests(
             compare_values = [
@@ -252,7 +252,7 @@ class TestImplicit(csdl_tests.CSDLTest):
         y_sol = np.array([np.sqrt((-1+np.sqrt(5))/2)])
 
         with csdl.namespace('total_deriv'):
-            deriv = csdl.derivative.reverse(sum_states, [param])
+            deriv = csdl.derivative(sum_states, [param])
 
         self.run_tests(
             compare_values = [
