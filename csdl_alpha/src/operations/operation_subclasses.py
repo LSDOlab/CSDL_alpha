@@ -1,4 +1,5 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
+# from csdl_alpha.src.graph.graph import Graph
 import numpy as np
 from csdl_alpha.utils.inputs import variablize
 

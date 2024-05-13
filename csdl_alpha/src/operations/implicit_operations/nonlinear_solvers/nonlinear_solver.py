@@ -5,7 +5,7 @@ import csdl_alpha.utils.error_utils as error_utils
 from csdl_alpha.utils.error_utils import GraphError
 import numpy as np
 
-from csdl_alpha.src.operations.derivative.derivative import VarTangents
+from csdl_alpha.src.operations.derivative.bookkeeping import VarTangents
 
 from csdl_alpha.utils.typing import VariableLike
 from typing import Union, Any
