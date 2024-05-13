@@ -41,7 +41,7 @@ class IterationVariable(Variable):
 
 class Loop(SubgraphOperation):
 
-    def __init__(self, inputs, outputs, graph, vals, iter_var, loop_vars) -> None:
+    def __init__(self, inputs, outputs, graph, vals, iter_var, loop_vars, parent:'Loop'=None) -> None:
         super().__init__()
         self.name = 'loop'
         self.inputs = inputs
@@ -53,6 +53,9 @@ class Loop(SubgraphOperation):
         self.loop_vars = loop_vars # (input node in graph, input for first iter, input for subsiquent iters)
         self.has_reset = False
         self.loop_var_history = {loop_var:[] for loop_var in loop_vars}
+        
+        self.parent = parent
+        
         self._add_outputs_to_graph()
         self._add_to_graph()
         self.assign_subgraph(graph)
@@ -68,6 +71,8 @@ class Loop(SubgraphOperation):
 
         # run loop
         for i in range(len(self.vals)):
+            if self.parent is not None: 
+                self.parent.compute_iteration(len(self.vals) - i)
             for loop_var in self.loop_vars:
                 if i == 0:
                     loop_var[0].value = loop_var[1].value
@@ -77,7 +82,12 @@ class Loop(SubgraphOperation):
             for loop_var in self.loop_vars:
                 loop_var[0].value = loop_var[2].value
         return [output.value for output in self.outputs]
-
+    
+    def compute_iteration(self, iteration):
+        for loop_var in self.loop_vars:
+            loop_var[0].value = self.loop_var_history[loop_var][iteration]
+        self.iter_var.set_value(self.vals[iteration])
+        self.graph.execute_inline()
 
 class frange():
     def __init__(self, arg1:int=None, arg2:int=None, increment:int=1, *, vals:list[int] = None):
