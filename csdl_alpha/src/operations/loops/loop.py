@@ -62,6 +62,11 @@ class Loop(SubgraphOperation):
             self.recorder.active_graph.add_node(output)
 
     def compute_inline(self, *args):
+        # clear loop var history
+        for hist in self.loop_var_history.values():
+            hist.clear()
+
+        # run loop
         for i in range(len(self.vals)):
             for loop_var in self.loop_vars:
                 if i == 0:
