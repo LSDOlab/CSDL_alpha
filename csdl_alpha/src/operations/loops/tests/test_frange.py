@@ -115,6 +115,28 @@ class Testfrange(csdl_tests.CSDLTest):
             ]
         )
 
+    def test_loop_var_history(self):
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a = csdl.Variable(value=2, name='a')
+        b = csdl.Variable(value=3, name='b')
+        loop_i = frange(0, 10)
+        for i in loop_i:
+            b = a + b
+        b_history = list(loop_i.op.loop_var_history.values())[0]
+
+        a_np = np.array([2.])
+        b_np = np.array([3.])
+        b_history_np = []
+        for i in range(0, 10):
+            b_history_np.append(b_np)
+            b_np = a_np + b_np
+            
+        for b, b_np in zip(b_history, b_history_np):
+            assert np.allclose(b, b_np)
 
 
 # class TestVRange(csdl_tests.CSDLTest):

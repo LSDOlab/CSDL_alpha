@@ -52,6 +52,7 @@ class Loop(SubgraphOperation):
         self.iter_var = iter_var
         self.loop_vars = loop_vars # (input node in graph, input for first iter, input for subsiquent iters)
         self.has_reset = False
+        self.loop_var_history = {loop_var:[] for loop_var in loop_vars}
         self._add_outputs_to_graph()
         self._add_to_graph()
         self.assign_subgraph(graph)
@@ -62,9 +63,10 @@ class Loop(SubgraphOperation):
 
     def compute_inline(self, *args):
         for i in range(len(self.vals)):
-            if i == 0:
-                for loop_var in self.loop_vars:
+            for loop_var in self.loop_vars:
+                if i == 0:
                     loop_var[0].value = loop_var[1].value
+                self.loop_var_history[loop_var].append(loop_var[0].value)
             self.iter_var.set_value(self.vals[i])
             self.graph.execute_inline()
             for loop_var in self.loop_vars:
