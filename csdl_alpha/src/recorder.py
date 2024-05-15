@@ -88,7 +88,7 @@ class Recorder:
 
         self.active_graph.execute_inline()
 
-    def gather_insights(self):
+    def gather_insights(self)->dict:
         """
         UNTESTED!
         """
@@ -142,12 +142,6 @@ class Recorder:
                         if len(current_graph.predecessors(node)) == 0:
                             information_dict['input_nodes'].add(node)
                         
-                    # track all graphs that the node is in
-                    if node not in information_dict['nodes2graphs']:
-                        information_dict['nodes2graphs'][node] = [current_graph]
-                    else:
-                        information_dict['nodes2graphs'][node].append(current_graph)
-                        
                 else:
                     information_dict['analytics']['number of operations'] += 1
                     if isinstance(node, SubgraphOperation):
@@ -156,6 +150,12 @@ class Recorder:
                         information_dict['graph_tree'][current_graph].append((node, subgraph))
                     else:
                         current_num_ops += 1
+
+                # track all graphs that the node is in
+                if node not in information_dict['nodes2graphs']:
+                    information_dict['nodes2graphs'][node] = [current_graph]
+                else:
+                    information_dict['nodes2graphs'][node].append(current_graph)
             information_dict['graph_tree'][current_graph].append((None, f'(+{current_num_ops} ops)'))
 
         return information_dict
@@ -364,12 +364,107 @@ class Recorder:
         self.active_graph_node = parent_graph_node
         self.active_graph = parent_graph_node.value
 
-    def visualize_graph(self, filename: str = 'image', trim_loops = False, format = 'svg'):
+    def visualize_graph(
+            self,
+            filename: str = 'image',
+            visualize_style: str = 'namespace',
+            trim_loops = False,
+            format = 'svg',
+            )->None:
         """
         Visualizes the graph.
-        """
-        self.active_graph.visualize(filename, trim_loops=trim_loops, format = format)
+        - 'namespace' visualizes the top-level graph where nodes are grouped by namespace
+        - 'hierarchical' visualizes all graphs including subgraph operations for debugging. Always saves as a .svg file.
 
+        Parameters
+        ----------
+        filename : str, optional
+            The filename to save the visualization to, by default 'image'
+        visualize_style : str, optional
+            The style of visualization, by default 'namespace'
+        trim_loops : bool, optional
+            Whether to trim loops, by default False
+        format : str, optional
+            The format of the visualization, by default 'svg'
+
+        """
+        if visualize_style == 'namespace':
+            self.active_graph.visualize(filename, trim_loops=trim_loops, format = format)
+        elif visualize_style == 'hierarchical':
+            self.visualize_hierarchical(filename)
+
+        else:
+            raise ValueError(f"Invalid visualize_style: {visualize_style}. Must be 'namespace' or 'hierarchical'")
+
+    def visualize_hierarchical(self, filename):
+        import pydot
+
+        # Get the graph tree structure
+        dot = pydot.Dot(graph_type='digraph')
+        insights = self.gather_insights()
+
+        # utility functions for naming nodes
+        def get_raw_node_string(node):
+            return str(node).split()[-1][:-1]
+
+        def build_unique_node_name(node, parent):
+            node_id = get_raw_node_string(node)
+            parent_id = get_raw_node_string(parent)
+            return f'{str(node_id)}_{str(parent_id)}'
+        
+        def name_single_node(node):
+            return f'{get_raw_node_string(node)}_{node.name}'
+
+        def name_node(node):
+            from csdl_alpha.src.graph.variable import Variable
+            attr_dict = {}
+            attr_dict['label'] = name_single_node(node)
+
+            if isinstance(node, Variable):
+                attr_dict['shape'] = 'ellipse'
+            else:
+                attr_dict['shape'] = 'rectangle'
+            return attr_dict
+
+        # Traverse the graph hierarchy and plot each subgraph to a cluster
+        # TODO: How do we actually create the tree structure? 
+        next_tree_nodes = [(None, self.get_root_graph(), build_unique_node_name(None, None))]
+        while len(next_tree_nodes) > 0:
+            popped = next_tree_nodes.pop(0)
+            g = popped[1]
+            parent_op = popped[0]
+            parent_op_name = popped[2]
+
+            if parent_op is None:
+                cluster_name = 'root'
+            else:
+                cluster_name = name_single_node(parent_op)
+            cluster = pydot.Cluster(str(parent_op), label=cluster_name)
+            
+            for node in g.node_table:
+                node_name = build_unique_node_name(node, parent_op)
+                dot_node = pydot.Node(node_name, **name_node(node))
+                cluster.add_node(dot_node)
+
+                # Add upstream edges to the dot graph
+                node_index = g.node_table[node]
+                for pred in g.rxgraph.predecessors(node_index):
+                    pred_name = build_unique_node_name(pred, parent_op)
+                    edge = pydot.Edge(pred_name, node_name)
+                    dot.add_edge(edge)
+
+                # if g.in_degree(node) == 0:
+                #     edge = pydot.Edge(parent_op_name, node_name)
+                #     dot.add_edge(edge)
+
+            for child in insights['graph_tree'][g]:
+                if isinstance(child[1], Graph):
+                    parent_op_name = build_unique_node_name(child[0], parent_op)
+                    next_tree_nodes.append((*child, parent_op_name))
+
+            dot.add_subgraph(cluster)
+        dot.write_svg(f'{filename}.svg')
+        
     def visualize_adjacency_matrix(self):
         """
         Visualizes the adjacency matrix of the graph.
