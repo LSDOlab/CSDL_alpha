@@ -2,6 +2,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 # from csdl_alpha.src.graph.graph import Graph
 import numpy as np
 from csdl_alpha.utils.inputs import variablize
+from csdl_alpha.src.graph.variable import Variable, Constant
 
 @set_properties(elementwise = True, diagonal_jacobian = True)
 class ElementwiseOperation(Operation):
@@ -103,8 +104,28 @@ class ComposedOperation(SubgraphOperation):
         outputs = super().finalize_and_return_outputs(skip_inline = True)
         return outputs
     
-    def set_inline_values(self):
-        self.get_subgraph().execute_inline()
+    def set_inline_values(self, debug = False):
+        self.get_subgraph().execute_inline(debug=debug)
+
+        keep_set = set(self.outputs).union(set(self.inputs))
+        subgraph = self.get_subgraph()
+        for node in subgraph.node_table:
+            if isinstance(node, Variable):
+
+                do_not_delete = False
+                if subgraph.in_degree(node) == 0:
+                    do_not_delete = True
+                if isinstance(node, Constant):
+                    do_not_delete = True
+                
+                for pred in subgraph.predecessors(node):
+                    if isinstance(pred, SubgraphOperation):
+                        do_not_delete = True
+
+                if not do_not_delete:
+                   if node not in keep_set:
+                        # print([node2 for node2 in keep_set])
+                        node.value = None
 
     def evaluate_vjp(self, cotangents, *inputs_outputs):
         # TODO: extremely messy and crappy. FIX!
@@ -153,8 +174,9 @@ class ComposedOperation(SubgraphOperation):
         def composed_vjp(*cotangets_and_inputs):
             output_cotangents = cotangets_and_inputs[:num_cots]
             original_inputs = cotangets_and_inputs[num_cots:]
-            # print(original_inputs)
+
             outputs_again = self.evaluate_composed(*original_inputs)
+            
             if not isinstance(outputs_again, tuple):
                 outputs_again = (outputs_again,)
 
@@ -163,9 +185,8 @@ class ComposedOperation(SubgraphOperation):
                 seeds.append((output_var, output_cotangents[i]))
             
             rec = csdl.get_current_recorder()
-            
+
             wrts_composed = vjp(seeds, wrts, rec.active_graph)
-            # rec.visualize_graph(format = 'png')
             
             outputs_composed = []
             for wrt_composed, wrt_cotangent in wrts_composed.items():
@@ -190,9 +211,6 @@ class ComposedOperation(SubgraphOperation):
                 self.name = f'vjp_{name}'
             def evaluate_composed(self, *args):
                 outs = composed_vjp(*args)
-                # import csdl_alpha as csdl
-                # rec = csdl.get_current_recorder()
-                # rec.visualize_graph(format = 'png')
                 return outs
             
         wrt_derivs = VJPInputsOutputs(*composed_inputs).finalize_and_return_outputs()
