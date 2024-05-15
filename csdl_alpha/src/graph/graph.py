@@ -25,6 +25,9 @@ class Graph():
 
     def in_degree(self, node):
         return self.rxgraph.in_degree(self.node_table[node])
+    
+    def out_degree(self, node):
+        return self.rxgraph.out_degree(self.node_table[node])
 
     def add_edge(self, node_from, node_to):
         from_ind = self.node_table[node_from]
@@ -44,7 +47,7 @@ class Graph():
         """
         return self.rxgraph.predecessors(self.node_table[node])
 
-    def execute_inline(self, subset = None):
+    def execute_inline(self, subset = None, debug = False):
         """
         executes the graph inline
         """
@@ -64,11 +67,30 @@ class Graph():
 
             # print(get_node_info_string(node, self))
             if is_operation(node):
-                # print(f"Executing {node}")
-                # print('\t', *[input.value for input in node.inputs])
-                # print('\t', *[output.value for output in node.outputs])
-                node.set_inline_values()
-                # print('\t', *[output.value for output in node.outputs])
+
+                if debug:
+                    print(f"Executing {node} ({node.name})")
+                    print(f"Inputs:")
+                    for input in node.inputs:
+                        in_name = input.name if input.name is not None else ' '
+                        print(f"\t{input}: {input.value}")
+                    from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
+                    if isinstance(node, ComposedOperation):
+                        print(f'\nCOMPOSED START: {node} ({node.name})')
+                        node.set_inline_values(debug=True)
+                        print(f'COMPOSED END: {node} ({node.name})')
+                    else:
+                        node.set_inline_values()
+                    print(f"Outputs:")
+                    for output in node.outputs:
+                        out_name = output.name if output.name is not None else ' '
+                        print(f"\t{output} ({out_name}): {output.value}")
+                        # if output.value is None:
+                        #     node.get_subgraph().visualize('inline')
+                        #     exit()
+                    print()
+                else:
+                    node.set_inline_values()
 
     def update_downstream(self, node):
         descendants = rx.descendants(self.rxgraph, self.node_table[node])
