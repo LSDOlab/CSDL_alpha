@@ -61,8 +61,8 @@ class BroadcastDiv2(Operation):
         return x/y
 
     def evaluate_vjp(self,cotangents, x, y, z):
+        import csdl_alpha as csdl
         if cotangents.check(x):
-            import csdl_alpha as csdl
             cotangents.accumulate(x, cotangents[z]/y)
         if cotangents.check(y):
             cotangents.accumulate(y, -csdl.sum(cotangents[z]*z)/y)

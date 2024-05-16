@@ -7,6 +7,7 @@ import numpy as np
 def verify_derivatives_inline(
         ofs:list[Variable],
         wrts:list[Variable],
+        step_size:float,
         of_wrt_meta_data:dict = None,
         print_results:bool = True,
         raise_on_error:bool = True,
@@ -52,7 +53,7 @@ def verify_derivatives_inline(
     graph = csdl.get_current_recorder().active_graph
     start = time.time()
     for wrt in wrts:
-        finited_differenced_values_wrts = finite_difference_inline(ofs, wrt, graph)
+        finited_differenced_values_wrts = finite_difference_inline(ofs, wrt, graph, tolerance=step_size)
         for of in ofs:
             finite_differenced_values[(of, wrt)] = finited_differenced_values_wrts[of]['jacobian']
     end = time.time()
@@ -62,7 +63,7 @@ def verify_derivatives_inline(
     analytical_derivative_values = {}
     start = time.time()
     for of in ofs:
-        deriv = csdl.derivative.reverse(of, wrts=wrts)
+        deriv = csdl.derivative(ofs = of, wrts=wrts)
         for wrt in wrts:
             analytical_derivative_values[(of, wrt)] = deriv[wrt].value
             # print(f"Analytical derivative of {of.name} with respect to {wrt.name}: \n{deriv.value}\n")

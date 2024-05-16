@@ -193,9 +193,10 @@ def maximum(*args, axes=None, rho=20.):
         else:
             out_shape = tuple([x for i, x in enumerate(args[0].shape) if i not in axes])
             if len(out_shape) == 0:
-                raise ValueError('It is inefficient to find the maximum of a tensor Variable along all axes. \
-                                 Use maximum(A) to find the maximum of all tensor entries.')
-        
+                # raise ValueError('It is inefficient to find the maximum of a tensor Variable along all axes. \
+                #                  Use maximum(A) to find the maximum of all tensor entries.')
+                out_shape = (1,)
+                axes = None
         op = Maximum(validate_and_variablize(args[0]), axes=axes, out_shape=out_shape, rho=rho)
     else:
         # axes is None for multiple variables
@@ -229,6 +230,10 @@ class TestMaximum(csdl_tests.CSDLTest):
         s1 = csdl.maximum(x)
         s1.add_name('s1')
         t1 = np.array([15.0])
+        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
+
+        # maximum of a single tensor variable
+        s1 = csdl.maximum(x, axes=(0,1))
         compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
 
         # maximum of a single tensor constant

@@ -18,7 +18,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         # print(np.cos(2.0))
         # print(np.linalg.norm(np.sin(2.0)))
 
-        dy_dx = csdl.derivative.reverse(y, [x0, x1])
+        dy_dx = csdl.derivative(y, [x0, x1])
         dy_dx0 = dy_dx[x0]
         dy_dx1 = dy_dx[x1]
 
@@ -42,13 +42,14 @@ class TestDeriv(csdl_tests.CSDLTest):
         x1.add_name('x1')
 
         y = csdl.norm(x0[[0,1], :]) - csdl.sin(x1)
+        # y = x0+x1
         y.add_name('y')
         with csdl.Namespace('deriv1'):
-            dy_dx1 = csdl.derivative.reverse(y, [x1, x0])[x1]
+            dy_dx1 = csdl.derivative(y, [x1, x0])[x1]
             dy_dx1.add_name('dy_dx1')
 
         with csdl.Namespace('deriv2'):
-            d2y_dx12 = csdl.derivative.reverse(dy_dx1, [x1])[x1]
+            d2y_dx12 = csdl.derivative(dy_dx1, [x1])[x1]
             d2y_dx12.add_name('d2y_dx12')
 
         # recorder = csdl.get_current_recorder()
@@ -74,7 +75,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         y1 = y-csdl.exp(x1)**(x1*x1)
         y2 = csdl.tensordot(y1, x0, axes=([1],[1]),)
         with csdl.Namespace('deriv1'):
-            dy_dx1 = csdl.derivative.reverse(y2, [x1, x0])[x1]
+            dy_dx1 = csdl.derivative(y2, [x1, x0])[x1]
             dy_dx1.add_name('dy_dx1')
 
         y3 = csdl.maximum(csdl.absolute(dy_dx1/100000))
@@ -95,26 +96,50 @@ class TestDeriv(csdl_tests.CSDLTest):
         y2 = x1-x0
         y2.add_name('y2')
         with csdl.Namespace('deriv1'):
-            dy_dx1 = csdl.derivative.reverse(y2, [x1, x0])[x1]
+            dy_dx1 = csdl.derivative(y2, [x1, x0])[x1]
             dy_dx1.add_name('dy_dx1')
 
         with csdl.Namespace('deriv2'):
-            dy_dx2 = csdl.derivative.reverse(dy_dx1, [x1])[x1]
+            dy_dx2 = csdl.derivative(dy_dx1, [x1])[x1]
             dy_dx2.add_name('dy2_dx2')
-
 
         compare_values = []
         compare_values += [csdl_tests.TestingPair(dy_dx2, dy_dx2.value)]
         compare_values += [csdl_tests.TestingPair(dy_dx1, np.ones((1,1)))]
         self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
+    def test_deriv_composed2(self):
+        """
+        Test single derivatives with composed operations
+        """
+        self.prep()
+
+        x0 = csdl.Variable(name = 'x0', value=np.array([1.0, 2.0]))
+        x1 = csdl.Variable(name = 'x1', value=np.array([3.0, -2.0]))
+
+        # y2 = x1-x1
+        y2 = csdl.tensordot(x1, x1)
+        y2.add_name('y2')
+        with csdl.Namespace('deriv1'):
+            dy_dx1 = csdl.derivative(y2, [x1, x0])[x1]
+            dy_dx1.add_name('dy_dx1')
+
+        with csdl.Namespace('deriv2'):
+            dy_dx2 = csdl.derivative(csdl.sum(dy_dx1), [x1])[x1]
+            dy_dx2.add_name('dy2_dx2')
+
+        compare_values = []
+        compare_values += [csdl_tests.TestingPair(dy_dx2, dy_dx2.value)]
+        compare_values += [csdl_tests.TestingPair(dy_dx1, dy_dx1.value)]
+        self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
 if __name__ == '__main__':
     t = TestDeriv()
     t.test_deriv()
     t.test_deriv_2()
     t.test_deriv_3()
-    t.test_deriv_composed()
+    # t.test_deriv_composed()
+    t.test_deriv_composed2()
 
 
 

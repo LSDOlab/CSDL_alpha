@@ -1,4 +1,5 @@
 from csdl_alpha.src.graph.graph import Graph
+from csdl_alpha.utils.inputs import get_type_string
 import inspect
 
 class Recorder:
@@ -54,14 +55,16 @@ class Recorder:
         self.objectives = {}
 
         self.namespace_tree = Namespace(None)
-        self.graph_tree = Tree(Graph())
-
-        self.active_graph_node = self.graph_tree
-
-        self.active_graph:Graph = self.active_graph_node.value
         self.active_namespace = self.namespace_tree
 
+        # TODO: unbloat...
+        self.graph_tree = Tree(Graph())
+        self.active_graph:Graph = self.graph_tree.value
         self.node_graph_map = {}
+        self.active_graph_stack = [self.active_graph]
+        self.graph_to_tree_node_map = {
+            self.active_graph: self.graph_tree
+        }
 
         manager.constructed_recorders.append(self)
         
@@ -230,23 +233,47 @@ class Recorder:
         self.active_namespace = self.active_namespace.parent
         self.active_namespace = self.active_namespace
 
-    def _enter_subgraph(self, add_missing_variables: bool = False, name:str = None):
+    def _enter_subgraph(
+            self,
+            add_missing_variables: bool = False,
+            name:str = None,
+            graph:Graph = None,
+        ):
         """
         Enters a new subgraph.
         """
         #TODO: TEST TEST TEST TEST
 
-        self.active_graph_node = self.active_graph_node.add_child(Graph(name = name))
-        self.active_graph = self.active_graph_node.value
-        self.active_graph.add_missing_variables = add_missing_variables
-        self.active_graph.inputs = []
+        if not isinstance(add_missing_variables, bool):
+            raise TypeError(f"add_missing_variables must be a boolean. Got {get_type_string(add_missing_variables)}")
+        if name is not None and not isinstance(name, str):
+            raise TypeError(f"name must be a string. Got {get_type_string(name)}")
+        if graph is not None and not isinstance(graph, Graph):
+            raise TypeError(f"graph must be a Graph object. Got {get_type_string(graph)}")
+
+        if graph is None:
+            # Add new graph to tree
+            active_graph_node = self.graph_to_tree_node_map[self.active_graph].add_child(Graph(name = name))
+            self.active_graph = active_graph_node.value
+
+            # Add new graph to graph to tree node map
+            self.graph_to_tree_node_map[self.active_graph] = active_graph_node
+            self.active_graph_stack.append(self.active_graph)
+            self.active_graph.add_missing_variables = add_missing_variables
+            self.active_graph.inputs = []
+        else:
+            self.active_graph = graph
+            self.active_graph_stack.append(self.active_graph)
 
     def _exit_subgraph(self):
         """
         Exits the current subgraph.
         """
-        self.active_graph_node = self.active_graph_node.parent
-        self.active_graph = self.active_graph_node.value
+        self.active_graph_stack.pop()
+        self.active_graph = self.active_graph_stack[-1]
+
+        # self.active_graph_node = self.active_graph_node.parent
+        # self.active_graph = self.active_graph_node.value
 
     def _add_node(self, node):
         """
@@ -283,13 +310,13 @@ class Recorder:
                 graph.add_node(node_from)
                 if not node_from in graph.inputs: graph.inputs.append(node_from)
             else:
-                raise ValueError(f"Node {node_from} not in graph")
+                raise ValueError(f"Node {node_from.name} not in graph")
         if node_to not in graph.node_table:
             # if graph.add_missing_variables and isinstance(node_to, Variable):
             #     graph.add_node(node_to)
             # else:
             #     raise ValueError(f"Node {node_to} not in graph")
-            raise ValueError(f"Node {node_to} not in graph")
+            raise ValueError(f"Node {node_to.name} not in graph")
         graph.add_edge(node_from, node_to)
 
     def _add_design_variable(self, variable, upper, lower, scalar):

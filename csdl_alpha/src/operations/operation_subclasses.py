@@ -1,5 +1,6 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
 import numpy as np
+from csdl_alpha.utils.inputs import variablize
 
 @set_properties(elementwise = True, diagonal_jacobian = True)
 class ElementwiseOperation(Operation):
@@ -61,7 +62,21 @@ class SubgraphOperation(Operation):
 class ComposedOperation(SubgraphOperation):
 
     def __init__(self,*args, **kwargs):
-        super().__init__(*args, **kwargs)
+        
+        unique_args = set()
+        new_args = []
+        import csdl_alpha as csdl
+        for arg in args:
+            arg = variablize(arg)
+            if arg in unique_args:
+                new_arg = csdl.copyvar(arg)
+                new_args.append(new_arg)
+                unique_args.add(new_arg)
+            else:
+                unique_args.add(arg)
+                new_args.append(arg)
+        
+        super().__init__(*new_args, **kwargs)
 
     def evaluate_composed(self, *args):
         raise NotImplementedError("Composed operations must implement the evaluate_composed method")
@@ -119,6 +134,7 @@ class ComposedOperation(SubgraphOperation):
         # All the inputs we pass into the composed operation
         composed_inputs = []
         for of in outputs:
+            cotangents.initialize(of)
             if cotangents[of] is None:
                 cotangents.accumulate(of, csdl.Variable(value = np.zeros(of.shape)))
             composed_inputs.append(cotangents[of]) # Cotangents we need to propagate by
