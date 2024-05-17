@@ -43,7 +43,7 @@ class LeftBroadcastPower(Operation):
     def evaluate_vjp(self, cotangents, x, y, z):
         if cotangents.check(x):
             import csdl_alpha as csdl
-            cotangents.accumulate(x, csdl.sum(cotangents[z]*y*z/x))
+            cotangents.accumulate(x, csdl.sum(cotangents[z]*y*x**(y-1)))
         if cotangents.check(y):
             import csdl_alpha as csdl
             cotangents.accumulate(y, cotangents[z]*z*csdl.log(x))
@@ -65,7 +65,7 @@ class RightBroadcastPower(Operation):
     def evaluate_vjp(self, cotangents, x, y, z):
         if cotangents.check(x):
             import csdl_alpha as csdl
-            cotangents.accumulate(x, cotangents[z]*y*z/x)
+            cotangents.accumulate(x, cotangents[z]*y*x**(y-1))
         if cotangents.check(y):
             import csdl_alpha as csdl
             cotangents.accumulate(y, csdl.sum(cotangents[z]*z*csdl.log(x)))
