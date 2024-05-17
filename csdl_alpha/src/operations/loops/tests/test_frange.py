@@ -23,7 +23,6 @@ class Testfrange(csdl_tests.CSDLTest):
         x_np = a_np+b_np
 
         recorder = csdl.get_current_recorder()
-        recorder.visualize_graph('test_frange')
 
         self.run_tests(
             compare_values=[
@@ -189,9 +188,11 @@ class Testfrange(csdl_tests.CSDLTest):
             b = b + j
             c = c + i*j
 
-        assert a.value == np.array([6])
-        assert b.value == np.array([22])
-        assert c.value == np.array([38])
+        compare_values = []
+        compare_values += [csdl_tests.TestingPair(a, np.array([6]))]
+        compare_values += [csdl_tests.TestingPair(b, np.array([22]))]
+        compare_values += [csdl_tests.TestingPair(c, np.array([38]))]
+        self.run_tests(compare_values=compare_values)
 
     def test_stack(self):
         self.prep()
@@ -208,9 +209,87 @@ class Testfrange(csdl_tests.CSDLTest):
             c = a*2
         x = a+b
 
+        # recorder = csdl.get_current_recorder()
+        # recorder.visualize_graph('stacked', visualize_style='hierarchical')
+
         loop_vars = loop.op.loop_vars
         b_stack = loop_vars[1][2]
         assert np.all(b_stack.value == np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
+        assert b_stack == loop.op.get_stacked(b)
+
+    def test_stack_multi(self):
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a = csdl.Variable(value=1, name='a')
+        b = csdl.Variable(value=1, name='b')
+        c = csdl.Variable(value=4, name='c')
+        loop = frange(0,10)
+        
+        for i in loop:
+            b = a + b
+            c = b+c
+        x = a+b
+
+        # recorder = csdl.get_current_recorder()
+        # recorder.visualize_graph('stacked', visualize_style='hierarchical')
+
+        loop_vars = loop.op.loop_vars
+        b_stack = loop_vars[2][2]
+        c_stack = loop.op.get_stacked(c)
+
+        real_b = np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]])
+        real_c = [4]
+        for i in range(9):
+            real_c.append(real_b[i+1][0]+real_c[i])
+
+        assert np.all(b_stack.value == real_b)
+        assert np.all(c_stack.value == np.array(real_c).reshape(10,1))
+        assert b_stack == loop.op.get_stacked(b)
+
+
+    def test_stack_multidim(self):
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a_val = np.arange(6).reshape(2,3)-1
+        b_val = np.arange(6).reshape(2,3)
+        c_val = np.ones(3)*3.0
+        c_val[0] = 2.0
+
+        a = csdl.Variable(value=a_val, name='a')
+        b = csdl.Variable(value=b_val, name='b')
+        c = csdl.Variable(value=c_val, name='c')
+        loop = frange(0,4)
+        
+        for i in loop:
+            b = a + b
+            c = b[1]+c
+            b = b + csdl.expand(c, out_shape=(2,3), action='i->ji')
+        x = a+b
+
+        # recorder = csdl.get_current_recorder()
+        # recorder.visualize_graph('stacked', visualize_style='hierarchical')
+
+        loop_vars = loop.op.loop_vars
+        b_stack = loop.op.get_stacked(b)
+        c_stack = loop.op.get_stacked(c)
+
+        real_b = np.zeros((4,2,3))
+        real_c = np.zeros((4,3))
+        for i in range(4):
+            real_b[i] = b_val
+            real_c[i] = c_val
+            b_val = a_val + b_val
+            c_val = b_val[1]+c_val
+            b_val = b_val + c_val
+
+        assert np.all(b_stack.value == real_b)
+        assert np.all(c_stack.value == real_c)
         assert b_stack == loop.op.get_stacked(b)
 
 if __name__ == '__main__':
@@ -220,11 +299,11 @@ if __name__ == '__main__':
     test.test_range_inputs()
     test.test_setitem()
     test.test_setget()
-    # test.test_loop_var_history()
-    # test.test_compute_iteration()
     test.test_custom_vals()
     test.test_multi_vals()
     test.test_stack()
+    test.test_stack_multi()
+    test.test_stack_multidim()
 
 # class TestVRange(csdl_tests.CSDLTest):
 #     def test_simple_loop(self):
