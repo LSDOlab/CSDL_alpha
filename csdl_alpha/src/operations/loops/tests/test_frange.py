@@ -211,6 +211,7 @@ class Testfrange(csdl_tests.CSDLTest):
         loop_vars = loop.op.loop_vars
         b_stack = loop_vars[1][2]
         assert np.all(b_stack.value == np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
+        assert b_stack == loop.op.get_stacked(b)
 
 if __name__ == '__main__':
     test = Testfrange()

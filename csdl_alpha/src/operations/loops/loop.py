@@ -74,10 +74,30 @@ class Loop(SubgraphOperation):
         self.has_reset = False
         self.loop_var_history = {loop_var:[] for loop_var in loop_vars}
         self.length = len(self.vals[0])
+
+        self.loop_var_lookup = {}
+        for i in range(int(len(loop_vars)/2)):
+            self.loop_var_lookup[loop_vars[i][2]] = loop_vars[i+int(len(loop_vars)/2)][2]
         
         self._add_outputs_to_graph()
         self._add_to_graph()
         self.assign_subgraph(graph)
+
+    def get_stacked(self, variable:Variable) -> Variable:
+        """Gets the stacked input per iteration for a given loop outout with feedback
+
+        Parameters
+        ----------
+        variable : Variable
+            Loop output to get the stacked variable for
+
+        Returns
+        -------
+        Variable
+            Stacked variable corresponding to the loop output. Shape is (num_iterations, *variable.shape)
+        """
+        return self.loop_var_lookup[variable]
+
 
     def _add_outputs_to_graph(self):
         for output in self.outputs:
