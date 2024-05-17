@@ -1,6 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
 from csdl_alpha.src.graph.variable import Variable
+from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as slice
 
 class IterationVariable(Variable):
     def __init__(self, vals):
@@ -41,20 +42,38 @@ class IterationVariable(Variable):
 
 class Loop(SubgraphOperation):
 
-    def __init__(self, inputs, outputs, graph, vals, iter_var, loop_vars, parent:'Loop'=None) -> None:
-        super().__init__()
+    def __init__(self, inputs, outputs, graph, vals, iter_vars, loop_vars) -> None:
+        """
+        Initialize a Loop object.
+
+        Parameters
+        ----------
+        inputs : list
+            List of input nodes for the loop.
+        outputs : list
+            List of output nodes for the loop.
+        graph : Graph
+            The graph representing one loop iteration.
+        vals : list
+            List of lists of values corresponding to each iteration variable.
+        iter_vars : list
+            List of iteration variables.
+        loop_vars : tuple
+            Tuple containing the input node in the graph, input for the first iteration, and input for subsequent iterations.
+            List is length 2n - 0:n are the natural loop vars, and n:2n are loop vars for stacking 0:n
+        """
+        super().__init__(*inputs)
         self.name = 'loop'
         self.inputs = inputs
         self.num_inputs = len(inputs)
         self.outputs = outputs
         self.graph = graph
-        self.vals = vals
-        self.iter_var = iter_var
+        self.vals = vals # list of list of values corresponding to iter_var
+        self.iter_vars = iter_vars # list of iteration variables
         self.loop_vars = loop_vars # (input node in graph, input for first iter, input for subsiquent iters)
         self.has_reset = False
         self.loop_var_history = {loop_var:[] for loop_var in loop_vars}
-        
-        self.parent = parent
+        self.length = len(self.vals[0])
         
         self._add_outputs_to_graph()
         self._add_to_graph()
@@ -70,27 +89,20 @@ class Loop(SubgraphOperation):
             hist.clear()
 
         # run loop
-        for i in range(len(self.vals)):
-            if self.parent is not None: 
-                self.parent.compute_iteration(len(self.vals) - i)
+        for i in range(self.length):
             for loop_var in self.loop_vars:
                 if i == 0:
                     loop_var[0].value = loop_var[1].value
                 self.loop_var_history[loop_var].append(loop_var[0].value)
-            self.iter_var.set_value(self.vals[i])
+            for iter_var, val in zip(self.iter_vars, self.vals):
+                iter_var.set_value(val[i])
             self.graph.execute_inline()
             for loop_var in self.loop_vars:
                 loop_var[0].value = loop_var[2].value
         return [output.value for output in self.outputs]
-    
-    def compute_iteration(self, iteration):
-        for loop_var in self.loop_vars:
-            loop_var[0].value = self.loop_var_history[loop_var][iteration]
-        self.iter_var.set_value(self.vals[iteration])
-        self.graph.execute_inline()
 
 class frange():
-    def __init__(self, arg1:int=None, arg2:int=None, increment:int=1, *, vals:list[int] = None):
+    def __init__(self, arg1:int=None, arg2:int=None, increment:int=1, *, vals:list[int]|tuple[list[int]] = None):
             """Initialize the Loop object.
 
             Parameters
@@ -101,15 +113,15 @@ class frange():
                 The upper bound of the loop. If provided, `arg1` represents the lower bound of the loop.
             increment : int, optional
                 The increment value for each iteration of the loop. By default, it is set to 1.
-            vals : list[int], optional
-                A list of values to iterate over. If provided, the loop will iterate over the values in the list instead of using the range defined by `arg1` and `arg2`.
+            vals : list[int] or tuple[list[int]], optional
+                A list or tuple of lists of values to iterate over.
 
             Raises
             ------
             ValueError
                 If the lower bound of the loop is greater than the upper bound.
             ValueError
-                If any value in the `vals` list is not an integer.
+                If any value in the `vals` list or tuple of lists is not an integer.
             """
 
             if arg2 is None:
@@ -127,11 +139,19 @@ class frange():
             if vals is None:
                 if upper < lower:
                     raise ValueError(f'The lower bound of the for loop, {lower}, is above the upper bound of the for loop, {upper}')
-                self.vals = list(range(lower, upper, increment))
-            else:
+                self.vals = [list(range(lower, upper, increment))]
+            elif isinstance(vals, list):
                 if not all(isinstance(val, int) for val in vals):
                     raise ValueError(f'All values in the list of values must be integers')
-                self.vals = vals
+                self.vals = [vals]
+            elif isinstance(vals, tuple):
+                for vals_list in vals:
+                    if not all(isinstance(val, int) for val in vals_list):
+                        raise ValueError(f'All values in the list of values must be integers')
+                self.vals = list(vals)
+
+            # add internal iteration variable for indexing
+            self.vals.append(list(range(len(self.vals[0]))))
 
             self.curr_index = 0
             self.max_index = 2
@@ -144,7 +164,10 @@ class frange():
             # self._graph_node = self._recorder.active_graph_node
 
             # initialize iteration variable:
-            self.iteration_variable = IterationVariable(self.vals)
+            self.iteration_variables = []
+            for vals in self.vals:
+                self.iteration_variables.append(IterationVariable(vals))
+
 
     def get_ops_and_shapes(self, graph=None):
         ops = []
@@ -180,7 +203,8 @@ class frange():
             self.iter1_non_inputs.discard(input)
 
         # don't want iteration variable to be removed, even if it's not used
-        self.iter1_non_inputs.discard(self.iteration_variable)
+        for iteration_variable in self.iteration_variables:
+            self.iter1_non_inputs.discard(iteration_variable)
 
         # deleting the operations so we cana find inputs to the second iteration in the same way
         self._graph._delete_nodes(ops)
@@ -222,11 +246,27 @@ class frange():
         external_inputs = self._graph.inputs
         # non_feedback_inputs = external_inputs - strike_set # external inputs that are used for things other than feedback (and maybe feedback too)
 
+        # add operation that stacks loop variables - this creates more loop variables ironically
+        stack_vars = [] # (input node in graph, input for subsiquent iters)
+        index = self.iteration_variables[-1]
+        for loop_var in loop_vars:
+            stack_input = Variable(shape=(len(self.vals[0]),) + loop_var[0].shape, value=0)
+            stack_output = stack_input.set(slice[index], loop_var[0])
+            stack_output.add_name('stack_output')
+            stack_vars.append((stack_input, stack_output))
+         
         # Stop the graph
         # self._graph.visualize('graph_loop_final')
         self._recorder._exit_subgraph()
 
+        # add input to loop operation for stacks
+        for stack_var in stack_vars:
+            stack_in = Variable(shape=stack_var[0].shape, value=0)
+            loop_vars.append((stack_var[0], stack_in, stack_var[1]))
+            external_inputs.append(stack_in)
+            self.iter2_outputs.append(stack_var[1])
 
+            
         # add the loop operation to the graph
         #NOTE: this only exposes outputs of operations, not variables created within the loop
         self.op = Loop(
@@ -234,7 +274,7 @@ class frange():
             self.iter2_outputs, 
             self._graph, 
             self.vals, 
-            self.iteration_variable, 
+            self.iteration_variables, 
             loop_vars
             )
 
@@ -268,7 +308,9 @@ class frange():
             raise StopIteration
 
         self.curr_index+=1
-        return self.iteration_variable
+        if len(self.iteration_variables) == 2:
+            return self.iteration_variables[0]
+        return tuple(self.iteration_variables[:-1])
         
     def __iter__(self):
         return self

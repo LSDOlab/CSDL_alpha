@@ -22,6 +22,9 @@ class Testfrange(csdl_tests.CSDLTest):
             c_np = a_np*2
         x_np = a_np+b_np
 
+        recorder = csdl.get_current_recorder()
+        recorder.visualize_graph('test_frange')
+
         self.run_tests(
             compare_values=[
                 csdl_tests.TestingPair(a, a_np),
@@ -73,7 +76,7 @@ class Testfrange(csdl_tests.CSDLTest):
             frange(10, 0)
 
         f_range = frange(vals=[1, 2, 3, 4, 5])
-        assert f_range.vals == [1, 2, 3, 4, 5]
+        assert f_range.vals[0] == [1, 2, 3, 4, 5]
 
     def test_setitem(self):
         self.prep()
@@ -115,62 +118,112 @@ class Testfrange(csdl_tests.CSDLTest):
             ]
         )
 
-    def test_loop_var_history(self):
+    # def test_loop_var_history(self):
+    #     self.prep()
+    #     import csdl_alpha as csdl
+    #     from csdl_alpha.api import frange
+    #     import numpy as np
+
+    #     a = csdl.Variable(value=2, name='a')
+    #     b = csdl.Variable(value=3, name='b')
+    #     loop_i = frange(0, 10)
+    #     for i in loop_i:
+    #         b = a + b
+    #     b_history = list(loop_i.op.loop_var_history.values())[0]
+
+    #     a_np = np.array([2.])
+    #     b_np = np.array([3.])
+    #     b_history_np = []
+    #     for i in range(0, 10):
+    #         b_history_np.append(b_np)
+    #         b_np = a_np + b_np
+            
+    #     for b, b_np in zip(b_history, b_history_np):
+    #         assert np.allclose(b, b_np)
+
+
+    # def test_compute_iteration(self):
+    #     self.prep()
+    #     import csdl_alpha as csdl
+    #     from csdl_alpha.api import frange
+    #     import numpy as np
+
+    #     a = csdl.Variable(value=2, name='a')
+    #     b = csdl.Variable(value=3, name='b')
+    #     loop_i = frange(0, 10)
+    #     for i in loop_i:
+    #         b = a + b
+    #     b_history = list(loop_i.op.loop_var_history.values())[0]
+
+    #     b_history_recomputed = [np.array([3.])]
+    #     for i in range(9):
+    #         loop_i.op.compute_iteration(i)
+    #         b_history_recomputed.append(b.value)
+            
+    #     for b, b_recomp in zip(b_history, b_history_recomputed):
+    #         assert np.allclose(b, b_recomp)
+
+    def test_custom_vals(self):
         self.prep()
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
 
-        a = csdl.Variable(value=2, name='a')
-        b = csdl.Variable(value=3, name='b')
-        loop_i = frange(0, 10)
-        for i in loop_i:
-            b = a + b
-        b_history = list(loop_i.op.loop_var_history.values())[0]
+        a = csdl.Variable(value=0, name='a')
+        for i in frange(vals=[0,1,2,3]):
+            a = a + i
 
-        a_np = np.array([2.])
-        b_np = np.array([3.])
-        b_history_np = []
-        for i in range(0, 10):
-            b_history_np.append(b_np)
-            b_np = a_np + b_np
-            
-        for b, b_np in zip(b_history, b_history_np):
-            assert np.allclose(b, b_np)
+        assert a.value == np.array([6])
 
-
-    def test_compute_iteration(self):
+    def test_multi_vals(self):
         self.prep()
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
 
-        a = csdl.Variable(value=2, name='a')
-        b = csdl.Variable(value=3, name='b')
-        loop_i = frange(0, 10)
-        for i in loop_i:
+        a = csdl.Variable(value=0, name='a')
+        b = csdl.Variable(value=0, name='b')
+        c = csdl.Variable(value=0, name='c')
+        for i, j in frange(vals=([0,1,2,3], [4,5,6,7])):
+            a = a + i
+            b = b + j
+            c = c + i*j
+
+        assert a.value == np.array([6])
+        assert b.value == np.array([22])
+        assert c.value == np.array([38])
+
+    def test_stack(self):
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a = csdl.Variable(value=1, name='a')
+        b = csdl.Variable(value=1, name='b')
+        loop = frange(0,10)
+        
+        for i in loop:
             b = a + b
-        b_history = list(loop_i.op.loop_var_history.values())[0]
+            c = a*2
+        x = a+b
 
-        b_history_recomputed = [np.array([3.])]
-        for i in range(9):
-            loop_i.op.compute_iteration(i)
-            b_history_recomputed.append(b.value)
-            
-        for b, b_recomp in zip(b_history, b_history_recomputed):
-            assert np.allclose(b, b_recomp)
-
+        loop_vars = loop.op.loop_vars
+        b_stack = loop_vars[1][2]
+        assert np.all(b_stack.value == np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
 
 if __name__ == '__main__':
     test = Testfrange()
-    # test.test_simple_loop()
-    # test.test_simple_double_loop()
-    # test.test_range_inputs()
-    # test.test_setitem()
-    # test.test_setget()
+    test.test_simple_loop()
+    test.test_simple_double_loop()
+    test.test_range_inputs()
+    test.test_setitem()
+    test.test_setget()
     # test.test_loop_var_history()
-    test.test_compute_iteration()
-
+    # test.test_compute_iteration()
+    test.test_custom_vals()
+    test.test_multi_vals()
+    test.test_stack()
 
 # class TestVRange(csdl_tests.CSDLTest):
 #     def test_simple_loop(self):
