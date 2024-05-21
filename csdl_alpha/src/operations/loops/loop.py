@@ -269,7 +269,10 @@ class Loop(SubgraphOperation):
                 name = f'{parent_external_input.external_body_IO.name}_tangent_body',
                 value = np.zeros(parent_external_input.external_body_IO.shape)
             )
-            parent_external_input.out_cotangent = vjps[parent_external_input.external_body_IO] + parent_external_input.body_input_cotangent
+            if vjps[parent_external_input.external_body_IO] is None:
+                parent_external_input.out_cotangent = parent_external_input.body_input_cotangent
+            else:
+                parent_external_input.out_cotangent = vjps[parent_external_input.external_body_IO] + parent_external_input.body_input_cotangent
             
             vjp_external_ouputs.append(parent_external_input.out_cotangent)
             vjp_external_inputs.append(parent_external_input.external_input_cotangent)
@@ -379,6 +382,8 @@ class frange():
             self.max_index = 2
 
             # enter new graph
+            # TODO: Enter new subgraph only when the actual iteration begins
+            # TODO: Add a check to make sure they only use this frange object once!
             from csdl_alpha.api import manager
             self._recorder = manager.active_recorder
             self._recorder._enter_subgraph(add_missing_variables=True, name = 'loop')

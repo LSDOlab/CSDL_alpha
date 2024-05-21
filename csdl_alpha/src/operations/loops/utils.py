@@ -34,9 +34,7 @@ def build_external_inputs_data(
     parent_external_inputs:list[Variable] = []
     for input in loop_operation.inputs:
         # TODO: Double check correctness of this condition
-        # if input in loop_operation.get_subgraph().node_table:
-
-        if input not in feedback_inputs:
+        if input in loop_operation.get_subgraph().node_table:
             if cotangents.check(input):
                 input_data = ParentIOData(input)
                 input_data.external_input_cotangent = Variable(
