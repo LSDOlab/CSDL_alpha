@@ -413,7 +413,7 @@ class Recorder:
             return f'{str(node_id)}_{str(parent_id)}'
         
         def name_single_node(node):
-            return f'{get_raw_node_string(node)}_{node.name}'
+            return f'{get_raw_node_string(node)}\n{node.name}'
 
         def name_node(node):
             from csdl_alpha.src.graph.variable import Variable
