@@ -65,9 +65,9 @@ def copyto(x:Variable, y:Variable)->Variable:
     recorder = csdl.get_current_recorder()
     current_graph = recorder.active_graph
     if not y in current_graph.node_table:
-        raise ValueError('y must be a variable in the current graph')
+        raise ValueError(f'y ({y}) must be a variable in the current graph')
     if current_graph.in_degree(y) > 0:
-        raise ValueError(f'y must not be computed from an operation already. ({current_graph.in_degree(y)} predecessors)')
+        raise ValueError(f'y ({y}) must not be computed from an operation already. ({current_graph.in_degree(y)} predecessors)')
     if y.shape != x.shape:
         raise ValueError(f'x and y must have the same shape. {x.shape} != {y.shape}')
 
