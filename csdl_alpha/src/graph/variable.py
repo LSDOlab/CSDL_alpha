@@ -329,7 +329,7 @@ class Variable(Node):
     def __rmul__(self, other:'VariableLike') -> 'Variable':
         return self.__mul__(other)
 
-    def __neg__(self):
+    def __neg__(self) -> 'Variable':
         from csdl_alpha.src.operations.neg import negate
         return negate(self)
     
