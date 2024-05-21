@@ -51,7 +51,7 @@ def evaluate_elementwise_sum(*args):
         out = out + args[i]
     return out
 
-def sum(*args, axes=None):
+def sum(*args, axes=None)->Variable:
     '''
     Computes the sum of all entries in the input tensor if a single argument is provided.
     Computes the sum of all entries along the specified axes if `axes` argument is given.
