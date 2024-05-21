@@ -603,3 +603,32 @@ def get_node_info_string(node, graph):
     if is_variable(node):
         node_info += f"\nValue:                 {node.value}"
     return node_info
+
+
+def _copy_to_current_graph(
+        graph_to_replace:'Graph',
+        input_map:dict['Variable':'Variable'] ,
+        delete_nodes:set['Variable'] = None,
+    ):
+    """_summary_
+
+    Parameters
+    ----------
+    graph : Graph
+        Replaces the current graph with the graph passed in
+    input_map : dict[Variable:Variable] 
+        maps <input leaf node in graph_to_replace> to <new input variable> 
+    """
+
+    import csdl_alpha as csdl
+    current_graph = csdl.get_current_recorder().active_graph
+    # current_graph.rxgraph = graph_to_replace.rxgraph.copy()
+    current_graph.rxgraph = rx.digraph_union(current_graph.rxgraph, graph_to_replace.rxgraph)
+
+    current_graph.update_node_table()
+
+    from csdl_alpha.src.operations.copyvar import copyto
+    for leaf_node in input_map:
+        copyto(input_map[leaf_node], leaf_node)
+
+    current_graph.update_node_table()
