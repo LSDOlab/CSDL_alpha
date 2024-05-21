@@ -213,7 +213,7 @@ class Testfrange(csdl_tests.CSDLTest):
         # recorder.visualize_graph('stacked', visualize_style='hierarchical')
 
         loop_vars = loop.op.loop_vars
-        b_stack = loop_vars[1][2]
+        b_stack =  loop.op.outputs[-1]
         assert np.all(b_stack.value == np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
         assert b_stack == loop.op.get_stacked(b)
 
@@ -237,8 +237,8 @@ class Testfrange(csdl_tests.CSDLTest):
         # recorder.visualize_graph('stacked', visualize_style='hierarchical')
 
         loop_vars = loop.op.loop_vars
-        b_stack = loop_vars[2][2]
-        c_stack = loop.op.get_stacked(c)
+        b_stack = loop.op.outputs[-2]
+        c_stack = loop.op.outputs[-1]
 
         real_b = np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]])
         real_c = [4]
@@ -248,7 +248,7 @@ class Testfrange(csdl_tests.CSDLTest):
         assert np.all(b_stack.value == real_b)
         assert np.all(c_stack.value == np.array(real_c).reshape(10,1))
         assert b_stack == loop.op.get_stacked(b)
-
+        assert c_stack == loop.op.get_stacked(c)
 
     def test_stack_multidim(self):
         self.prep()
@@ -292,18 +292,64 @@ class Testfrange(csdl_tests.CSDLTest):
         assert np.all(c_stack.value == real_c)
         assert b_stack == loop.op.get_stacked(b)
 
+    def test_feedback(self):
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a_val = np.arange(6).reshape(2,3)-1
+        b_val = np.arange(6).reshape(2,3)
+        c_val = np.ones((2,3))*3.0
+        c_val[0] = 2.0
+
+        a = csdl.Variable(value=a_val, name='a')
+        b = csdl.Variable(value=b_val, name='b')
+        c = csdl.Variable(value=c_val, name='c')
+
+        loop = frange(0,4)
+        for i in loop:
+            b.add_name('b_in')
+            c.add_name('c_in')
+            c = c + c + b
+            b = a + b
+
+        c.add_name('c_updated')
+        b.add_name('b_updated')
+
+        # loop_vars = loop.op.loop_vars
+        # for i,loop_var in enumerate(loop_vars):
+        #     print(f'loop var {i}')
+        #     print(f'--{loop_var[0].name}')
+        #     print(f'--{loop_var[1].name}')
+        #     print(f'--{loop_var[2].name}')
+
+        assert len(loop.op.loop_vars) == 2
+
+
+        for i in range(4):
+            c_val = c_val + c_val + b_val
+            b_val = a_val + b_val
+
+        compare_values = []
+        compare_values += [csdl_tests.TestingPair(c, c_val)]
+        compare_values += [csdl_tests.TestingPair(b, b_val)]
+
+        self.run_tests(compare_values=compare_values)
+
 if __name__ == '__main__':
     test = Testfrange()
-    test.test_simple_loop()
-    test.test_simple_double_loop()
-    test.test_range_inputs()
-    test.test_setitem()
-    test.test_setget()
-    test.test_custom_vals()
-    test.test_multi_vals()
-    test.test_stack()
-    test.test_stack_multi()
-    test.test_stack_multidim()
+    # test.test_simple_loop()
+    # test.test_simple_double_loop()
+    # test.test_range_inputs()
+    # test.test_setitem()
+    # test.test_setget()
+    # test.test_custom_vals()
+    # test.test_multi_vals()
+    # test.test_stack()
+    # test.test_stack_multi()
+    # test.test_stack_multidim()
+    test.test_feedback()
 
 # class TestVRange(csdl_tests.CSDLTest):
 #     def test_simple_loop(self):

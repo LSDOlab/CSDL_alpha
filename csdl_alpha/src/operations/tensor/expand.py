@@ -161,7 +161,7 @@ def expand(x, out_shape, action=None):
                 raise ValueError('Each character in the input string must appear exactly once in the output string.')
             
             if in_shape != tuple([out_shape[out_str.index(char)] for char in in_str]):
-                raise ValueError('Input tensor shape is not compatible with the output shape specified in the action.')
+                raise ValueError(f'Input tensor shape {in_shape} is not compatible with the output shape {out_shape} specified in the action.')
             
             ones_str   = ''.join([char for char in out_str if char not in in_str])
             ones_shape = tuple([out_shape[out_str.index(char)] for char in ones_str])

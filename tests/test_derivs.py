@@ -133,13 +133,99 @@ class TestDeriv(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(dy_dx1, dy_dx1.value)]
         self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
+    def test_deriv_composed3(self):
+        """
+        Test single derivatives with composed operations
+        """
+        self.prep(inline=False)
+
+        x0 = csdl.Variable(name = 'x0', value=np.array([1.0, 2.0]))
+        x1 = csdl.Variable(name = 'x1', value=np.array([3.0, -2.0]))
+
+        # y2 = x1-x1
+        # y2 = csdl.tensordot(x1, x1)
+        y2 = csdl.einsum(x1, x0, action = 'i,j->ij')
+        y2.add_name('y2')
+        with csdl.Namespace('deriv1'):
+            dy_dx1 = csdl.derivative(csdl.sum(y2), [x1])[x1]
+            dy_dx1.add_name('dy_dx1')
+
+        with csdl.Namespace('deriv2'):
+            dy_dx2 = csdl.derivative(csdl.sum(dy_dx1), [x1])[x1]
+            dy_dx2.add_name('dy2_dx2')
+
+        with csdl.Namespace('deriv3'):
+            dy_dx3 = csdl.derivative(csdl.sum(dy_dx2), [x1])[x1]
+            dy_dx3.add_name('dy2_dx3')
+
+        # recorder = csdl.get_current_recorder()
+        # # recorder.stop()
+        # # recorder.visualize_graph()
+        # # exit()
+        
+        # # print(dy_dx2.value)
+        # x0.value = np.array([2.0, 2.0])
+        # # recorder.execute()
+        # # print(dy_dx2.value)
+        # # recorder.execute()
+        # recorder.active_graph.execute_inline(debug=True)
+        # print('========================================')
+        # recorder.active_graph.execute_inline(debug=True)
+
+        # exit()
+
+        # compare_values = []
+        # compare_values += [csdl_tests.TestingPair(dy_dx2, dy_dx2.value)]
+        # compare_values += [csdl_tests.TestingPair(dy_dx1, dy_dx1.value)]
+        self.run_tests(compare_values=[], verify_derivatives=True)
+
+    def test_deriv_composed4(self):
+        """
+        Taking 3rd derivatives and running it for a third time seemed to have issues...
+        """
+        self.prep(inline=True)
+
+        x0 = csdl.Variable(name = 'x0', value=np.array([1.0, 2.0]))
+        x1 = csdl.Variable(name = 'x1', value=np.array([3.0, 1.0]))
+
+        # Composed Operations:
+        # y2 = x1-x1
+        y2 = csdl.tensordot(x1, x1)
+        # y2 = csdl.einsum(x1, x0, action = 'i,j->ij')
+        # y2 = csdl.outer(x1, x1)
+        # y2 = csdl.minimum(x1, x1)
+        # y2 = csdl.exp(x1)
+        # y2 = csdl.sum(x1, x1)
+
+        y2.add_name('y2')
+        with csdl.Namespace('deriv1'):
+            dy2_dx1 = csdl.derivative(y2[0], x1)
+            dy2_dx1.add_name('dy_dx1')
+
+        with csdl.Namespace('deriv2'):
+            dy2_dx2 = csdl.derivative(dy2_dx1[0], x1)
+            dy2_dx2.add_name('dy2_dx2')
+
+        with csdl.Namespace('deriv3'):
+            dy3_dx2 = csdl.derivative(dy2_dx2[0], x1)
+            dy3_dx2.add_name('dy3_dx3')
+            print(dy3_dx2.shape)
+
+        recorder = csdl.get_current_recorder()
+        recorder.stop()
+        x0.value = np.array([2.0, 2.0])
+        recorder.active_graph.execute_inline(debug=False)
+        recorder.active_graph.execute_inline(debug=False)
+
+
 if __name__ == '__main__':
     t = TestDeriv()
-    t.test_deriv()
-    t.test_deriv_2()
-    t.test_deriv_3()
+    # t.test_deriv()
+    # t.test_deriv_2()
+    # t.test_deriv_3()
     # t.test_deriv_composed()
-    t.test_deriv_composed2()
+    # t.test_deriv_composed2()
+    t.test_deriv_composed3()
 
 
 
