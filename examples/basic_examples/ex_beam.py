@@ -212,9 +212,16 @@ h = csdl.Variable(value=np.ones(num_elements) * 0.5, name='height vector')
 #  )
 
 
+# Forward Evaluation:
 beam_model = BeamModel(E, L, b, num_elements)
 d, compliance, volume = beam_model.evaluate(force_vector, h)
 print(d.value, compliance.value, volume.value)
+
+# Reverse Derivatives:
+dcompliance_dh = csdl.derivative(compliance, h)
+dvolume_dh = csdl.derivative(volume, h)
+print(np.average(dcompliance_dh.value), np.average(dvolume_dh.value))
+
 recorder.stop()
 recorder.visualize_graph('beam_graph', trim_loops=True)
 recorder.save_graph('beam_graph')
