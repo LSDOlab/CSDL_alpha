@@ -8,7 +8,8 @@ def ingest_value(value, dtype=np.float64):
     if isinstance(value, (float, int, np.integer, np.floating)):
         value = np.array([value], dtype=dtype)
     elif isinstance(value, np.ndarray):
-        value = value.astype(dtype)
+        if value.dtype != dtype:
+            value = value.astype(dtype)
     elif value is not None:
         raise TypeError(f"Value must be a numpy array, float or int. Type {get_type_string(value)} given")
     return value
