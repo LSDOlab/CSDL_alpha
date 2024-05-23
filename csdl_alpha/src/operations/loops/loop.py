@@ -282,6 +282,9 @@ class Loop(SubgraphOperation):
             if vjps[parent_external_input.external_body_IO] is None:
                 parent_external_input.out_cotangent = parent_external_input.body_input_cotangent
             else:
+                # This is a feedback right here --> These variables are stacked --> This feedback could be of an ALREADY stacked variable
+                # Therefore we could be DOUBLE/TRIPLE/etc stacking with every higher order derivative. --> Figure out a way to avoid this
+                # TODO: Can we get rid of this stacking for a +=?
                 parent_external_input.out_cotangent = vjps[parent_external_input.external_body_IO] + parent_external_input.body_input_cotangent
                 parent_external_input.out_cotangent.add_name(f'{parent_external_input.external_body_IO.name}_out_cotangent')
             vjp_external_ouputs.append(parent_external_input.out_cotangent)
