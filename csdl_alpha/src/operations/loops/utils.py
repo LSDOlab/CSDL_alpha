@@ -89,10 +89,20 @@ def build_feedback_data(loop_operation:Loop, cotangents)->list[FeedBackData]:
             body_external_output = loop_vars[i][2]
         )
 
+        build_zeros = False
         if cotangents.check(fbd.body_external_output):
-            fbd.external_input_cotangent = cotangents[fbd.body_external_output]
+            if cotangents[fbd.body_external_output] is None:
+                build_zeros = True
         else:
-            fbd.external_input_cotangent = Variable(value = np.zeros(fbd.external_input.shape))
+            build_zeros = True
+
+        if build_zeros:
+            fbd.external_input_cotangent = Variable(
+                name = f'zero_cot_{loop_vars[i][2].name}',
+                value = np.zeros(fbd.external_input.shape)
+            )
+        else:
+            fbd.external_input_cotangent = cotangents[fbd.body_external_output]
         feedbacks.append(fbd)
     return feedbacks
 

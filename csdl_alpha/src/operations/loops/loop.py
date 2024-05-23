@@ -124,6 +124,8 @@ class Loop(SubgraphOperation):
         inputs = inputs_and_outputs[:self.num_inputs]
         outputs = inputs_and_outputs[self.num_inputs:]
         debug = False
+        if debug:
+            print(f'loop VJP of {self.name}')
 
         # setup
         from csdl_alpha.src.operations.loops.utils import build_feedback_data, FeedBackData, build_reversed_iteration_variables, build_external_inputs_data, build_external_outputs_data
@@ -146,6 +148,7 @@ class Loop(SubgraphOperation):
 
         # Organize external outputs (with cotangents)
         feedback_outputs:set[Variable] = {feedback.body_external_output for feedback in feedbacks}
+        feedback_outputs.update({feedback.input_stack for feedback in feedbacks})
         parent_external_outputs = build_external_outputs_data(self, feedback_outputs, cotangents)
 
         # Checks: Comment out later
@@ -163,10 +166,11 @@ class Loop(SubgraphOperation):
             print('FEEDBACKS:')
             for feedback in feedbacks:
                 print(f'\t{feedback}:')
-                print(f'\t\t{feedback.body_external_output.name}')
-                print(f'\t\t{feedback.external_input.name}')
-                print(f'\t\t{feedback.body_input.name}')
-                print(f'\t\t{feedback.external_input_cotangent.name}')
+                print(f'\t\tb/ext out {feedback.body_external_output.name} \t\t{feedback.body_external_output}')
+                print(f'\t\text in    {feedback.external_input.name} \t\t{feedback.external_input}')
+                print(f'\t\tbody in   {feedback.body_input.name} \t\t{feedback.body_input}')
+                print(f'\t\text cot   {feedback.external_input_cotangent.name} \t\t{feedback.external_input_cotangent}')
+                print(f'\t\tstacked   {feedback.input_stack.name} \t\t{feedback.input_stack}')
 
             for output in parent_external_outputs:
                 assert output.external_body_IO in outer_graph.node_table
@@ -262,7 +266,13 @@ class Loop(SubgraphOperation):
 
         # Perform loop accumulation:
         for feedback in feedbacks:
-            feedback.out_cotangent = vjps[feedback.body_input]
+            if cotangents.check(feedback.input_stack):
+                vjp_external_inputs.append(cotangents[feedback.input_stack])
+                accumulated = vjps[feedback.body_input] + cotangents[feedback.input_stack][rev_index]
+            else:
+                accumulated = vjps[feedback.body_input]
+
+            feedback.out_cotangent = accumulated
             vjp_external_ouputs.append(feedback.out_cotangent)
         for parent_external_input in parent_external_inputs:
             parent_external_input.body_input_cotangent = csdl.Variable(
@@ -273,12 +283,15 @@ class Loop(SubgraphOperation):
                 parent_external_input.out_cotangent = parent_external_input.body_input_cotangent
             else:
                 parent_external_input.out_cotangent = vjps[parent_external_input.external_body_IO] + parent_external_input.body_input_cotangent
-            
+                parent_external_input.out_cotangent.add_name(f'{parent_external_input.external_body_IO.name}_out_cotangent')
             vjp_external_ouputs.append(parent_external_input.out_cotangent)
             vjp_external_inputs.append(parent_external_input.external_input_cotangent)
+            vjp_external_inputs.append(parent_external_input.external_body_IO)
         
         for parent_external_output in parent_external_outputs:
             parent_external_output.out_cotangent = parent_external_output.body_input_cotangent*0.0
+            parent_external_output.out_cotangent.add_name(f'{parent_external_output.external_body_IO.name}_zeroed')
+            vjp_external_ouputs.append(parent_external_output.out_cotangent)
 
         # deriv_loop_graph.visualize('vjp_loop2')
         recorder._exit_subgraph()
