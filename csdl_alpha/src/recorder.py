@@ -457,6 +457,14 @@ class Recorder:
                 #     edge = pydot.Edge(parent_op_name, node_name)
                 #     dot.add_edge(edge)
 
+            from csdl_alpha.src.operations.loops.loop import Loop
+            if isinstance(parent_op, Loop):
+                for loop_var in parent_op.loop_vars:
+                    body_input = build_unique_node_name(loop_var[0], parent_op)
+                    body_output = build_unique_node_name(loop_var[2], parent_op)
+                    edge = pydot.Edge(body_output, body_input, color="blue", style = "dashed")
+                    dot.add_edge(edge)
+
             for child in insights['graph_tree'][g]:
                 if isinstance(child[1], Graph):
                     parent_op_name = build_unique_node_name(child[0], parent_op)
