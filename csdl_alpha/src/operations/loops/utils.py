@@ -30,10 +30,12 @@ class ParentIOData():
 def build_external_inputs_data(
         loop_operation:Loop,
         feedback_inputs:set[Variable],
-        cotangents,)->list[ParentIOData]:
-    parent_external_inputs:list[Variable] = []
+        cotangents,)->tuple[list[ParentIOData],list[Variable]]:
+    parent_external_inputs:list[ParentIOData] = []
+    remaining_parent_external_inputs:list[Variable] = []
     for input in loop_operation.inputs:
         # TODO: Double check correctness of this condition
+        # This is to avoid feedback inputs
         if input in loop_operation.get_subgraph().node_table:
             if cotangents.check(input):
                 input_data = ParentIOData(input)
@@ -42,7 +44,9 @@ def build_external_inputs_data(
                     value = np.zeros(input.shape),
                 )
                 parent_external_inputs.append(input_data)
-    return parent_external_inputs
+            else:
+                remaining_parent_external_inputs.append(input)
+    return parent_external_inputs, remaining_parent_external_inputs
 
 def build_external_outputs_data(
         loop_operation:Loop,
@@ -99,6 +103,7 @@ def build_feedback_data(loop_operation:Loop, cotangents)->list[FeedBackData]:
         if build_zeros:
             fbd.external_input_cotangent = Variable(
                 name = f'zero_cot_{loop_vars[i][2].name}',
+                shape = fbd.external_input.shape,
                 value = np.zeros(fbd.external_input.shape)
             )
         else:

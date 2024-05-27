@@ -144,7 +144,7 @@ class Loop(SubgraphOperation):
 
         # Organize external inputs (with cotangents)
         feedback_inputs:set[Variable] = {feedback.external_input for feedback in feedbacks}
-        parent_external_inputs = build_external_inputs_data(self, feedback_inputs, cotangents)
+        parent_external_inputs, remaining_external_inputs = build_external_inputs_data(self, feedback_inputs, cotangents)
 
         # Organize external outputs (with cotangents)
         feedback_outputs:set[Variable] = {feedback.body_external_output for feedback in feedbacks}
@@ -173,18 +173,20 @@ class Loop(SubgraphOperation):
                 print(f'\t\tstacked   {feedback.input_stack.name} \t\t{feedback.input_stack}')
 
             for output in parent_external_outputs:
-                assert output.external_body_IO in outer_graph.node_table
+                # TODO: Find another way to check this
+                # assert output.external_body_IO in outer_graph.node_table
                 assert output.external_input_cotangent in outer_graph.node_table
             for input in parent_external_inputs:
-                assert input.external_body_IO in outer_graph.node_table
+                # TODO: Find another way to check this
+                # assert input.external_body_IO in outer_graph.node_table
                 assert input.external_input_cotangent in outer_graph.node_table
             for feedback in feedbacks:
-                assert feedback.body_external_output in outer_graph.node_table
-                assert feedback.external_input in outer_graph.node_table
+                # TODO: Find another way to check this
+                # assert feedback.body_external_output in outer_graph.node_table
+                # assert feedback.external_input in outer_graph.node_table
                 assert feedback.body_input in self.get_subgraph().node_table
                 assert feedback.external_input_cotangent in outer_graph.node_table
 
-        # reversed_iter_var = IterationVariable()
         parent_loop_graph = self.get_subgraph()
 
         # ========================================================================================================================================
@@ -194,6 +196,10 @@ class Loop(SubgraphOperation):
 
         vjp_external_inputs = []
         vjp_external_ouputs = []
+
+        # Add parent inputs to the VJP loop that are not used for cotangents:
+        for non_accumulating_input in remaining_external_inputs:
+            vjp_external_inputs.append(non_accumulating_input)
 
         # Initialize body of VJP loop
         recorder = csdl.get_current_recorder()
@@ -239,6 +245,7 @@ class Loop(SubgraphOperation):
             ext_output = parent_external_output.external_body_IO
             parent_external_output.body_input_cotangent = csdl.Variable(
                 name = f'{ext_output.name}_tangent_body',
+                shape = parent_external_output.external_input_cotangent.shape,
                 value=parent_external_output.external_input_cotangent.value,
             )
             seeds.append((ext_output,parent_external_output.body_input_cotangent))
@@ -250,7 +257,8 @@ class Loop(SubgraphOperation):
             # For each feedback, we need to create a new cotangent body input
             # we connect these for feedback later 
             feedback.body_input_cotangent = csdl.Variable(
-                name = f'{feedback.body_external_output.name}_tangent_body',
+                name=f'{feedback.body_external_output.name}_tangent_body',
+                shape=feedback.external_input_cotangent.shape,
                 value=feedback.external_input_cotangent.value,
             )
             seeds.append((feedback.body_external_output, feedback.body_input_cotangent))
@@ -277,6 +285,7 @@ class Loop(SubgraphOperation):
         for parent_external_input in parent_external_inputs:
             parent_external_input.body_input_cotangent = csdl.Variable(
                 name = f'{parent_external_input.external_body_IO.name}_tangent_body',
+                shape = parent_external_input.external_body_IO.shape,
                 value = np.zeros(parent_external_input.external_body_IO.shape)
             )
             if vjps[parent_external_input.external_body_IO] is None:

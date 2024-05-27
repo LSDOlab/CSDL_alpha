@@ -28,18 +28,9 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
             deriv2 = csdl.derivative(deriv, a)
         with csdl.namespace('deriv3'):
             deriv3 = csdl.derivative(deriv2, a)
-        # recorder = csdl.get_current_recorder()
-        # recorder.visualize_graph(visualize_style='hierarchical')
+        with csdl.namespace('deriv4'):
+            deriv4 = csdl.derivative(deriv3, a)
 
-        # print('COMPUTING SECOND DERIVATIVES')
-        #     deriv23 = csdl.derivative(deriv, loop.op.get_stacked(b))
-        #     # deriv23 = csdl.derivative(loop.op.get_stacked(b), a)
-        # print(deriv2.value)
-        # print(deriv23.value)
-        # from csdl_alpha.src.operations.derivative.utils import verify_derivatives_inline
-        # verify_derivatives_inline(ofs=[csdl.derivative(x, a)], wrts=[a], step_size=1e-6)
-        # exit()
-            
         # manual derivative check:
         # --- forward --- :
         # x     = a +       b      +  c
@@ -48,14 +39,16 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         # dx/da    = 15a^2 + 2a^3
         # dx2/da2  = 30*a + 6a^2
         # dx3/da3  = 30 + 12a
-        
+        # dx4/da4  = 12
+
         deriv_value = (15*a.value**2.0+2*a.value**3)
         assert abs(deriv.value[0,0] - deriv_value) < 1e-9
         deriv_value2 = (30*a.value+6*a.value**2)
         assert abs(deriv2.value[0,0] - deriv_value2) < 1e-9
         deriv_value3 = (30+12*a.value)
         assert abs(deriv3.value[0,0] - deriv_value3) < 1e-9
-
+        deriv_value4 = 12
+        assert abs(deriv4.value[0,0] - deriv_value4) < 1e-9
         self.run_tests(
             compare_values=[
                 csdl_tests.TestingPair(x, x.value),
@@ -342,7 +335,7 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         db_d = csdl.norm(deriv[b, d])
         dc_da0 = csdl.norm(deriv[c, a_0])
         dc_d = csdl.norm(deriv[c, d])
-        deriv_sums = dx_da0+dx_d+db_da0+db_d+dc_da0+dc_d
+        deriv_sums = dx_da0 + dx_d + db_da0 + db_d + dc_da0 + dc_d
         deriv_sums.add_name('deriv_sums')
 
         recorder = csdl.get_current_recorder()
@@ -460,4 +453,4 @@ if __name__ == '__main__':
     # t.test_simple_loop_feedback_indexing()
     # t.test_simple_loop_feedback_indexing2()
     # t.test_nested()
-    t.test_nested_double_indexing()
+    # t.test_nested_double_indexing()
