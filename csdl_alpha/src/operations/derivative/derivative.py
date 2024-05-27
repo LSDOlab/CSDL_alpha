@@ -17,7 +17,7 @@ def reverse(
         of: Variable,
         wrts: Union[Variable, list[Variable]],
         graph:Graph = None,
-        loop:bool = True
+        loop:bool = True,
     )->dict[Variable]:
     of_var = validate_and_variablize(of)
     wrt_vars = listify_and_verify_variables(wrts)

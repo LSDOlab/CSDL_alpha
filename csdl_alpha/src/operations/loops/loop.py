@@ -356,69 +356,69 @@ class Loop(SubgraphOperation):
 
 class frange():
     def __init__(self, arg1:int=None, arg2:int=None, increment:int=1, *, vals:Union[list[int],tuple[list[int]]] = None):
-            """Initialize the Loop object.
+        """Initialize the Loop object.
 
-            Parameters
-            ----------
-            arg1 : int, optional
-                The lower bound of the loop. If `arg2` is not provided, `arg1` represents the upper bound of the loop.
-            arg2 : int, optional
-                The upper bound of the loop. If provided, `arg1` represents the lower bound of the loop.
-            increment : int, optional
-                The increment value for each iteration of the loop. By default, it is set to 1.
-            vals : list[int] or tuple[list[int]], optional
-                A list or tuple of lists of values to iterate over.
+        Parameters
+        ----------
+        arg1 : int, optional
+            The lower bound of the loop. If `arg2` is not provided, `arg1` represents the upper bound of the loop.
+        arg2 : int, optional
+            The upper bound of the loop. If provided, `arg1` represents the lower bound of the loop.
+        increment : int, optional
+            The increment value for each iteration of the loop. By default, it is set to 1.
+        vals : list[int] or tuple[list[int]], optional
+            A list or tuple of lists of values to iterate over.
 
-            Raises
-            ------
-            ValueError
-                If the lower bound of the loop is greater than the upper bound.
-            ValueError
-                If any value in the `vals` list or tuple of lists is not an integer.
-            """
+        Raises
+        ------
+        ValueError
+            If the lower bound of the loop is greater than the upper bound.
+        ValueError
+            If any value in the `vals` list or tuple of lists is not an integer.
+        """
 
-            if arg2 is None:
-                if arg1 is None:
-                    if vals is None:
-                        raise ValueError(f'No arguments provided for the for loop')
-                else:
-                    lower = 0
-                    upper = arg1
+        if arg2 is None:
+            if arg1 is None:
+                if vals is None:
+                    raise ValueError(f'No arguments provided for the for loop')
             else:
-                lower = arg1
-                upper = arg2
+                lower = 0
+                upper = arg1
+        else:
+            lower = arg1
+            upper = arg2
 
-            # process runtime iterations
-            if vals is None:
-                if upper < lower:
-                    raise ValueError(f'The lower bound of the for loop, {lower}, is above the upper bound of the for loop, {upper}')
-                self.vals = [list(range(lower, upper, increment))]
-            elif isinstance(vals, list):
-                if not all(isinstance(val, int) for val in vals):
+        # process runtime iterations
+        if vals is None:
+            if upper < lower:
+                raise ValueError(f'The lower bound of the for loop, {lower}, is above the upper bound of the for loop, {upper}')
+            self.vals = [list(range(lower, upper, increment))]
+        elif isinstance(vals, list):
+            if not all(isinstance(val, int) for val in vals):
+                raise ValueError(f'All values in the list of values must be integers')
+            self.vals = [vals]
+        elif isinstance(vals, tuple):
+            for vals_list in vals:
+                if not all(isinstance(val, int) for val in vals_list):
                     raise ValueError(f'All values in the list of values must be integers')
-                self.vals = [vals]
-            elif isinstance(vals, tuple):
-                for vals_list in vals:
-                    if not all(isinstance(val, int) for val in vals_list):
-                        raise ValueError(f'All values in the list of values must be integers')
-                self.vals = list(vals)
+            self.vals = list(vals)
 
-            self.curr_index = 0
-            self.max_index = 2
+        self.curr_index = 0
+        self.max_index = 2
 
-            # enter new graph
-            # TODO: Enter new subgraph only when the actual iteration begins
-            # TODO: Add a check to make sure they only use this frange object once!
-            from csdl_alpha.api import manager
-            self._recorder = manager.active_recorder
-            self._recorder._enter_subgraph(add_missing_variables=True, name = 'loop')
-            self._graph = self._recorder.active_graph
-            # self._graph_node = self._recorder.active_graph_node
+        # enter new graph
+        # TODO: Enter new subgraph only when the actual iteration begins
+        # TODO: Add a check to make sure they only use this frange object once!
+        from csdl_alpha.api import manager
+        self._recorder = manager.active_recorder
+        self._recorder._enter_subgraph(add_missing_variables=True, name = 'loop')
+        self._graph = self._recorder.active_graph
+        # self._graph_node = self._recorder.active_graph_node
 
-            # initialize iteration variable:
-            self.iteration_variables = []
-            for vals in self.vals:
-                self.iteration_variables.append(IterationVariable(vals))
+        # initialize iteration variable:
+        self.iteration_variables = []
+        for vals in self.vals:
+            self.iteration_variables.append(IterationVariable(vals))
 
 
     def get_ops_and_shapes(self, graph=None):
@@ -434,7 +434,7 @@ class frange():
         return ops, shapes
 
     def post_iteration_one(self):
-        # self._graph.visualize('graph_loop_iter_1')
+        # self._graph.visualize(f'graph_loop_iter_1_{self}')
         self.iter1_inputs = [] # list of inputs to the first iteration
         self.iter1_outputs = [] # list of outputs to the first iteration
         # NOTE: variables that are created inside the loop but not used in the loop aren't going to show up in either of these lists, but that *should* be okay?
@@ -462,7 +462,7 @@ class frange():
         self._graph._delete_nodes(ops)
 
     def post_iteration_two(self):
-        # self._graph.visualize('graph_loop_iter_2')
+        # self._graph.visualize(f'graph_loop_iter_2_{self}')
         self.iter2_inputs = [] # list of inputs to the second iteration (same order as first)
         self.iter2_outputs = [] # list of outputs to the second iteration (same order as first)
         for node in self._graph.node_table.keys():
@@ -476,28 +476,39 @@ class frange():
         # any input that's changed represents an internal loop, so we need to replace it with a special variable
         loop_vars = []
         strike_set = set() # set of inputs that are only used in the first iteration (feedback)
+        # print(self)
+        # print('in1', len(self.iter1_inputs))
+        # print('in2', len(self.iter2_inputs))
+        # print('out1', len(self.iter1_outputs))
+        # print('out2', len(self.iter2_outputs))
+
+        if len(self.iter1_inputs) != len(self.iter2_inputs):
+            raise ValueError(f'Number of loop inputs changed between iterations: {len(self.iter1_inputs)} != {len(self.iter2_inputs)}. Loop body graph must be constant between iterations.')
+        if len(self.iter1_outputs) != len(self.iter2_outputs):
+            raise ValueError(f'Number of loop outputs changed between iterations: {len(self.iter1_outputs)} != {len(self.iter2_outputs)}.  Loop body graph must be constant between iterations.')
+
         for input1, input2 in zip(self.iter1_inputs, self.iter2_inputs):
             if not input1 is input2: 
                 if input2 in self.iter1_outputs:
-                        # we want to go from input2 to the corresponding output of the 2nd iteration
-                        output2 = self.iter2_outputs[self.iter1_outputs.index(input2)] # TODO: make this less bad
-                        loop_var = (input2, input1, output2) # (input node in graph, input for first iter, input for subsiquent iters)
-                        
-                        # OLD:
-                        # if input1 in self._graph.node_table.keys():
-                            # self._graph._delete_nodes([input1])
-                        
-                        # NEW:
-                        if input1 in self._graph.node_table.keys():
-                            if not (input1 in self.iter2_inputs):
-                                self._graph._delete_nodes([input1])
+                    # we want to go from input2 to the corresponding output of the 2nd iteration
+                    output2 = self.iter2_outputs[self.iter1_outputs.index(input2)] # TODO: make this less bad
+                    loop_var = (input2, input1, output2) # (input node in graph, input for first iter, input for subsiquent iters)
+                    
+                    # OLD:
+                    # if input1 in self._graph.node_table.keys():
+                        # self._graph._delete_nodes([input1])
+                    
+                    # NEW:
+                    if input1 in self._graph.node_table.keys():
+                        if not (input1 in self.iter2_inputs):
+                            self._graph._delete_nodes([input1])
 
-                        self.iter1_non_inputs.discard(input2)
-                        
-                        # TODO: this is a bit of a hack, but it works for now
-                        if loop_var in loop_vars:
-                            continue
-                        loop_vars.append(loop_var)
+                    self.iter1_non_inputs.discard(input2)
+                    
+                    # TODO: this is a bit of a hack, but it works for now
+                    if loop_var in loop_vars:
+                        continue
+                    loop_vars.append(loop_var)
                 else:
                     # this implies input 1 and input 2 are both made in the loop, so we can just keep input 2
                     pass
@@ -506,12 +517,12 @@ class frange():
 
         # delete any remnanats of the first iteration
         self._graph._delete_nodes(self.iter1_non_inputs)
-        # self._graph.visualize('graph_loop_iter_3')
+        # self._graph.visualize(f'graph_loop_iter_3_{self}')
 
         external_inputs = self._graph.inputs
         # non_feedback_inputs = external_inputs - strike_set # external inputs that are used for things other than feedback (and maybe feedback too)
         # Stop the graph
-        # self._graph.visualize('graph_loop_final')
+        # self._graph.visualize(f'graph_loop_final_{self}')
         self._recorder._exit_subgraph()
 
         for loop_var in loop_vars:

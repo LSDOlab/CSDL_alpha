@@ -222,6 +222,10 @@ class NonlinearSolver(object):
         if recorder.inline:
             G.update_downstream(implicit_operation)
         
+        # TODO: Eventually switch from eager to lazy.
+        # This is a temporary fix to get the derivatives working with csdl loops
+        self.get_full_residual_jacobian(for_deriv=True)
+        
         # For debugging:
         # self.residual_graph.visualize(f'inner_graph_{self.name}')
         # recorder.active_graph.visualize(f'top_level_{self.name}_after')
