@@ -88,6 +88,31 @@ class Recorder:
 
         self.active_graph.execute_inline()
 
+    def _find_variables_by_name(self, name:str)->list:
+        """
+        !!!UNTESTED!!!
+        Finds a variable by name and returns them
+
+        Args:
+            name: The name of the variable to find.
+
+        Returns:
+            The variable with the given name.
+        """
+        from csdl_alpha.src.graph.variable import Variable
+        matched_names:list[Variable] = []
+        for node in self.active_graph.node_table:
+            if isinstance(node, Variable):
+                for node_name in node.names:
+                    if node_name == name:
+                        matched_names.append(node)
+
+        if len(matched_names) == 0:
+            raise KeyError(f"No variable with name {name} found")
+        
+        return matched_names
+
+
     def gather_insights(self)->dict:
         """
         UNTESTED!
