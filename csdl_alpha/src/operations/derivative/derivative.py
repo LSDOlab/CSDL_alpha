@@ -17,6 +17,7 @@ def reverse(
         of: Variable,
         wrts: Union[Variable, list[Variable]],
         graph:Graph = None,
+        loop:bool = True
     )->dict[Variable]:
     of_var = validate_and_variablize(of)
     wrt_vars = listify_and_verify_variables(wrts)
@@ -35,12 +36,15 @@ def reverse(
     import numpy as np
     jacobians:dict[Variable:Variable] = {}
     for wrt_var in wrt_vars:
-        jacobians[wrt_var] = csdl.Variable(name = f'jacobian_{of.name}_wrt_{wrt_var.name}', value = np.zeros((of_var.size, wrt_var.size)))
+        jacobians[wrt_var] = csdl.Variable(name = f'jac_{of.name}_wrt_{wrt_var.name}', value = np.zeros((of_var.size, wrt_var.size)))
 
     initial_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
     
-    # for row_index in csdl.frange(of_var.size):
-    for row_index in range(of_var.size):
+    if loop:
+        loop_d = csdl.frange(of_var.size)
+    else:
+        loop_d = range(of_var.size)
+    for row_index in loop_d:
         current_output_seed = initial_output_seed.set(csdl.slice[row_index], 1.0)
         current_output_seed = current_output_seed.reshape(of_var.shape)
 
@@ -52,8 +56,9 @@ def reverse(
             if wrt_cotangent is None:
                 continue
             jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[row_index, :], wrt_cotangent.flatten())
-            jacobians[wrt_var].add_name(f'jacobian_{of.name}_wrt_{wrt_var.name}')
-        
+            jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
+    if loop:
+        loop_d.op.name = 'r_loop'
     return jacobians
 
 
@@ -62,7 +67,9 @@ def derivative(
     wrts:Union[Variable, list[Variable]],
     mode:str = 'reverse',
     as_block:bool = False,
-    graph:Graph = None)->Union[dict[Variable], dict[Variable,Variable], Variable]:
+    graph:Graph = None,
+    loop:bool = True
+    )->Union[dict[Variable], dict[Variable,Variable], Variable]:
     """Computes the derivatives of the output variables with respect to the input variables in CSDL.
 
     Parameters
@@ -73,8 +80,12 @@ def derivative(
         Variables to take derivatives with respect to.
     mode : str, optional
         'forward' or 'reverse' to forward or reverse mode differentiation, by default 'reverse'
+    as_block : bool, optional
+        If True, returns the derivatives as a block matrix, by default False
     graph : Graph, optional
         Which graph to take derivatives of, by default the current active graph
+    loop : bool, optional
+        If True, uses a csdl loop to compute the derivatives, by default True
 
     Returns
     -------
@@ -116,7 +127,7 @@ def derivative(
     if mode == 'reverse':
         output_dict = {}
         for of in ofs:
-            deriv_of = reverse(of, wrts, graph)
+            deriv_of = reverse(of, wrts, graph, loop = loop)
             for wrt in deriv_of:
                 output_dict[of, wrt] = deriv_of[wrt]
     elif mode == 'forward':

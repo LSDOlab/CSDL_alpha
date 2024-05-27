@@ -53,3 +53,25 @@ class TestDerivative(csdl_tests.CSDLTest):
         deriv = csdl.derivative([z,w], y, as_block = True)
         assert isinstance(deriv, csdl.Variable)
         assert deriv.shape == (2,1)
+
+
+    def test_loop_argument(self,):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+
+        recorder = csdl.build_new_recorder(inline = True)
+        recorder.start()
+        x_val = np.array([1.0, 2.0])
+        y_val = np.array([3.0, 4.0])
+
+        x = csdl.Variable(name = 'x', value = x_val)
+        y = csdl.Variable(name = 'y', value = y_val)
+
+        z = y*x
+        deriv1 = csdl.derivative([z], [x], loop = True)[z,x]
+        deriv1_raw = csdl.derivative([z], [x], loop = False)[z,x]
+
+        assert np.array_equal(deriv1.value, deriv1_raw.value)
+
