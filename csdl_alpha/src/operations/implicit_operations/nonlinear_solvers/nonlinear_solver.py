@@ -368,7 +368,7 @@ class NonlinearSolver(object):
             else:
                 state.value = self.state_metadata[state]['initial_value'].value
                 
-    def _inline_print_nl_status(self, iter_num, did_converge):
+    def _inline_print_nl_status(self, iter_num:int, did_converge:bool)->None:
         """
         Print the status of the nonlinear solver.
         """
