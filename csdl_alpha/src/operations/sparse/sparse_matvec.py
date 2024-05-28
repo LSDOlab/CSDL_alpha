@@ -10,7 +10,7 @@ import pytest
 @set_properties(supports_sparse=True)
 class SparseMatVec(Operation):
 
-    def __init__(self, x:Variable, sparse_matrix:sp.sparray) -> 'MatVec':
+    def __init__(self, x:Variable, sparse_matrix) -> 'MatVec':
         super().__init__(x)
         self.name = 'sp_matvec'
         self.A = sparse_matrix
@@ -25,7 +25,7 @@ class SparseMatVec(Operation):
             cotangents.accumulate(x, csdl.sparse.matvec(self.A.T, cotangents[b]))
 
 # TODO: A will be variablized to sparse csdl matrix in the future
-def matvec(A:sp.sparray, x:Variable) -> Variable:
+def matvec(A, x:Variable) -> Variable:
     """(TEMPORARY) sparse matrix-vector multiplication A*x for Andrew.
     The number of columns of A must be equal to the number of rows of x.
 
