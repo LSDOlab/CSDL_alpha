@@ -152,17 +152,17 @@ def derivative(
     if of_is_list and wrt_is_list:
         return_dict =  CustomDict(
             output_dict,
-            error_message='indexing requires a tuple of Variable objects: derivatives[<of>, <wrt>]',
+            error_message='Key not found. Indexing requires a tuple of Variable objects: derivatives[<of>, <wrt>]',
         )
     elif wrt_is_list:
         return_dict = CustomDict(
             {wrt: output_dict[ofs[0], wrt] for wrt in wrts},
-            error_message='indexing requires a Variable object: derivatives[<wrt>]'
+            error_message='Key not found. Indexing requires a Variable object: derivatives[<wrt>]'
         )
     elif of_is_list:
         return_dict = CustomDict(
             {of: output_dict[of, wrts[0]] for of in ofs},
-            error_message='indexing requires a Variable object: derivatives[<of>]'
+            error_message='Key not found. Indexing requires a Variable object: derivatives[<of>]'
         )
     else:
         return_dict = output_dict[ofs[0], wrts[0]]

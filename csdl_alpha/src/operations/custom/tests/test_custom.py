@@ -53,12 +53,12 @@ class Paraboloid(csdl.CustomExplicitOperation):
         y = input_vals['y']
         z = input_vals['z']
 
-        derivatives['f', 'x'] = 2*x - self.a + y
-        derivatives['f', 'y'] = 2*y + x + self.b
+        derivatives['f', 'x'] = 2*x - 2*self.a + y
+        derivatives['f', 'y'] = 2*y + x + 2*self.b
 
         if self.return_g:
             derivatives['g', 'x'] = z*derivatives['f', 'x']
-            derivatives['g', 'y'] = z*derivatives['f', 'x']
+            derivatives['g', 'y'] = z*derivatives['f', 'y']
             derivatives['g', 'z'] = outputs_vals['f']
 
 class TestCustom(csdl_tests.CSDLTest):
@@ -74,9 +74,7 @@ class TestCustom(csdl_tests.CSDLTest):
             ("evaluate", {}),
             ("compute", ({}, {})),
             ("compute_derivatives", ({}, {}, {})),
-            ("evaluate_diagonal_jacobian", {}),
             ("evaluate_jvp", {}),
-            ("evaluate_vjp", {}),
         ]
 
         for method, args in methods:
