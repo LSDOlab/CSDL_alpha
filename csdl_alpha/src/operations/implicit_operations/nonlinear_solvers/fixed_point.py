@@ -13,6 +13,7 @@ class FixedPoint(NonlinearSolver):
             print_status,
             tolerance,
             max_iter,
+            elementwise_states,
         ):
         """
         Base class for standard fixed point iteration solvers. Not to be used directly.
@@ -22,7 +23,8 @@ class FixedPoint(NonlinearSolver):
             name = name,
             print_status = print_status,
             tolerance = tolerance,
-            max_iter = max_iter
+            max_iter = max_iter,
+            elementwise_states = elementwise_states,
         )
 
     def add_state(*args, **kwargs):

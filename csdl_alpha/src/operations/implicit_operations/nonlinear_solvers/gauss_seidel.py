@@ -14,6 +14,7 @@ class GaussSeidel(FixedPoint):
             print_status = True,
             tolerance=1e-10,
             max_iter=100,
+            elementwise_states=False,
         ):
         """
         A nonlinear block Gauss-Seidel solver
@@ -29,7 +30,8 @@ class GaussSeidel(FixedPoint):
             name = name,
             print_status = print_status,
             tolerance = tolerance,
-            max_iter = max_iter
+            max_iter = max_iter,
+            elementwise_states = elementwise_states,
         )
 
     def add_state(

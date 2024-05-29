@@ -17,6 +17,7 @@ class NonlinearSolver(object):
             print_status = True,
             tolerance=1e-10,
             max_iter=100,
+            elementwise_states=False,
         ):
         self.name = name
         self.print_status = print_status
@@ -55,6 +56,7 @@ class NonlinearSolver(object):
         # Attributes for derivatives:
         self.full_residual_jacobian = None
         self.total_state_size = 0
+        self.elementwise_states = elementwise_states
 
     def add_metadata(self, key, datum, is_input=True):
         if isinstance(datum, Variable) and is_input:
@@ -335,9 +337,9 @@ class NonlinearSolver(object):
                 current_residual_block = []
 
                 if for_deriv:
-                    deriv = csdl.derivative(residual, states_list, graph = self.residual_graph)
+                    deriv = csdl.derivative(residual, states_list, graph = self.residual_graph, elementwise=self.elementwise_states)
                 else:
-                    deriv = csdl.derivative(residual, states_list)
+                    deriv = csdl.derivative(residual, states_list, elementwise=self.elementwise_states)
 
                 for _state in states_list:
                     current_residual_block.append(deriv[_state])

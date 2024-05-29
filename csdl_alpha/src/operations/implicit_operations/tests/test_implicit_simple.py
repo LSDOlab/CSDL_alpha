@@ -43,50 +43,54 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         self.prep()
 
         # Gauss Seidel tests:
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {}))
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'tolerance': 1e-10}))
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'tolerance': csdl.Variable(value=1e-8)}))
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'tolerance': csdl.Variable(value=np.ones((2,))*1e-8)}))
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': csdl.Variable(value=0.27)}))
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': 0.28}))
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': csdl.Variable(value=0.28), 'tolerance': 1e-10}))
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': 0.27, 'tolerance': csdl.Variable(value=1e-8)}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {}, {}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'tolerance': 1e-10}, {}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'tolerance': csdl.Variable(value=1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'tolerance': csdl.Variable(value=np.ones((2,))*1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': csdl.Variable(value=0.27)}, {}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': 0.28}, {}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': csdl.Variable(value=0.28), 'tolerance': 1e-10}, {}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': 0.27, 'tolerance': csdl.Variable(value=1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {}, {'elementwise_states': True}))
         
         # Jacobi tests:
-        cases.append((csdl.nonlinear_solvers.Jacobi, {}))
-        cases.append((csdl.nonlinear_solvers.Jacobi, {'tolerance': 1.1e-10}))
-        cases.append((csdl.nonlinear_solvers.Jacobi, {'tolerance': csdl.Variable(value=1.1e-8)}))
-        cases.append((csdl.nonlinear_solvers.Jacobi, {'tolerance': csdl.Variable(value=np.ones((2,))*1.1e-8)}))
-        cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': csdl.Variable(value=0.271)}))
-        cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': 0.281}))
-        cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': csdl.Variable(value=0.281), 'tolerance': 1e-10}))
-        cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': 0.271, 'tolerance': csdl.Variable(value=1.1e-8)}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {}, {}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {'tolerance': 1.1e-10}, {}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {'tolerance': csdl.Variable(value=1.1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {'tolerance': csdl.Variable(value=np.ones((2,))*1.1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': csdl.Variable(value=0.271)}, {}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': 0.281}, {}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': csdl.Variable(value=0.281), 'tolerance': 1e-10}, {}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': 0.271, 'tolerance': csdl.Variable(value=1.1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {}, {'elementwise_states': True}))
 
         # Newtons method tests:
-        cases.append((csdl.nonlinear_solvers.Newton, {}))
-        cases.append((csdl.nonlinear_solvers.Newton, {'tolerance': 1.1e-10}))
-        cases.append((csdl.nonlinear_solvers.Newton, {'tolerance': csdl.Variable(value=1.1e-8)}))
-        cases.append((csdl.nonlinear_solvers.Newton, {'tolerance': csdl.Variable(value=np.ones((2,))*1.1e-8)}))
-        cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': csdl.Variable(value=0.271)}))
-        cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': 0.281}))
-        cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': csdl.Variable(value=0.281), 'tolerance': 1e-10}))
-        cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': 0.271, 'tolerance': csdl.Variable(value=1.1e-8)}))
+        cases.append((csdl.nonlinear_solvers.Newton, {}, {}))
+        cases.append((csdl.nonlinear_solvers.Newton, {'tolerance': 1.1e-10}, {}))
+        cases.append((csdl.nonlinear_solvers.Newton, {'tolerance': csdl.Variable(value=1.1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.Newton, {'tolerance': csdl.Variable(value=np.ones((2,))*1.1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': csdl.Variable(value=0.271)}, {}))
+        cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': 0.281}, {}))
+        cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': csdl.Variable(value=0.281), 'tolerance': 1e-10}, {}))
+        cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': 0.271, 'tolerance': csdl.Variable(value=1.1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.Newton, {}, {'elementwise_states': True}))
 
         # Bracketed search tests:
-        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0, 4)}))
-        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (csdl.Variable(value=np.zeros((2,))), 4)}))
-        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4*np.ones((2,))))}))
-        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4*np.ones((2,)))),'tolerance': csdl.Variable(value=1e-8)}))
-        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (csdl.Variable(value=np.zeros((2,))), csdl.Variable(value=4*np.ones((2,)))),'tolerance': 1e-7}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0, 4)}, {}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (csdl.Variable(value=np.zeros((2,))), 4)}, {}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4*np.ones((2,))))}, {}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4*np.ones((2,)))),'tolerance': csdl.Variable(value=1e-8)}, {}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (csdl.Variable(value=np.zeros((2,))), csdl.Variable(value=4*np.ones((2,)))),'tolerance': 1e-7}, {}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0, 4)}, {'elementwise_states': True}))
 
         compare_values = []
-        for i, (solver, kwargs) in enumerate(cases):
+        for i, (solver, kwargs, solver_kwargs) in enumerate(cases):
             print('running case', i, solver, kwargs)
 
             x, y = nl_model_vectorized()
 
             # apply coupling:
-            solver = solver()
+            solver = solver(**solver_kwargs)
             solver.add_state(x, y, **kwargs)
             solver.run()
 

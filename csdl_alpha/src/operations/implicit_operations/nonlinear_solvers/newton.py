@@ -14,6 +14,7 @@ class Newton(FixedPoint):
             print_status = True,
             tolerance=1e-10,
             max_iter=100,
+            elementwise_states=False,
         ):
         """
         Newton method solver
@@ -23,7 +24,8 @@ class Newton(FixedPoint):
             name = name,
             print_status = print_status,
             tolerance = tolerance,
-            max_iter = max_iter
+            max_iter = max_iter,
+            elementwise_states = elementwise_states,
         )
 
     def add_state(

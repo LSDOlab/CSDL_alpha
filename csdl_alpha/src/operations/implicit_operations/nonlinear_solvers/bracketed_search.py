@@ -14,6 +14,7 @@ class BracketedSearch(NonlinearSolver):
                 print_status:bool = True,
                 tolerance:VariableLike=1e-10,
                 max_iter:int=100,
+                elementwise_states=False,
             ):
             """Initialize the BracketedSearch solver.
 
@@ -33,7 +34,8 @@ class BracketedSearch(NonlinearSolver):
                 name = name,
                 print_status = print_status,
                 tolerance = tolerance,
-                max_iter = max_iter
+                max_iter = max_iter,
+                elementwise_states = elementwise_states,
             )
 
             self.add_metadata('tolerance', tolerance)
