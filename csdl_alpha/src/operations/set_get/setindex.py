@@ -123,8 +123,8 @@ class TestSet(csdl_tests.CSDLTest):
         compare_values = []
         # set a scalar slice with a scalar variable
         x1 = x.set(slice[0:1], y)
-        x2 = x.set((0,), y)
-        x2_v = x.set((ind_0,), y)
+        x2 = x.set(slice[0], y)
+        x2_v = x.set(slice[ind_0], y)
         t1 = np.array([2.])
         compare_values += [csdl_tests.TestingPair(x1, t1)]
         compare_values += [csdl_tests.TestingPair(x2, t1)]
@@ -132,7 +132,7 @@ class TestSet(csdl_tests.CSDLTest):
 
         # set a scalar slice with a scalar constant
         x3 = x.set(slice[0:1], 2.0)
-        x3_v = x.set([ind_0,], 2.0)
+        x3_v = x.set(slice[[ind_0,]], 2.0)
         compare_values += [csdl_tests.TestingPair(x3, t1)]
         compare_values += [csdl_tests.TestingPair(x3_v, t1)]
 
@@ -140,20 +140,20 @@ class TestSet(csdl_tests.CSDLTest):
         z = csdl.Variable(name = 'z', value = z_val)
         # set a tensor slice with a tensor constant
         z1 = z.set(slice[0:-1:1], 2.0*np.ones((2,2)))
-        z1_v = z.set([ind_0, ind_0+1], 2.0*np.ones((2,2)))
+        z1_v = z.set(slice[[ind_0, ind_0+1]], 2.0*np.ones((2,2)))
         t2 = np.array([[2.,2.],[2.,2.],[3.,3.]])
         compare_values += [csdl_tests.TestingPair(z1, t2)]
         compare_values += [csdl_tests.TestingPair(z1_v, t2)]
 
         # set a tensor slice with a scalar constant
         z2 = z.set(slice[0:-1:1], 2.0)
-        z2_v = z.set([ind_0, ind_0+1], 2.0)
+        z2_v = z.set(slice[[ind_0, ind_0+1]], 2.0)
         compare_values += [csdl_tests.TestingPair(z2, t2)]
         compare_values += [csdl_tests.TestingPair(z2_v, t2)]
 
         # set a tensor slice with a scalar variable
         z3 = z.set(slice[0:-1:1], y)
-        z3_v = z.set([ind_0, ind_0+1], y)
+        z3_v = z.set(slice[[ind_0, ind_0+1]], y)
         compare_values += [csdl_tests.TestingPair(z3, t2)]
         compare_values += [csdl_tests.TestingPair(z3_v, t2)]
 
@@ -161,7 +161,7 @@ class TestSet(csdl_tests.CSDLTest):
         t = csdl.Variable(name = 't', value = t_val)
         # set a tensor slice with a tensor variable
         z4 = z.set(slice[0:-1:1], t)
-        z4_v = z.set([ind_0, ind_0+1], t_val)
+        z4_v = z.set(slice[[ind_0, ind_0+1]], t_val)
         z4_var = z.set(slice[ind_0:ind_0+2:1], t_val)
         compare_values += [csdl_tests.TestingPair(z4, t2)]
         compare_values += [csdl_tests.TestingPair(z4_v, t2)]
@@ -177,20 +177,20 @@ class TestSet(csdl_tests.CSDLTest):
 
         t = csdl.Variable(name = 't', value = 2.0*np.ones((2,)))
         # set a tensor slice at specific indices with a tensor variable
-        z6 = z.set(([0,1], [1,1]), t)
-        z6_v = z.set(([ind_0,1], [ind_1,ind_1]), t)
+        z6 = z.set(slice[([0,1], [1,1])], t)
+        z6_v = z.set(slice[([ind_0,1], [ind_1,ind_1])], t)
         compare_values += [csdl_tests.TestingPair(z6, t3)]
         compare_values += [csdl_tests.TestingPair(z6_v, t3)]
 
         # set a tensor slice at specific indices with a scalar variable
-        z7 = z.set(([0,1], [1,1]), y)
-        z7_v = z.set(([ind_0,1], [ind_1,ind_1]), y)
+        z7 = z.set(slice[([0,1], [1,1])], y)
+        z7_v = z.set(slice[([ind_0,1], [ind_1,ind_1])], y)
         compare_values += [csdl_tests.TestingPair(z7, t3)]
         compare_values += [csdl_tests.TestingPair(z7_v, t3)]
 
         # set a tensor slice at specific indices with a scalar constant
-        z8 = z.set(([0,1], [1,1]), 2.0)
-        z8_v = z.set(([ind_0,1], [ind_1,ind_1]), 2.0)
+        z8 = z.set(slice[([0,1], [1,1])], 2.0)
+        z8_v = z.set(slice[([ind_0,1], [ind_1,ind_1])], 2.0)
         compare_values += [csdl_tests.TestingPair(z8, t3)]
         compare_values += [csdl_tests.TestingPair(z8_v, t3)]
 
@@ -229,6 +229,8 @@ class TestSet(csdl_tests.CSDLTest):
             z.set(slice[ind_0:-1:1], t)
         with pytest.raises(ValueError):
             z.set(slice[[0,0]], t)
+        with pytest.raises(TypeError):
+            z.set([0], t)
 
         self.run_tests(compare_values = compare_values,turn_off_recorder=False, verify_derivatives=False)
 
