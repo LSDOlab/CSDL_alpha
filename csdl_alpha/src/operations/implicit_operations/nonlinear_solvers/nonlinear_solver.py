@@ -304,7 +304,7 @@ class NonlinearSolver(object):
         for current_state, current_residual in self.state_to_residual_map.items():
             il = self.state_metadata[current_state]['index_lower']
             iu = self.state_metadata[current_state]['index_upper']
-            seeds.append((current_residual, psi[il:iu]))
+            seeds.append((current_residual, psi[il:iu].reshape(current_residual.shape)))
         psi_vjps = vjp(seeds, list(wrts_set), self.residual_graph)
         # recorder.visualize_graph('post_step3')
 
