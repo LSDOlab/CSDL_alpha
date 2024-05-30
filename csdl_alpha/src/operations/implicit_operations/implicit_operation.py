@@ -16,6 +16,12 @@ class ImplicitOperation(SubgraphOperation):
         
         return [output.value for output in self.outputs]
     
+    def prep_vjp(self):
+        """
+        Prepare operation for reverse mode differentiation
+        """
+        self.nonlinear_solver.prep_vjp()
+
     def evaluate_vjp(self, cotangents, *inputs_and_outputs):
         inputs = inputs_and_outputs[:len(self.inputs)]
         outputs = inputs_and_outputs[len(self.inputs):]

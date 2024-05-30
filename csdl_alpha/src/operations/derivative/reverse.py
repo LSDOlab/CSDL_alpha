@@ -19,9 +19,44 @@ class VJPOperation(SubgraphOperation):
     def compute_inline(self, *args):
         self.get_subgraph().execute_inline()
 
+def preprocess_reverse(
+        of_vars:list[Variable],
+        wrt_vars:list[Variable],
+        graph:Graph,
+    )->dict[Variable]:
+    """Computes the reverse mode derivative order of the graph and allows operations to perform any precomputations.
+    """
+
+    # Call preprocess for all variables
+    # Extract subgraph of relevant nodes in the graph
+    node_order = build_derivative_node_order(graph, of_vars, wrt_vars)
+
+    # call preprocess for all operations
+    for node in node_order:
+        if isinstance(node, Operation):
+            node.prep_vjp()
+    return node_order
+
 def vjp(seeds:list[tuple[Variable, Variable]],
         wrts:Union[Variable, list[Variable]],
         graph:Graph,
+    )->dict[Variable]:
+    # Preprocess inputs
+    of_vars = []
+    for of_var, of_seeds in seeds:
+        of_vars.append(validate_and_variablize(of_var))
+
+        # Seeds must match shape of the variable
+        if of_seeds.shape != of_var.shape:
+            raise ValueError(f"Seed shape {of_seeds.shape} and variable shape {of_var.shape} do not match.")
+
+    wrt_vars = listify_and_verify_variables(wrts)
+    node_order = preprocess_reverse(of_vars, wrt_vars, graph)
+    return _vjp(seeds, wrt_vars, node_order)
+
+def _vjp(seeds:list[tuple[Variable, Variable]],
+        wrt_vars:Union[Variable, list[Variable]],
+        node_order:list[Union[Variable,Operation]],
     )->dict[Variable]:
     """ Computes the vector-Jacobian product of the seeds with respect to the wrts in the graph.
 
@@ -45,27 +80,14 @@ def vjp(seeds:list[tuple[Variable, Variable]],
         Seeds must match the shape of the associated variable
     """
 
-    # Preprocess inputs
-    of_vars = []
-    for of_var, of_seeds in seeds:
-        of_vars.append(validate_and_variablize(of_var))
-
-        # Seeds must match shape of the variable
-        if of_seeds.shape != of_var.shape:
-            raise ValueError(f"Seed shape {of_seeds.shape} and variable shape {of_var.shape} do not match.")
-    wrt_vars = listify_and_verify_variables(wrts)
-
-    # Extract subgraph of relevant nodes in the graph
-    node_order = build_derivative_node_order(graph, of_vars, wrt_vars)
-
     # initialize seeds and final wrt cotangents
     import numpy as np
     import csdl_alpha as csdl
 
     cotangents = VarTangents()
-    for i, of_var in enumerate(of_vars):
+    for of_var, seed in seeds:
         cotangents.initialize(of_var)
-        cotangents.accumulate(of_var, variablize(seeds[i][1]))
+        cotangents.accumulate(of_var, variablize(seed))
 
     # perform the vector-jacobian here in terms of CSDL operations by going through the node order
     for node in node_order:

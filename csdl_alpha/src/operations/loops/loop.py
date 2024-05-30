@@ -120,6 +120,20 @@ class Loop(SubgraphOperation):
 
         return [output.value for output in self.outputs]
 
+    def prep_vjp(self):
+        """
+        Prepare the nonlinear solver for reverse mode differentiation.
+        """
+        import csdl_alpha as csdl
+        recorder = csdl.get_current_recorder()
+        recorder._enter_subgraph(graph = self.get_subgraph())
+        
+        for node in self.get_subgraph().node_table.keys():
+            if isinstance(node, Operation):
+                node.prep_vjp()
+        
+        recorder._exit_subgraph()
+
     def evaluate_vjp(self, cotangents, *inputs_and_outputs):
         inputs = inputs_and_outputs[:self.num_inputs]
         outputs = inputs_and_outputs[self.num_inputs:]

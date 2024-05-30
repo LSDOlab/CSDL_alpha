@@ -129,6 +129,16 @@ class Operation(Node):
         else:
             return tuple(self.outputs)
 
+    def prep_vjp(self):
+        """
+        Prepare operation for reverse mode differentiation.
+        This method is called before every major reverse mode derivative computation.
+        This can be used to pre-compute any values such as partial jacobians.
+        IMPORTANT: Because this method may be called more than once,
+        make sure to store any precomputed values in the operation object.
+        """
+        pass
+
     def compute_inline(self, *args):
         raise NotImplementedError('not implemented') 
 

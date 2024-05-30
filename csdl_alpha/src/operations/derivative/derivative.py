@@ -1,5 +1,5 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
-from csdl_alpha.src.operations.derivative.reverse import vjp
+from csdl_alpha.src.operations.derivative.reverse import _vjp, preprocess_reverse
 from csdl_alpha.src.operations.derivative.bookkeeping import listify_and_verify_variables
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
@@ -32,6 +32,7 @@ def reverse(
             raise TypeError(f"Expected graph to be a Graph, but got {get_type_string(graph)}.")
     # Node order built in VJP for now..
     # node_order = build_derivative_node_order(graph, [of_var], wrt_vars)
+    node_order = preprocess_reverse([of_var], wrt_vars, graph)
 
     # perform the reverse mode differentiation:
     import numpy as np
@@ -51,7 +52,8 @@ def reverse(
             current_output_seed = current_output_seed.reshape(of_var.shape)
 
             #TODO: pass in node order first somehow. Right now, we are 
-            vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)
+            # vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)
+            vjp_cotangents = _vjp([(of_var,current_output_seed)], wrt_vars, node_order)
 
             for wrt_var in wrt_vars:
                 wrt_cotangent = vjp_cotangents[wrt_var]
@@ -63,7 +65,9 @@ def reverse(
             loop_d.op.name = 'r_loop'
     else:
         current_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.ones(of_var.shape))
-        vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)
+        # vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)
+        vjp_cotangents = _vjp([(of_var,current_output_seed)], wrt_vars, node_order)
+
         for wrt_var in wrt_vars:
             wrt_cotangent = vjp_cotangents[wrt_var]
             if wrt_cotangent is None:
