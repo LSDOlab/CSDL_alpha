@@ -1,6 +1,6 @@
 from csdl_alpha.src.graph.variable import ImplicitVariable, Variable
 from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation
-from csdl_alpha.utils.inputs import scalarize, ingest_value, validate_and_variablize
+from csdl_alpha.utils.inputs import scalarize, ingest_value, validate_and_variablize, get_type_string
 import csdl_alpha.utils.error_utils as error_utils
 from csdl_alpha.utils.error_utils import GraphError
 import numpy as np
@@ -108,10 +108,15 @@ class NonlinearSolver(object):
 
         Initializes mappings between states and residuals, and stores metadata about the state.
         """
+        import csdl_alpha as csdl
+        current_graph = csdl.get_current_recorder().active_graph
         if self.locked:
             raise RuntimeError("Nonlinear solver has already been run. Cannot add more state-residual pairs.")
-        if not isinstance(state, ImplicitVariable):
-            raise TypeError(f"State must be an ImplicitVariable. {state} given")
+        
+        if not isinstance(state, Variable):
+            raise TypeError(f"State must be a Variable. {get_type_string(state)} given")
+        elif current_graph.in_degree(state) != 0:
+            raise TypeError(f"State must not be computed from another operation.")
         else:
             if state._check_nlsolver_conflict():
                 raise ValueError(f"Implicit variable with name = {state.name} has already been previously added to a solver.")

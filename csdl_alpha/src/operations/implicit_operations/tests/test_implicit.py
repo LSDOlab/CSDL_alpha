@@ -323,7 +323,7 @@ class TestImplicit(csdl_tests.CSDLTest):
 
         # state must be CSDL implicit variable
         with pytest.raises(TypeError) as e_info:
-            solver.add_state(c, y)
+            solver.add_state(1.0*c, y)
         
         # residual must be CSDL variable
         with pytest.raises(TypeError) as e_info:

@@ -29,7 +29,7 @@ def nl_model_vectorized_double():
     b = csdl.Variable(value=np.array([2.1, 2.0]))
     c = csdl.Variable(value=-1)
     x = csdl.ImplicitVariable(value=np.array([0.34, 0.30])) # solution:[0.38462, 0.38743]
-    x2 = csdl.ImplicitVariable(value=np.array([0.34, 0.30])) # solution:[0.38462, 0.38743]
+    x2 = csdl.Variable(value=np.array([0.34, 0.30])) # solution:[0.38462, 0.38743]
 
     ax2 = a*((x+x2)/2)**2
     y = x - (-ax2 - c)/b
