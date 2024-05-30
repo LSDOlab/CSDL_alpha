@@ -1,3 +1,4 @@
+from functools import wraps
 from .src.data import inline_export, inline_import, save_optimization_variables, save_all_variables
 from .src.graph.variable import Variable, ImplicitVariable, SparseMatrix
 from .src.model import Model
@@ -74,3 +75,8 @@ def exit_subgraph():
 def print_all_recorders():
     print(manager)
     
+
+@wraps(Recorder.visualize_graph)
+def visualize_graph(*args, **kwargs):
+    recorder = get_current_recorder()
+    recorder.visualize_graph(*args, **kwargs)
