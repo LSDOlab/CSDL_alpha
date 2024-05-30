@@ -271,7 +271,7 @@ class NonlinearSolver(object):
             if state not in wrts_set:
                 wrts.append(state)
 
-        from csdl_alpha.src.operations.derivative.derivative import vjp
+        from csdl_alpha.src.operations.derivative.reverse import vjp
         
         # TODO: Should VJP function should be INSIDE or OUTSIDE the nonlinear solver?
         # Compute vector-Jacobian product of the residuals in the residual graph
