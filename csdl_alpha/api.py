@@ -1,4 +1,4 @@
-from .src.data import inline_save, import_h5py, save_optimization_variables, save_all_variables, inline_csv_save
+from .src.data import inline_export, inline_import, save_optimization_variables, save_all_variables
 from .src.graph.variable import Variable, ImplicitVariable, SparseMatrix
 from .src.model import Model
 from .src.recorder import Recorder
@@ -38,18 +38,6 @@ class namespace:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         exit_namespace()
-
-class Namespace(namespace):
-    def __init__(self, namespace: str):
-        """Depricated: use namespace instead. Namespacing context manager.
-
-        Parameters
-        ----------
-        namespace : str
-            The name of the namespace to enter.
-        """
-        warnings.warn("Namespace is depricated. Use namespace instead.", DeprecationWarning)
-        super().__init__(namespace)
 
 def enter_namespace(namespace: str):
     """

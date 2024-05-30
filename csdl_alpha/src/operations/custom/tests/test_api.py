@@ -5,8 +5,10 @@ import pytest
 # basic custom explicit
 
 class CustomOp(csdl.CustomExplicitOperation):
-    def initialize(self):
-        self.a = self.parameters.declare('a', types = (int, float))
+    def __init__(self, a):
+        super().__init__()
+        csdl.check_parameter(a, 'a', types=(int, float))
+        self.a = a
 
     def evaluate(self, x1, x2, x3):
         self.declare_input('x1', x1)

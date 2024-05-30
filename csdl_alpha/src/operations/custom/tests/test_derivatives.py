@@ -63,10 +63,11 @@ class TestCustom(csdl_tests.CSDLTest):
         import numpy as np
  
         class Custom2(csdl.CustomExplicitOperation):
-            def initialize(self):
-                self.a = self.parameters.declare('a')
-                self.b = self.parameters.declare('b')
-                self.c = self.parameters.declare('c')
+            def __init__(self, a, b, c):
+                super().__init__()
+                self.a = a
+                self.b = b
+                self.c = c
 
             def evaluate(self, x, y, z):
                 # assign method _dict to input dictionary

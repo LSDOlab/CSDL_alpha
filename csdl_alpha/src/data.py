@@ -1,4 +1,21 @@
-def inline_save(filename:str):
+def inline_export(filename:str, summary_csv:bool=False, do_print=False):
+    """Save variables from the current recorder's node graph to an HDF5 file.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the HDF5 file to save the variables to.
+    summary_csv : bool, optional
+        If True, a CSV file will be saved instead of an HDF5 file, by default False.
+    do_print : bool, optional
+        If True, the CSV file will be printed to the console, by default False.
+    """
+    if summary_csv:
+        _inline_csv_save(filename, print_csv=do_print)
+    else:
+        _export_h5py(filename, do_print=do_print)
+
+def _export_h5py(filename:str, do_print=False):
     """Save variables from the current recorder's node graph to an HDF5 file.
 
     Parameters
@@ -46,7 +63,7 @@ def _get_savename(key, name_counter_dict):
         savename = key.names[0]
     return savename
 
-def import_h5py(filename:str, group:str):
+def inline_import(filename:str, group:str):
     """
     Import variables from an HDF5 file.
 
@@ -98,7 +115,7 @@ def import_h5py(filename:str, group:str):
     # Return the dictionary of variables
     return variables
     
-def inline_csv_save(filename:str, print_csv:bool=False):
+def _inline_csv_save(filename:str, print_csv:bool=False):
     """Save the name, min, max, and mean of variables from the current recorder's node graph to a CSV file.
 
     Parameters
@@ -148,7 +165,7 @@ def inline_csv_save(filename:str, print_csv:bool=False):
                     print('{:<{}}  {:<30}  {:<30} {:<30} {:<10} {:<30}'.format(row[0], name_len, row[1], row[2], row[3], row[4], row[5]))
                 
 def save_optimization_variables():
-    """Save optimization variables.
+    """Sets optimization variables to be saved.
 
     This function sets the optimization variables to be saved, including objectives, constraints, and design variables.
     """
@@ -163,7 +180,13 @@ def save_optimization_variables():
         key.save()
 
 def save_all_variables(ignore_unnamed = False):
-    """Save all variables in the current recorder's node graph."""
+    """Sets all variables in the current recorder's node graph to be saved.
+    
+    Parameters
+    ----------
+    ignore_unnamed : bool, optional
+        If True, only variables with names will be saved, by default False.
+    """
     from ..api import Variable
     from ..api import get_current_recorder
 

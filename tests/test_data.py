@@ -27,9 +27,9 @@ class TestData(CSDLTest):
 
         csdl.save_optimization_variables()
 
-        csdl.inline_save('test_data')
+        csdl.inline_export('test_data')
 
-        variables = csdl.import_h5py('test_data.hdf5', 'inline')
+        variables = csdl.inline_import('test_data.hdf5', 'inline')
         assert variables['a'].value == a.value
         assert variables['a'].tags == a.tags
         assert variables['a'].hierarchy == a.hierarchy
@@ -60,7 +60,7 @@ class TestData(CSDLTest):
 
         csdl.save_optimization_variables()
 
-        csdl.inline_csv_save('test_data')
+        csdl.inline_export('test_data', summary_csv=True)
 
 if __name__ == '__main__':
     import csdl_alpha as csdl

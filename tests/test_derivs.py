@@ -44,11 +44,11 @@ class TestDeriv(csdl_tests.CSDLTest):
         y = csdl.norm(x0[[0,1], :]) - csdl.sin(x1)
         # y = x0+x1
         y.add_name('y')
-        with csdl.Namespace('deriv1'):
+        with csdl.namespace('deriv1'):
             dy_dx1 = csdl.derivative(y, [x1, x0])[x1]
             dy_dx1.add_name('dy_dx1')
 
-        with csdl.Namespace('deriv2'):
+        with csdl.namespace('deriv2'):
             d2y_dx12 = csdl.derivative(dy_dx1, [x1])[x1]
             d2y_dx12.add_name('d2y_dx12')
 
@@ -74,7 +74,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         y = x0.set(csdl.slice[1:2], csdl.sum(x0))
         y1 = y-csdl.exp(x1)**(x1*x1)
         y2 = csdl.tensordot(y1, x0, axes=([1],[1]),)
-        with csdl.Namespace('deriv1'):
+        with csdl.namespace('deriv1'):
             dy_dx1 = csdl.derivative(y2, [x1, x0])[x1]
             dy_dx1.add_name('dy_dx1')
 
@@ -95,11 +95,11 @@ class TestDeriv(csdl_tests.CSDLTest):
 
         y2 = x1-x0
         y2.add_name('y2')
-        with csdl.Namespace('deriv1'):
+        with csdl.namespace('deriv1'):
             dy_dx1 = csdl.derivative(y2, [x1, x0])[x1]
             dy_dx1.add_name('dy_dx1')
 
-        with csdl.Namespace('deriv2'):
+        with csdl.namespace('deriv2'):
             dy_dx2 = csdl.derivative(dy_dx1, [x1])[x1]
             dy_dx2.add_name('dy2_dx2')
 
@@ -120,11 +120,11 @@ class TestDeriv(csdl_tests.CSDLTest):
         # y2 = x1-x1
         y2 = csdl.tensordot(x1, x1)
         y2.add_name('y2')
-        with csdl.Namespace('deriv1'):
+        with csdl.namespace('deriv1'):
             dy_dx1 = csdl.derivative(y2, [x1, x0])[x1]
             dy_dx1.add_name('dy_dx1')
 
-        with csdl.Namespace('deriv2'):
+        with csdl.namespace('deriv2'):
             dy_dx2 = csdl.derivative(csdl.sum(dy_dx1), [x1])[x1]
             dy_dx2.add_name('dy2_dx2')
 
@@ -146,15 +146,15 @@ class TestDeriv(csdl_tests.CSDLTest):
         # y2 = csdl.tensordot(x1, x1)
         y2 = csdl.einsum(x1, x0, action = 'i,j->ij')
         y2.add_name('y2')
-        with csdl.Namespace('deriv1'):
+        with csdl.namespace('deriv1'):
             dy_dx1 = csdl.derivative(csdl.sum(y2), [x1])[x1]
             dy_dx1.add_name('dy_dx1')
 
-        with csdl.Namespace('deriv2'):
+        with csdl.namespace('deriv2'):
             dy_dx2 = csdl.derivative(csdl.sum(dy_dx1), [x1])[x1]
             dy_dx2.add_name('dy2_dx2')
 
-        with csdl.Namespace('deriv3'):
+        with csdl.namespace('deriv3'):
             dy_dx3 = csdl.derivative(csdl.sum(dy_dx2), [x1])[x1]
             dy_dx3.add_name('dy2_dx3')
 
@@ -191,11 +191,11 @@ class TestDeriv(csdl_tests.CSDLTest):
         # y2 = csdl.tensordot(x1, x1)
         # y2 = csdl.einsum(x1, x0, action = 'i,j->ij')
         y2.add_name('y2')
-        with csdl.Namespace('deriv1'):
+        with csdl.namespace('deriv1'):
             dy_dx1 = csdl.derivative((y2), [x1])[x1]
             dy_dx1.add_name('dy_dx1')
 
-        with csdl.Namespace('deriv2'):
+        with csdl.namespace('deriv2'):
             sum_dy_dx1 = (dy_dx1)
             sum_dy_dx1.add_name('sum_dy_dx1')
             dy_dx2 = csdl.derivative(sum_dy_dx1, [x1])[x1]
@@ -249,15 +249,15 @@ class TestDeriv(csdl_tests.CSDLTest):
         # y2 = csdl.sum(x1, x1)
 
         y2.add_name('y2')
-        with csdl.Namespace('deriv1'):
+        with csdl.namespace('deriv1'):
             dy2_dx1 = csdl.derivative(y2[0], x1)
             dy2_dx1.add_name('dy_dx1')
 
-        with csdl.Namespace('deriv2'):
+        with csdl.namespace('deriv2'):
             dy2_dx2 = csdl.derivative(dy2_dx1[0], x1)
             dy2_dx2.add_name('dy2_dx2')
 
-        with csdl.Namespace('deriv3'):
+        with csdl.namespace('deriv3'):
             dy3_dx2 = csdl.derivative(dy2_dx2[0], x1)
             dy3_dx2.add_name('dy3_dx3')
             print(dy3_dx2.shape)

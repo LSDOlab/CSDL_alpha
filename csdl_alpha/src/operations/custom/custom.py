@@ -11,13 +11,6 @@ import numpy as np
 
 class CustomOperation(Operation):
     def __init__(self, *args, **kwargs):
-        if hasattr(self, 'initialize'):
-            warnings.warn('The initialize method is deprecated. Use __init__ and check_parameter instead.', DeprecationWarning)
-            self.parameters = Parameters()
-            self.parameters.hold(kwargs)
-            self.initialize()
-            self.parameters.check(kwargs)
-
         self.input_dict = {}
         self.output_dict = {}
         self.derivative_parameters = {}
@@ -80,12 +73,6 @@ class CustomExplicitOperation(CustomOperation):
 
         self.evaluate = self._wrap_evaluate(self.evaluate)
         self.locked = False
-
-    def initialize(self):
-        """
-        Depricated, use __init__ instead.
-        """
-        pass
 
     def evaluate(self):
         raise NotImplementedError('not implemented')
