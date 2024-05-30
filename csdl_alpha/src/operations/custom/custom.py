@@ -2,7 +2,13 @@ from csdl_alpha.utils.parameters import Parameters
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.utils.inputs import variablize, get_type_string, ingest_value
-from csdl_alpha.src.operations.custom.utils import prepare_compute_derivatives, process_custom_derivatives_metadata, postprocess_compute_derivatives
+from csdl_alpha.src.operations.custom.utils import (
+    prepare_compute_derivatives,
+    process_custom_derivatives_metadata,
+    postprocess_compute_derivatives,
+    preprocess_custom_inputs,
+    postprocess_custom_outputs,
+)
 
 import warnings
 import numpy as np
@@ -22,53 +28,6 @@ class CustomOperation(Operation):
         self.output_dict = {}
         self.derivative_parameters = {}
         self.name = 'custom'
-
-# https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
-def _readonly(self, *args, **kwargs):
-    raise RuntimeError("Cannot modify inputs dictionary.")
-
-# https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
-class CustomInputsDict(dict):
-    __setitem__ = _readonly
-    __delitem__ = _readonly
-    pop = _readonly
-    popitem = _readonly
-    clear = _readonly
-    update = _readonly
-    setdefault = _readonly
-
-def preprocess_custom_inputs(inputs):
-    return CustomInputsDict(inputs)
-
-def postprocess_custom_outputs(given_outputs:dict, declared_outputs:dict):
-    processed_outputs = {}
-    for given_key, given_output in given_outputs.items():
-
-        # If they give an output that isn't a VariableLike, raise an error
-        try:
-            given_output = ingest_value(given_output)
-        except Exception as e:
-            raise TypeError(f'Error with output \'{given_key}\': {e}')
-
-        # If they give an output that wasn't declared, raise an error
-        if given_key not in declared_outputs:
-            raise KeyError(f'Output \'{given_key}\' was not declared but was computed')
-        
-        # If they give an output that doesn't have the right shape, raise an error
-        if given_output.size == 1: # broadcasting????
-            given_output = np.ones(declared_outputs[given_key].shape) * given_output.flatten()
-        elif given_output.shape != declared_outputs[given_key].shape:
-            raise ValueError(f'Output \'{given_key}\' must have shape {declared_outputs[given_key].shape}, but shape {given_output.shape} was given')
-
-        processed_outputs[given_key] = given_output
-
-    for declared_key, declared_output_variable in declared_outputs.items():
-
-        # If they didn't give an output that was declared, raise an error
-        if declared_key not in processed_outputs:
-            raise KeyError(f'Output \'{declared_key}\' was declared but was not computed')
-
-    return processed_outputs
 
 class CustomExplicitOperation(CustomOperation):
 
@@ -114,12 +73,15 @@ class CustomExplicitOperation(CustomOperation):
             return eval_outputs
         return new_evaluate
 
+    def compute_forward(self, inputs, outputs):
+        self.compute(inputs, outputs)
+
     def compute_inline(self, *args):
         inputs = {key:input for key, input in zip(self.input_dict.keys(), args)}
         comp_outputs = {}
 
         inputs = preprocess_custom_inputs(inputs)
-        self.compute(inputs, comp_outputs)
+        self.compute_forward(inputs, comp_outputs)
         comp_outputs = postprocess_custom_outputs(comp_outputs, self.output_dict)
 
         output = [comp_outputs[key] for key in self.output_dict.keys()]
@@ -340,8 +302,7 @@ class CustomExplicitOperation(CustomOperation):
             if cotangents.check(input):
                 input_cots.append(input)
 
-        vjps = build_custom_operation_vjp(
-            self,
+        vjps = self.build_custom_operation_vjp(
             input_cotangents = input_cots,
             output_cotangents = output_cots,
             deriv_order = 1)
@@ -351,6 +312,17 @@ class CustomExplicitOperation(CustomOperation):
             cots = (cots,)
         for i, input in enumerate(input_cots):
             cotangents.accumulate(input, cots[i])
+
+    def build_custom_operation_vjp(
+            self,
+            input_cotangents:list[Variable],
+            output_cotangents:list[Variable],
+            deriv_order:int)->'CustomJacOperation':
+
+        if deriv_order > 1:
+            raise NotImplementedError('Higher order custom derivatives not yet implemented')
+
+        return CustomJacOperation(self, input_cotangents, output_cotangents, deriv_order)
 
 class CustomJacOperation(Operation):
     
@@ -431,15 +403,3 @@ class CustomJacOperation(Operation):
             return input_cots[0]
         else:
             return tuple(input_cots)
-
-
-def build_custom_operation_vjp(
-        custom_operation:CustomOperation,
-        input_cotangents:list[Variable],
-        output_cotangents:list[Variable],
-        deriv_order:int)->CustomJacOperation:
-
-    if deriv_order > 1:
-        raise NotImplementedError('Higher order custom derivatives not yet implemented')
-
-    return CustomJacOperation(custom_operation, input_cotangents, output_cotangents, deriv_order)
