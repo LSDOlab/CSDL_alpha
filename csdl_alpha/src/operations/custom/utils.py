@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 from csdl_alpha.src.graph.variable import Variable
+from csdl_alpha.utils.inputs import variablize, get_type_string, ingest_value
 
 def process_custom_derivatives_metadata(
         derivative_dict:dict[tuple[str,str], dict],
@@ -119,3 +120,51 @@ def postprocess_compute_derivatives(
     for total_tuple in totals:
         if total_tuple not in derivative_meta:
             raise KeyError(f'derivative {total_tuple} does not exist')
+        
+
+# https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
+def _readonly(self, *args, **kwargs):
+    raise RuntimeError("Cannot modify inputs dictionary.")
+
+# https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
+class CustomInputsDict(dict):
+    __setitem__ = _readonly
+    __delitem__ = _readonly
+    pop = _readonly
+    popitem = _readonly
+    clear = _readonly
+    update = _readonly
+    setdefault = _readonly
+
+def preprocess_custom_inputs(inputs):
+    return CustomInputsDict(inputs)
+
+def postprocess_custom_outputs(given_outputs:dict, declared_outputs:dict):
+    processed_outputs = {}
+    for given_key, given_output in given_outputs.items():
+
+        # If they give an output that isn't a VariableLike, raise an error
+        try:
+            given_output = ingest_value(given_output)
+        except Exception as e:
+            raise TypeError(f'Error with output \'{given_key}\': {e}')
+
+        # If they give an output that wasn't declared, raise an error
+        if given_key not in declared_outputs:
+            raise KeyError(f'Output \'{given_key}\' was not declared but was computed')
+        
+        # If they give an output that doesn't have the right shape, raise an error
+        if given_output.size == 1: # broadcasting????
+            given_output = np.ones(declared_outputs[given_key].shape) * given_output.flatten()
+        elif given_output.shape != declared_outputs[given_key].shape:
+            raise ValueError(f'Output \'{given_key}\' must have shape {declared_outputs[given_key].shape}, but shape {given_output.shape} was given')
+
+        processed_outputs[given_key] = given_output
+
+    for declared_key, declared_output_variable in declared_outputs.items():
+
+        # If they didn't give an output that was declared, raise an error
+        if declared_key not in processed_outputs:
+            raise KeyError(f'Output \'{declared_key}\' was declared but was not computed')
+
+    return processed_outputs

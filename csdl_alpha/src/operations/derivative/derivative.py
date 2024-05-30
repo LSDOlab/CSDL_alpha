@@ -18,6 +18,7 @@ def reverse(
         wrts: Union[Variable, list[Variable]],
         graph:Graph = None,
         loop:bool = True,
+        elementwise = False,
     )->dict[Variable]:
     of_var = validate_and_variablize(of)
     wrt_vars = listify_and_verify_variables(wrts)
@@ -40,25 +41,37 @@ def reverse(
 
     initial_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
     
-    if loop:
-        loop_d = csdl.frange(of_var.size)
+    if not elementwise:
+        if loop:
+            loop_d = csdl.frange(of_var.size)
+        else:
+            loop_d = range(of_var.size)
+        for row_index in loop_d:
+            current_output_seed = initial_output_seed.set(csdl.slice[row_index], 1.0)
+            current_output_seed = current_output_seed.reshape(of_var.shape)
+
+            #TODO: pass in node order first somehow. Right now, we are 
+            vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)
+
+            for wrt_var in wrt_vars:
+                wrt_cotangent = vjp_cotangents[wrt_var]
+                if wrt_cotangent is None:
+                    continue
+                jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[row_index, :], wrt_cotangent.flatten())
+                jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
+        if loop:
+            loop_d.op.name = 'r_loop'
     else:
-        loop_d = range(of_var.size)
-    for row_index in loop_d:
-        current_output_seed = initial_output_seed.set(csdl.slice[row_index], 1.0)
-        current_output_seed = current_output_seed.reshape(of_var.shape)
-
-        #TODO: pass in node order first somehow. Right now, we are 
+        current_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.ones(of_var.shape))
         vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)
-
         for wrt_var in wrt_vars:
             wrt_cotangent = vjp_cotangents[wrt_var]
             if wrt_cotangent is None:
                 continue
-            jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[row_index, :], wrt_cotangent.flatten())
-            jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
-    if loop:
-        loop_d.op.name = 'r_loop'
+            diag_indices = list(np.arange(wrt_var.size))
+            jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[diag_indices, diag_indices], wrt_cotangent.flatten())
+            jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}_diag')
+
     return jacobians
 
 
@@ -68,7 +81,8 @@ def derivative(
     mode:str = 'reverse',
     as_block:bool = False,
     graph:Graph = None,
-    loop:bool = True
+    loop:bool = True,
+    elementwise = False,
     )->Union[dict[Variable], dict[Variable,Variable], Variable]:
     """Computes the derivatives of the output variables with respect to the input variables in CSDL.
 
@@ -86,6 +100,8 @@ def derivative(
         Which graph to take derivatives of, by default the current active graph
     loop : bool, optional
         If True, uses a csdl loop to compute the derivatives, by default True
+    elementwise : bool, optional
+        If True, assumes diagonal derivatives, by default False
 
     Returns
     -------
@@ -124,10 +140,16 @@ def derivative(
         wrts = [wrts]
         wrt_is_list = False
 
+    if elementwise:
+        first_var_size = ofs[0].size
+        for var in ofs + wrts:
+            if var.size != first_var_size:
+                raise ValueError(f"Elementwise option requires all derivative variables to have the same size. Got size {var.size}, expected {first_var_size}.")
+
     if mode == 'reverse':
         output_dict = {}
         for of in ofs:
-            deriv_of = reverse(of, wrts, graph, loop = loop)
+            deriv_of = reverse(of, wrts, graph, loop = loop, elementwise = elementwise)
             for wrt in deriv_of:
                 output_dict[of, wrt] = deriv_of[wrt]
     elif mode == 'forward':

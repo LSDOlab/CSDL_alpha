@@ -9,3 +9,5 @@ from csdl_alpha.src.operations.implicit_operations import nonlinear_solvers as n
 from csdl_alpha.src.operations.linalg import linear_solvers as linear_solvers
 
 from .api import *
+
+import csdl_alpha.experimental as experimental

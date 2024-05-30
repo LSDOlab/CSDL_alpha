@@ -87,7 +87,7 @@ class Testfrange(csdl_tests.CSDLTest):
         
         for i in frange(0, 3):
             for j in frange(0, 3):
-                a = a.set((i, j), i+j)
+                a = a.set(csdl.slice[(i, j)], i+j)
 
         a_np = np.array([[0, 1, 2], [1, 2, 3], [2, 3, 4]])
         self.run_tests(
@@ -107,7 +107,7 @@ class Testfrange(csdl_tests.CSDLTest):
         
         for i in frange(0, 3):
             for j in frange(0, 3):
-                a = a.set((i, j), b[i,j] * i+j)
+                a = a.set(csdl.slice[(i, j)], b[i,j] * i+j)
         
         a_np = np.array([[0, 1, 2], [1, 2, 3], [2, 3, 4]])
 

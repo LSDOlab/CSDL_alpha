@@ -4,7 +4,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 from typing import Union
 from csdl_alpha.src.graph.graph import Graph
-from csdl_alpha.utils.inputs import validate_and_variablize
+from csdl_alpha.utils.inputs import validate_and_variablize, variablize
 
 
 class VJPOperation(SubgraphOperation):
@@ -65,7 +65,7 @@ def vjp(seeds:list[tuple[Variable, Variable]],
     cotangents = VarTangents()
     for i, of_var in enumerate(of_vars):
         cotangents.initialize(of_var)
-        cotangents.accumulate(of_var, seeds[i][1])
+        cotangents.accumulate(of_var, variablize(seeds[i][1]))
 
     # perform the vector-jacobian here in terms of CSDL operations by going through the node order
     for node in node_order:

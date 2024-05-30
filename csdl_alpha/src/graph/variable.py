@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.node import Node
 import numpy as np
 from typing import Union
-from csdl_alpha.utils.inputs import ingest_value, get_shape, process_shape_and_value
+from csdl_alpha.utils.inputs import ingest_value, get_shape, process_shape_and_value, get_type_string
 
 class Variable(Node):
     __array_priority__ = 1000
@@ -203,9 +203,7 @@ class Variable(Node):
         if isinstance(slices, Slice):
             return set_index(self, slices,value)
         else:
-            import warnings 
-            warnings.warn('We will be deprecating the use of providing indices directly through the set method. Please use csdl.slice instead: x = x.set(csdl.slice[...], val)') 
-            return set_index(self, loop_slice[slices], value)
+            raise TypeError(f"Use csdl.slice to index a variable. For example: x = x.set(csdl.slice[...], val). Type {get_type_string(slices)} given.")
 
     def save(self):
         """Sets variable to be saved
