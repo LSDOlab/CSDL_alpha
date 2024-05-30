@@ -473,9 +473,18 @@ class Variable(Node):
         from csdl_alpha.src.operations.tensor.inner import inner
         return inner(self, other)
 
+    def _check_nlsolver_conflict(self):
+        if hasattr(self, 'in_solver'):
+            if self.in_solver is True:
+                return True
+            else:
+                self.in_solver = True
+        else:
+            self.in_solver = True
+        return False
+    
 class ImplicitVariable(Variable):
-    def post_init(self):
-        self.in_solver = False
+    pass
 
 class SparseMatrix(Variable):
     def post_init(self):

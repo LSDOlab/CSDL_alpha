@@ -113,9 +113,8 @@ class NonlinearSolver(object):
         if not isinstance(state, ImplicitVariable):
             raise TypeError(f"State must be an ImplicitVariable. {state} given")
         else:
-            if state.in_solver:
+            if state._check_nlsolver_conflict():
                 raise ValueError(f"Implicit variable with name = {state.name} has already been previously added to a solver.")
-            state.in_solver = True
 
         if not isinstance(residual, Variable):
             residual = validate_and_variablize(residual)
