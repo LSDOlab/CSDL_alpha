@@ -435,43 +435,44 @@ class Testfrange(csdl_tests.CSDLTest):
 
         self.run_tests(compare_values=compare_values)
 
-    def test_pure_accrue(self):
-        self.prep()
-        import csdl_alpha as csdl
-        from csdl_alpha.api import frange
-        import numpy as np
+    # TODO: add pure accrue function for loops
+    # def test_pure_accrue(self):
+    #     self.prep()
+    #     import csdl_alpha as csdl
+    #     from csdl_alpha.api import frange
+    #     import numpy as np
 
-        a_val = 3.14
-        b_val = 0.0
+    #     a_val = 3.14
+    #     b_val = 0.0
 
-        a0 = csdl.Variable(value=a_val, name='a')
-        b0 = csdl.Variable(value=b_val, name='b')
+    #     a0 = csdl.Variable(value=a_val, name='a')
+    #     b0 = csdl.Variable(value=b_val, name='b')
 
-        a = a0
-        b = b0
+    #     a = a0
+    #     b = b0
 
-        b.add_name('b_init')
-        loop = frange(0,3)
-        for i in loop:
-            a = a**2.0
+    #     b.add_name('b_init')
+    #     loop = frange(0,3)
+    #     for i in loop:
+    #         a = a**2.0
 
-            a.add_name('a_updated') 
-            b.add_name('b_body_in')
-            b = b + csdl.sin(a)
-            b.add_name('b_updated')
+    #         a.add_name('a_updated') 
+    #         b.add_name('b_body_in')
+    #         b = b + csdl.sin(a)
+    #         b.add_name('b_updated')
 
-        with csdl.namespace('derivatives'):
-            deriv = csdl.derivative(csdl.cos(b), [a0])
-            print(deriv[a0].value)
+    #     with csdl.namespace('derivatives'):
+    #         deriv = csdl.derivative(csdl.cos(b), [a0])
+    #         print(deriv[a0].value)
 
-            # print(csdl.derivative(deriv[a0], loop.op.get_stacked(b)).value)
-        # recorder = csdl.get_current_recorder()
-        # recorder.visualize_graph(visualize_style='hierarchical')
-        exit('TODO: add pure accrue function for loops')
-        compare_values = []
-        compare_values += [csdl_tests.TestingPair(b, b_val)]
+    #         # print(csdl.derivative(deriv[a0], loop.op.get_stacked(b)).value)
+    #     # recorder = csdl.get_current_recorder()
+    #     # recorder.visualize_graph(visualize_style='hierarchical')
+    #     exit('TODO: add pure accrue function for loops')
+    #     compare_values = []
+    #     compare_values += [csdl_tests.TestingPair(b, b_val)]
 
-        self.run_tests(compare_values=compare_values, verify_derivatives=True)
+    #     self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
 if __name__ == '__main__':
     test = Testfrange()
