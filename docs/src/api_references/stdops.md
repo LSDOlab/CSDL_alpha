@@ -46,6 +46,7 @@
     csdl_alpha.einsum
     csdl_alpha.bessel
     csdl_alpha.sparse.matvec
+    csdl_alpha.derivative
 
 ```
 
@@ -136,5 +137,7 @@
 .. autofunction:: csdl_alpha.bessel
 
 .. autofunction:: csdl_alpha.sparse.matvec
+
+.. autofunction:: csdl_alpha.derivative
 
 ```
