@@ -16,7 +16,7 @@ import numpy as np
 # warnings.simplefilter("always")
 
 class CustomOperation(Operation):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self.input_dict = {}
         self.output_dict = {}
         self.derivative_parameters = {}
@@ -24,11 +24,11 @@ class CustomOperation(Operation):
 
 class CustomExplicitOperation(CustomOperation):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """Wraps the evaluate method. No input arguments are required. 
         """
 
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.evaluate = self._wrap_evaluate(self.evaluate)
         self.locked = False

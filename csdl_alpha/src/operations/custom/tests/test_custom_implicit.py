@@ -5,8 +5,9 @@ import pytest
 
 class CustomImp(csdl.experimental.CustomImplicitOperation):
 
-    def initialize(self):
-        self.const = self.parameters.declare('a')
+    def __init__(self, a):
+        super().__init__()
+        self.const = a
 
     def evaluate(self, a, b, c):
         self.declare_input('a', a)
@@ -76,8 +77,9 @@ class CustomImp(csdl.experimental.CustomImplicitOperation):
 
 class CustomImpVec(csdl.experimental.CustomImplicitOperation):
 
-    def initialize(self):
-        self.const = self.parameters.declare('a')
+    def __init__(self, a):
+        super().__init__()
+        self.const = a
 
     def evaluate(self, a, b, c):
         self.declare_input('a', a)
