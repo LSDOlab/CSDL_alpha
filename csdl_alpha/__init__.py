@@ -1,4 +1,4 @@
-__version__ = '0.0.0'
+__version__ = '0.0.0-a.1'
 
 
 # from .manager import get_current_recorder, print_all_recorders, build_new_recorder
