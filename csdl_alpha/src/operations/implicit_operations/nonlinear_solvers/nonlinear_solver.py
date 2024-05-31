@@ -1,12 +1,14 @@
 from csdl_alpha.src.graph.variable import ImplicitVariable, Variable
 from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation
-from csdl_alpha.utils.inputs import scalarize, ingest_value, validate_and_variablize
+from csdl_alpha.utils.inputs import scalarize, ingest_value, validate_and_variablize, get_type_string
 import csdl_alpha.utils.error_utils as error_utils
 from csdl_alpha.utils.error_utils import GraphError
 import numpy as np
 
+from csdl_alpha.src.operations.derivative.bookkeeping import VarTangents
+
 from csdl_alpha.utils.typing import VariableLike
-from typing import Union
+from typing import Union, Any
 
 class NonlinearSolver(object):
     def __init__(
@@ -15,6 +17,7 @@ class NonlinearSolver(object):
             print_status = True,
             tolerance=1e-10,
             max_iter=100,
+            elementwise_states=False,
         ):
         self.name = name
         self.print_status = print_status
@@ -22,13 +25,13 @@ class NonlinearSolver(object):
         self.metadata = {}
         
         # state variable -> residual variable
-        self.state_to_residual_map = {}
+        self.state_to_residual_map:dict[Variable:Variable] = {}
         
         # residual variable -> state variable
-        self.residual_to_state_map = {}
+        self.residual_to_state_map:dict[Variable:Variable] = {}
         
         # state variable -> any other information about the state such as initial value, tolerance, etc.
-        self.state_metadata = {}
+        self.state_metadata:dict[Variable:Any] = {}
         
         # CSDL variables that are "constants" from the perspective of the solver everytime it is ran
         # for example:
@@ -49,6 +52,11 @@ class NonlinearSolver(object):
 
         # block nonlinear solver from running more than once
         self.locked = False
+
+        # Attributes for derivatives:
+        self.full_residual_jacobian = None
+        self.total_state_size = 0
+        self.elementwise_states = elementwise_states
 
     def add_metadata(self, key, datum, is_input=True):
         if isinstance(datum, Variable) and is_input:
@@ -100,14 +108,18 @@ class NonlinearSolver(object):
 
         Initializes mappings between states and residuals, and stores metadata about the state.
         """
+        import csdl_alpha as csdl
+        current_graph = csdl.get_current_recorder().active_graph
         if self.locked:
             raise RuntimeError("Nonlinear solver has already been run. Cannot add more state-residual pairs.")
-        if not isinstance(state, ImplicitVariable):
-            raise TypeError(f"State must be an ImplicitVariable. {state} given")
+        
+        if not isinstance(state, Variable):
+            raise TypeError(f"State must be a Variable. {get_type_string(state)} given")
+        elif current_graph.in_degree(state) != 0:
+            raise TypeError(f"State must not be computed from another operation.")
         else:
-            if state.in_solver:
+            if state._check_nlsolver_conflict():
                 raise ValueError(f"Implicit variable with name = {state.name} has already been previously added to a solver.")
-            state.in_solver = True
 
         if not isinstance(residual, Variable):
             residual = validate_and_variablize(residual)
@@ -129,6 +141,12 @@ class NonlinearSolver(object):
     def add_intersection_target(self, target:Variable):
         self._intersection_targets.add(target)
 
+    def _preprocess_run(self):
+        """
+        Preprocesses the solver before running it.
+        """
+        pass
+
     def run(self):
         """
         Creates the implicit operation graph and runs the solver if inline is True
@@ -140,6 +158,8 @@ class NonlinearSolver(object):
             raise RuntimeError("Nonlinear solver has already been run. Cannot run again.")
 
         self.locked = True
+
+        self._preprocess_run()
 
         # Steps:
         # G is the current graph we are in
@@ -208,10 +228,140 @@ class NonlinearSolver(object):
         if recorder.inline:
             G.update_downstream(implicit_operation)
         
+        
         # For debugging:
         # self.residual_graph.visualize(f'inner_graph_{self.name}')
         # recorder.active_graph.visualize(f'top_level_{self.name}_after')
+    
+    def prep_vjp(self):
+        """
+        Prepare the nonlinear solver for reverse mode differentiation.
+        """
+        self.get_full_residual_jacobian(for_deriv=True)
+
+    def accumulate_cotangents(
+            self,
+            cotangents: VarTangents,
+            outputs_with_cotangents: list[Variable],
+            inputs_to_accumulate: list[Variable]
+            ):
+        # Steps
+        # 1) Preprocess cotangents of the states by accumulating them with exposed output cotangents
+        # 2) Solve adjoint system
+        # 3) Compute VJP of the adjoint residuals
+        # 4) Accumulate exposed output cotangents with the adjoint residuals
+        import csdl_alpha as csdl
+        recorder = csdl.get_current_recorder()
+
+        # Step 1
+        seeds:list[tuple[Variable, Variable]] = []
+        for exposed_outer_variable in outputs_with_cotangents:
+            # if exposed_outer_variable in self.state_to_residual_map:
+            #     continue
+            if exposed_outer_variable in self.state_to_residual_map:
+                continue
+            seeds.append((exposed_outer_variable, cotangents[exposed_outer_variable]))
         
+        wrts = []
+        wrts_set = set()
+        for input_variable in inputs_to_accumulate:
+            
+            if input_variable in self.meta_input_variables:
+                continue
+
+            wrts.append(input_variable)
+            wrts_set.add(input_variable)
+        for state in self.state_to_residual_map:
+            if state not in wrts_set:
+                wrts.append(state)
+
+        from csdl_alpha.src.operations.derivative.reverse import vjp
+        
+        # TODO: Should VJP function should be INSIDE or OUTSIDE the nonlinear solver?
+        # Compute vector-Jacobian product of the residuals in the residual graph
+        # recorder._enter_subgraph(graph = self.residual_graph)
+        # residual_graph = self.residual_graph
+        # for seed in seeds:
+        #     residual_graph.add_node(seed[0])
+        # recorder.visualize_graph('pre_step1_residual_graph')
+        # recorder.visualize_graph('post_step1_residual_graph')
+        # recorder._exit_subgraph()
+
+        # recorder.visualize_graph('pre_step1')
+        exposed_vjps = vjp(seeds, wrts, self.residual_graph)
+        for state in self.state_to_residual_map:
+            cotangents.initialize(state)
+            if exposed_vjps[state] is not None:
+                cotangents.accumulate(state, exposed_vjps[state])
+        # recorder.visualize_graph('post_step1')
+        
+        # step 2
+        full_residual_jacobian_T = self.get_full_residual_jacobian(for_deriv=True).T()
+        residual_vector = csdl.Variable(name = 'residual_vector', value = np.zeros((self.total_state_size,)))
+        for current_state in self.state_to_residual_map.keys():
+            il = self.state_metadata[current_state]['index_lower']
+            iu = self.state_metadata[current_state]['index_upper']
+            if cotangents[current_state] is not None:
+                residual_vector = residual_vector.set(csdl.slice[il:iu], cotangents[current_state].flatten())
+        psi = csdl.solve_linear(full_residual_jacobian_T, residual_vector)
+        # recorder.visualize_graph('post_step2')
+
+        # step 3
+        seeds:list[tuple[Variable, Variable]] = []
+        for current_state, current_residual in self.state_to_residual_map.items():
+            il = self.state_metadata[current_state]['index_lower']
+            iu = self.state_metadata[current_state]['index_upper']
+            seeds.append((current_residual, psi[il:iu].reshape(current_residual.shape)))
+        psi_vjps = vjp(seeds, list(wrts_set), self.residual_graph)
+        # recorder.visualize_graph('post_step3')
+
+        # step 4
+        for input_variable in inputs_to_accumulate:
+            # cotangents.accumulate(input_variable,  csdl.Variable(value = 0.01+np.zeros(input_variable.shape)))
+            if input_variable not in self.meta_input_variables:
+                if psi_vjps[input_variable] is not None:
+                    cotangents.accumulate(input_variable, -psi_vjps[input_variable])
+                if exposed_vjps[input_variable] is not None:
+                    cotangents.accumulate(input_variable, exposed_vjps[input_variable])
+            if cotangents[input_variable] is None:
+                cotangents.accumulate(input_variable, csdl.Variable(value = np.zeros(input_variable.shape)))
+        # recorder.visualize_graph('post_step4')
+        
+        pass
+
+    def get_full_residual_jacobian(
+            self, 
+            for_deriv = False,    
+        )-> Variable:
+        import csdl_alpha as csdl
+        if self.full_residual_jacobian is None:
+            states_list = list(self.state_to_residual_map.keys())
+
+            block_mat = []
+            for residual in self.residual_to_state_map:
+                state = self.residual_to_state_map[residual]
+                # Create block matrix for linear system
+                current_residual_block = []
+
+                if for_deriv:
+                    deriv = csdl.derivative(residual, states_list, graph = self.residual_graph, elementwise=self.elementwise_states)
+                else:
+                    deriv = csdl.derivative(residual, states_list, elementwise=self.elementwise_states)
+
+                for _state in states_list:
+                    current_residual_block.append(deriv[_state])
+                    # self.add_intersection_target(deriv[state])
+                block_mat.append(current_residual_block)
+            
+                # Keep track of indices for each state
+                self.add_state_metadata(state, 'index_lower', self.total_state_size)
+                self.total_state_size += state.size
+                self.add_state_metadata(state, 'index_upper', self.total_state_size)
+
+            self.full_residual_jacobian = csdl.blockmat(block_mat)
+            return self.full_residual_jacobian
+        else:
+            return self.full_residual_jacobian
 
     def _inline_solve_(self):
         raise NotImplementedError("Solve method must be implemented by subclass")
@@ -227,7 +377,7 @@ class NonlinearSolver(object):
             else:
                 state.value = self.state_metadata[state]['initial_value'].value
                 
-    def _inline_print_nl_status(self, iter_num, did_converge):
+    def _inline_print_nl_status(self, iter_num:int, did_converge:bool)->None:
         """
         Print the status of the nonlinear solver.
         """
@@ -235,13 +385,39 @@ class NonlinearSolver(object):
             return f'nonlinear solver: {self.name} converged in {iter_num} iterations.'
         else:
             main_str = f'\nnonlinear solver: {self.name} did not converge in {iter_num} iterations.\n'
-            for state,residual in self.state_to_residual_map.items():
-                state_str = f'\t{state}\n'
-                state_str += f'\t\tname:  {state.name}\n'
-                state_str += f'\t\tval:    {state.value}\n'
-                state_str += f'\t\tres:    {residual.value}\n'
+            for i, (state,residual) in enumerate(self.state_to_residual_map.items()):
+                state_str  = f'    state {i}\n'
+                state_str += f'        name:     {state.name}\n'
+                state_str += f'        value:    {state.value}\n'
+                state_str += f'        residual: {residual.value}\n'
                 main_str += state_str
             return main_str
+
+    def _inline_check_converged(self,):
+        converged = True
+        for current_state, current_residual in self.state_to_residual_map.items():
+
+            # get current residual and error
+            current_residual_value = current_residual.value
+
+            # Uncomment to print iteration:
+            # error = np.linalg.norm(current_residual_value.flatten())
+            # print(f'iteration {iter}, {current_residual} error: {error}')
+
+            # compute tolerance:
+            tol = self.state_metadata[current_state]['tolerance']
+            if isinstance(tol, Variable):
+                tol = tol.value
+
+            if np.any(np.isnan(current_residual_value)):
+                raise ValueError(f'Residual is NaN for {current_residual.name}')
+            
+            # if current_residual_value > tol:
+            # if any of the residuals do not meet tolerance, no need to compute errors for other residuals
+            if not check_run_time_tolerance(current_residual_value, tol):
+                converged = False
+                break
+        return converged
 
     def solve_implicit_inline(self, *args):
         """

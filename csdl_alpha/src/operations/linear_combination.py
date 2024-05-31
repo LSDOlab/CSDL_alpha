@@ -92,12 +92,14 @@ def linear_combination(start:VariableLike, stop:VariableLike, num_steps:int, sta
     if start_weights is None:
         if num_steps == 1:
             start_weights = np.array([0.5])
-        start_weights = np.linspace(0, 1, num_steps)
+        else:
+            start_weights = np.linspace(1, 0, num_steps)
     
     if stop_weights is None:
         if num_steps == 1:
             stop_weights = np.array([0.5])
-        stop_weights = np.linspace(1, 0, num_steps)
+        else:
+            stop_weights = np.linspace(0, 1, num_steps)
     
     if check_expand_subgraphs():
         return evaluate_linear_combination(start, stop, start_weights, stop_weights, num_steps)

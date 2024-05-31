@@ -26,7 +26,7 @@ def evaluate_norm(args, axes, ord):
     out = power_sum ** (1/ord)
     return out
 
-def norm(*args, axes=None, ord=2):
+def norm(*args, axes=None, ord=2)->Variable:
     """
     Computes the even p-norm of all entries in the input tensor if a single argument is provided.
     Computes the even p-norm of all entries along the specified axes if `axes` argument is given.
@@ -162,7 +162,7 @@ class TestNorm(csdl_tests.CSDLTest):
         s6 = csdl.norm(x_val, y_val, z_val)
         compare_values += [csdl_tests.TestingPair(s6, t5, tag = 's6', decimal=8)]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
 
     def test_example(self,):

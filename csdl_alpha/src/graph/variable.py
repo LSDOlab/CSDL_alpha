@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.node import Node
 import numpy as np
 from typing import Union
-from csdl_alpha.utils.inputs import ingest_value, get_shape, process_shape_and_value
+from csdl_alpha.utils.inputs import ingest_value, get_shape, process_shape_and_value, get_type_string
 
 class Variable(Node):
     __array_priority__ = 1000
@@ -203,9 +203,7 @@ class Variable(Node):
         if isinstance(slices, Slice):
             return set_index(self, slices,value)
         else:
-            import warnings 
-            warnings.warn('We will be deprecating the use of providing indices directly through the set method. Please use csdl.slice instead: x = x.set(csdl.slice[...], val)') 
-            return set_index(self, loop_slice[slices], value)
+            raise TypeError(f"Use csdl.slice to index a variable. For example: x = x.set(csdl.slice[...], val). Type {get_type_string(slices)} given.")
 
     def save(self):
         """Sets variable to be saved
@@ -226,6 +224,9 @@ class Variable(Node):
         from csdl_alpha.src.operations.set_get.getindex import get_index
         return get_index(self, slices)
     
+    def __iter__(self):
+        raise TypeError(f"{type(self).__name__} object is not iterable")
+
     def __getitem__(self, indices:Union[Slice, tuple[list[int], int, slice]]) -> 'Variable':
         """Returns a sliced selection of the variable as a new variable. The slicing can be specified by a csdl Slice object or a tuple of lists of integers, integers, and slices.
         The slicing rules are similar to Numpy's tensor indexing rules with some restrictions. See examples for more information.
@@ -303,7 +304,6 @@ class Variable(Node):
         >>> x[0,[0,1],[1,0]].value
         array([1., 3.])
         """
-
         from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as loop_slice
         from csdl_alpha.src.operations.set_get.slice import Slice
 
@@ -327,7 +327,7 @@ class Variable(Node):
     def __rmul__(self, other:'VariableLike') -> 'Variable':
         return self.__mul__(other)
 
-    def __neg__(self):
+    def __neg__(self) -> 'Variable':
         from csdl_alpha.src.operations.neg import negate
         return negate(self)
     
@@ -439,9 +439,52 @@ class Variable(Node):
         from csdl_alpha.src.operations.tensor.transpose import transpose
         return transpose(self)
 
+    def inner(self, other: 'Variable') -> 'Variable':
+        """
+        Inner product of two tensors x and y. 
+        The result is a scalar of shape (1,).
+        The input tensors must have the same shape.
+
+        Parameters
+        ----------
+        self : Variable
+            First input tensor.
+        other : VariableLike
+            Second input tensor.
+        
+        Returns
+        -------
+        out: Variable
+            Scalar inner product of x and y.
+
+        Examples
+        --------
+        >>> recorder = csdl.Recorder(inline = True)
+        >>> recorder.start()
+        >>> x = csdl.Variable(value = np.array([1, 2, 3]))
+        >>> y = csdl.Variable(value = np.array([4, 5, 6]))
+        >>> x.inner(y).value
+        array([32.])
+        >>> a = csdl.Variable(value = np.array([[1, 2], [3, 4]]))
+        >>> b = csdl.Variable(value = np.array([[5, 6], [7, 8]]))
+        >>> a.inner(b).value
+        array([70.])
+        """
+        from csdl_alpha.src.operations.tensor.inner import inner
+        return inner(self, other)
+
+    def _check_nlsolver_conflict(self):
+        if hasattr(self, 'in_solver'):
+            if self.in_solver is True:
+                return True
+            else:
+                self.in_solver = True
+        else:
+            self.in_solver = True
+        return False
+    
 class ImplicitVariable(Variable):
-    def post_init(self):
-        self.in_solver = False
+    pass
 
 class SparseMatrix(Variable):
     def post_init(self):

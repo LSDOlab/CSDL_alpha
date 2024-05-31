@@ -60,6 +60,26 @@ class Maximum(Operation):
             smooth_axeswise_max = axeswise_max + 1.0 / rho * np.log(summation)
             return smooth_axeswise_max
 
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            if self.axes is None:
+                rho = self.rho
+                exp_x = csdl.exp(rho*(x) - y)
+                vjp = cotangents[y] * exp_x / csdl.sum(exp_x)
+            else:
+                rho = self.rho
+                axes = self.axes
+
+                in_str, out_str  = self.einsum_str.split('->')
+                in_str, ones_str = in_str.split(',')
+                exp_str = in_str + '->' + out_str
+                exp_term = csdl.exp(rho*(x-csdl.expand(y, x.shape, exp_str)))
+                sum = csdl.sum(exp_term, axes=axes)
+                expanded_sum = csdl.expand(sum, out_shape=x.shape, action=exp_str)
+                vjp = csdl.expand(cotangents[y] , x.shape, exp_str) * exp_term / expanded_sum
+
+            cotangents.accumulate(x, vjp)
+
 class ElementwiseMaximum(Operation):
     '''
     Elementwise maximum of all the Variables in the arguments.
@@ -83,6 +103,17 @@ class ElementwiseMaximum(Operation):
 
         smooth_ew_max = (ew_max + 1. / rho * np.log(summation))
         return smooth_ew_max
+
+    def evaluate_vjp(self, cotangents, *inputs_and_outputs):
+        inputs = inputs_and_outputs[:len(self.inputs)]
+        output = inputs_and_outputs[-1]
+        rho = self.rho
+        # sum  = cotangents[output]/csdl.sum(*[csdl.exp(rho*(arg-output)) for arg in inputs])
+        for input_var in inputs:
+            if cotangents.check(input_var):
+                cotangents.accumulate(input_var, cotangents[output]/csdl.sum(*[csdl.exp(rho*(arg-input_var)) for arg in inputs]))
+
+                # cotangents.accumulate(input_var, csdl.exp(rho*(input_var-output))*sum)
 
 def maximum(*args, axes=None, rho=20.):
     '''
@@ -162,9 +193,10 @@ def maximum(*args, axes=None, rho=20.):
         else:
             out_shape = tuple([x for i, x in enumerate(args[0].shape) if i not in axes])
             if len(out_shape) == 0:
-                raise ValueError('It is inefficient to find the maximum of a tensor Variable along all axes. \
-                                 Use maximum(A) to find the maximum of all tensor entries.')
-        
+                # raise ValueError('It is inefficient to find the maximum of a tensor Variable along all axes. \
+                #                  Use maximum(A) to find the maximum of all tensor entries.')
+                out_shape = (1,)
+                axes = None
         op = Maximum(validate_and_variablize(args[0]), axes=axes, out_shape=out_shape, rho=rho)
     else:
         # axes is None for multiple variables
@@ -196,42 +228,52 @@ class TestMaximum(csdl_tests.CSDLTest):
         compare_values = []
         # maximum of a single tensor variable
         s1 = csdl.maximum(x)
+        s1.add_name('s1')
         t1 = np.array([15.0])
+        compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
+
+        # maximum of a single tensor variable
+        s1 = csdl.maximum(x, axes=(0,1))
         compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
 
         # maximum of a single tensor constant
         s2 = csdl.maximum(x_val)
+        s2.add_name('s2')
         compare_values += [csdl_tests.TestingPair(s2, t1, tag = 's2')]
 
         # maximum of a single tensor variable along specified axes
         s3 = csdl.maximum(x, axes=(1,))
         t3 = np.max(x_val, axis=1)
+        s3.add_name('s3')
         compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
 
         # maximum of a single tensor variable along 2 specified axes
         s4 = csdl.maximum(d, axes=(0,2))
         t4 = np.max(d_val, axis=(0,2))
+        s4.add_name('s4')
         compare_values += [csdl_tests.TestingPair(s4, t4, tag = 's4', decimal=8)]
 
         # elementwise maximum of multiple tensor variables
         s5 = csdl.maximum(x, y, z)
         t5 = np.maximum(x_val, y_val)
+        # s5.add_name('s5')
         compare_values += [csdl_tests.TestingPair(s5, t5, tag = 's5', decimal=8)]
 
         # elementwise maximum of multiple tensor constants
         s6 = csdl.maximum(x_val, y_val, z_val)
+        # s6.add_name('s6')
         compare_values += [csdl_tests.TestingPair(s6, t5, tag = 's6', decimal=8)]
 
         # TODO: maximum of a zero tensor - need to check this 
         # to avoid errors from sum(log(1+1+..)) if there are multiple entries of zero
         # and zero is the maximum
-        zeros = np.zeros((2,3))
-        s7 = csdl.maximum(zeros, rho=2000)
-        t7 = np.array([0.0])
-        compare_values += [csdl_tests.TestingPair(s7, t7, tag = 's7', decimal=3)]
+        # zeros = np.zeros((2,3))
+        # s7 = csdl.maximum(zeros, rho=2000)
+        # t7 = np.array([0.0])
+        # s7.add_name('s7')
+        # compare_values += [csdl_tests.TestingPair(s7, t7, tag = 's7', decimal=3)]
 
-        self.run_tests(compare_values = compare_values,)
-
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(maximum)

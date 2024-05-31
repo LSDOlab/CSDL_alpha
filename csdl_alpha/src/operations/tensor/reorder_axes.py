@@ -12,21 +12,24 @@ class ReorderAxes(Operation):
     '''
     Reorders the axes of the input tensor as per the specified `action`.
     '''
-    def __init__(self, x, out_shape, out_axes):
+    def __init__(self, x, out_shape, in_str, out_str):
         super().__init__(x)
         self.name = 'reorder_axes'
         out_shapes = (out_shape,)
         self.set_dense_outputs(out_shapes)
+
+        out_axes = tuple([in_str.index(char) for char in out_str])
         self.out_axes = out_axes
+        self.in_str = in_str
+        self.out_str = out_str
 
     def compute_inline(self, x):
         return np.transpose(x, self.out_axes)
     
-    def evaluate_jacobian(self, x):
-        rows = np.arange(x.size)
-        cols = np.transpose(np.arange(x.size).reshape(x.shape), axes=self.out_axes)
-
-        return csdl.Constant(rows=rows.flatten(), cols=cols.flatten(), val = 1.)
+    def evaluate_vjp(self, cotangents, x, z):
+        if cotangents.check(x):
+            import csdl_alpha as csdl
+            cotangents.accumulate(x, csdl.reorder_axes(cotangents[z], action=self.out_str + '->' + self.in_str))
         
 def reorder_axes(x, action):
     '''
@@ -113,9 +116,8 @@ def reorder_axes(x, action):
         raise ValueError('Each character in the input string must appear exactly once in the output string.')
     
     out_shape = tuple([in_shape[in_str.index(char)] for char in out_str])
-    out_axes = tuple([in_str.index(char) for char in out_str])
         
-    op = ReorderAxes(x, out_shape, out_axes)
+    op = ReorderAxes(x, out_shape, in_str, out_str)
     
     return op.finalize_and_return_outputs()
 
@@ -145,7 +147,7 @@ class TestReorderAxes(csdl_tests.CSDLTest):
         t2 = np.transpose(y_val, (2,0,1))
         compare_values += [csdl_tests.TestingPair(s2, t2, tag = 's2')]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(reorder_axes)

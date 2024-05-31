@@ -4,16 +4,39 @@ import pytest
 
 # basic custom explicit
 class BasicCustomExplicitOperation(csdl.CustomExplicitOperation):
-    def initialize(self):
-        pass
+    def __init__(self):
+        super().__init__()
 
 # custom paraboloid model
 class Paraboloid(csdl.CustomExplicitOperation):
-    def initialize(self):
-        self.a = self.parameters.declare('a')
-        self.b = self.parameters.declare('b')
-        self.c = self.parameters.declare('c')
-        self.return_g = self.parameters.declare('return_g', default=False)
+    def __init__(self, a, b, c, return_g=False):
+            """
+            Paraboloid function implemented as a custom explicit operation.
+
+            Parameters
+            ----------
+            a : float or int
+                The value of parameter 'a'.
+            b : float or int
+                The value of parameter 'b'.
+            c : float or int
+                The value of parameter 'c'.
+            return_g : bool, optional
+                Specifies whether to return the value of 'g', by default False.
+            """
+            super().__init__()
+            
+            # define any checks for the parameters
+            csdl.check_parameter(a, 'a', types=(float, int))
+            csdl.check_parameter(b, 'b', types=(float, int))
+            csdl.check_parameter(c, 'c', types=(float, int))
+            csdl.check_parameter(return_g, 'return_g', types=bool)
+            
+            # assign parameters to the class
+            self.a = a
+            self.b = b
+            self.c = c
+            self.return_g = return_g
 
     def evaluate(self, x, y, z):
         # assign method _dict to input dictionary
@@ -53,12 +76,12 @@ class Paraboloid(csdl.CustomExplicitOperation):
         y = input_vals['y']
         z = input_vals['z']
 
-        derivatives['f', 'x'] = 2*x - self.a + y
-        derivatives['f', 'y'] = 2*y + x + self.b
+        derivatives['f', 'x'] = 2*x - 2*self.a + y
+        derivatives['f', 'y'] = 2*y + x + 2*self.b
 
         if self.return_g:
             derivatives['g', 'x'] = z*derivatives['f', 'x']
-            derivatives['g', 'y'] = z*derivatives['f', 'x']
+            derivatives['g', 'y'] = z*derivatives['f', 'y']
             derivatives['g', 'z'] = outputs_vals['f']
 
 class TestCustom(csdl_tests.CSDLTest):
@@ -74,9 +97,7 @@ class TestCustom(csdl_tests.CSDLTest):
             ("evaluate", {}),
             ("compute", ({}, {})),
             ("compute_derivatives", ({}, {}, {})),
-            ("evaluate_diagonal_jacobian", {}),
             ("evaluate_jvp", {}),
-            ("evaluate_vjp", {}),
         ]
 
         for method, args in methods:

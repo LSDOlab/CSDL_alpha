@@ -19,6 +19,13 @@ class Power(ElementwiseOperation):
     def compute_inline(self, x, y):
         return x ** y
     
+    def evaluate_vjp(self, cotangents, x, y, z):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[z]*y*x**(y-1))
+        if cotangents.check(y):
+            import csdl_alpha as csdl
+            cotangents.accumulate(y, cotangents[z]*z*csdl.log(x))
+
 class LeftBroadcastPower(Operation):
     '''
     First input is broadcasted to the shape of the second input.
@@ -33,6 +40,14 @@ class LeftBroadcastPower(Operation):
     def compute_inline(self, x, y):
         return x ** y
     
+    def evaluate_vjp(self, cotangents, x, y, z):
+        if cotangents.check(x):
+            import csdl_alpha as csdl
+            cotangents.accumulate(x, csdl.sum(cotangents[z]*y*x**(y-1)))
+        if cotangents.check(y):
+            import csdl_alpha as csdl
+            cotangents.accumulate(y, cotangents[z]*z*csdl.log(x))
+
 class RightBroadcastPower(Operation):
     '''
     Second input is broadcasted to the shape of the first input.
@@ -47,6 +62,14 @@ class RightBroadcastPower(Operation):
     def compute_inline(self, x, y):
         return x ** y
     
+    def evaluate_vjp(self, cotangents, x, y, z):
+        if cotangents.check(x):
+            import csdl_alpha as csdl
+            cotangents.accumulate(x, cotangents[z]*y*x**(y-1))
+        if cotangents.check(y):
+            import csdl_alpha as csdl
+            cotangents.accumulate(y, csdl.sum(cotangents[z]*z*csdl.log(x)))
+
 def power(x:VariableLike, y:VariableLike) -> Variable:
     '''
     Computes the power of the first input with exponent as the second input.
@@ -104,7 +127,7 @@ class TestPower(csdl_tests.CSDLTest):
 
         import csdl_alpha as csdl
         import numpy as np
-        x_val = np.arange(6).reshape(2,3)
+        x_val = np.arange(6).reshape(2,3)+1.1
         y_val = 2.0
         z_val = 2.0*np.ones((2,3))
         x = csdl.Variable(name = 'x', value = x_val)
@@ -112,6 +135,52 @@ class TestPower(csdl_tests.CSDLTest):
         z = csdl.Variable(name = 'z', value = z_val)
         
         compare_values = []
+
+        # power of a tensor variable to a tensor variable
+        y_tensor = csdl.Variable(value = x_val+1.0)
+        s1 = csdl.power(x, y_tensor)
+        compare_values += [csdl_tests.TestingPair(s1, x_val**(x_val+1.0), tag = 's0')]
+
+        # power of a tensor variable to a tensor variable
+        y_tensor = csdl.Variable(value = -x_val)
+        s1 = csdl.power(x, y_tensor)
+        compare_values += [csdl_tests.TestingPair(s1, x_val**(-x_val), tag = 's0')]
+
+        # If x is negative, things get strange, y must be integers
+        y_tensor = csdl.Variable(name = 'int_tensor', value = np.arange(6).reshape(2,3)+3.0)
+        s1 = csdl.power(-x, y_tensor)
+        compare_values += [csdl_tests.TestingPair(s1, (-x_val)**(np.arange(6).reshape(2,3)+3.0), tag = 's0')]
+
+        # power of a scalar variable to a tensor variable
+        x_scalar = csdl.Variable(value = 3.0)
+        y_tensor = csdl.Variable(value = x_val+1.0)
+        s1 = csdl.power(x_scalar, y_tensor)
+        compare_values += [csdl_tests.TestingPair(s1, 3.0**(x_val+1.0), tag = 's0')]
+
+        # power of a scalar variable to a tensor variable
+        y_tensor = csdl.Variable(value = -x_val)
+        s1 = csdl.power(x_scalar, y_tensor)
+        compare_values += [csdl_tests.TestingPair(s1, 3.0**(-x_val), tag = 's0')]
+
+        # If x is negative, things get strange, y must be integers
+        y_tensor = csdl.Variable(name = 'int_tensor', value = np.arange(6).reshape(2,3)+3.0)
+        s1 = csdl.power(-x_scalar, y_tensor)
+        compare_values += [csdl_tests.TestingPair(s1, (-3.0)**(np.arange(6).reshape(2,3)+3.0), tag = 's0')]
+
+
+        # power of a tensor variable to a scalar variable
+        s1 = csdl.power(x, y)
+        compare_values += [csdl_tests.TestingPair(s1, x_val**(y_val), tag = 's0')]
+
+        # power of a tensor variable to a tensor variable
+        s1 = csdl.power(x, -y)
+        compare_values += [csdl_tests.TestingPair(s1, x_val**(-y_val), tag = 's0')]
+
+        # If x is negative, things get strange, y must be integers
+        s1 = csdl.power(-x, y)
+        compare_values += [csdl_tests.TestingPair(s1, (-x_val)**(y_val), tag = 's0')]
+
+
         # power of a tensor variable to a scalar variable
         s1 = csdl.power(x, y)
         t1 = x_val ** y_val
@@ -126,7 +195,7 @@ class TestPower(csdl_tests.CSDLTest):
         t3 = 3.0 ** x_val
         compare_values += [csdl_tests.TestingPair(s3, t3, tag = 's3')]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(power)
@@ -134,4 +203,4 @@ class TestPower(csdl_tests.CSDLTest):
 if __name__ == '__main__':
     test = TestPower()
     test.test_functionality()
-    test.test_example()
+    # test.test_example()

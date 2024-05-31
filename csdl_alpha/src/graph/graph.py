@@ -25,6 +25,9 @@ class Graph():
 
     def in_degree(self, node):
         return self.rxgraph.in_degree(self.node_table[node])
+    
+    def out_degree(self, node):
+        return self.rxgraph.out_degree(self.node_table[node])
 
     def add_edge(self, node_from, node_to):
         from_ind = self.node_table[node_from]
@@ -37,7 +40,14 @@ class Graph():
     def add_operation(self, operation):
         self.add_node(operation)
 
-    def execute_inline(self, subset = None):
+    from csdl_alpha.src.graph.node import Node
+    def predecessors(self, node:Node) -> list[Node]:
+        """
+        Returns the predecessors of the node
+        """
+        return self.rxgraph.predecessors(self.node_table[node])
+
+    def execute_inline(self, subset = None, debug = False):
         """
         executes the graph inline
         """
@@ -57,11 +67,30 @@ class Graph():
 
             # print(get_node_info_string(node, self))
             if is_operation(node):
-                # print(f"Executing {node}")
-                # print('\t', *[input.value for input in node.inputs])
-                # print('\t', *[output.value for output in node.outputs])
-                node.set_inline_values()
-                # print('\t', *[output.value for output in node.outputs])
+
+                if debug:
+                    print(f"Executing {node} ({node.name})")
+                    print(f"Inputs:")
+                    for input in node.inputs:
+                        in_name = input.name if input.name is not None else ' '
+                        print(f"\t{input}: {input.value}")
+                    from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
+                    if isinstance(node, ComposedOperation):
+                        print(f'\nCOMPOSED START: {node} ({node.name})')
+                        node.set_inline_values(debug=True)
+                        print(f'COMPOSED END: {node} ({node.name})')
+                    else:
+                        node.set_inline_values()
+                    print(f"Outputs:")
+                    for output in node.outputs:
+                        out_name = output.name if output.name is not None else ' '
+                        print(f"\t{output} ({out_name}): {output.value}")
+                        # if output.value is None:
+                        #     node.get_subgraph().visualize('inline')
+                        #     exit()
+                    print()
+                else:
+                    node.set_inline_values()
 
     def update_downstream(self, node):
         descendants = rx.descendants(self.rxgraph, self.node_table[node])
@@ -288,18 +317,22 @@ class Graph():
         
         return None
 
-
+    from csdl_alpha.src.graph.variable import Variable
     def _get_intersection(
-            self,
-            sources,
-            targets,
-            check_sources = True,
-            check_targets = True,
-        ):
+            self:'Graph',
+            sources:list[Variable],
+            targets:list[Variable],
+            check_sources:bool = True,
+            check_targets:bool = True,
+            add_hanging_input_variables:bool = True,
+            add_hanging_output_variables:bool = True,
+        )-> list[int]:
         """
         Returns all nodes between sources and targets.
         If check_sources is True, then checks to make sure all sources should affect atleast one target
         If check_targets is True, then checks to make sure all targets should be affected by atleast one source
+        If add_hanging_input_variables is True, then adds all input variables of ALL affected operations to the graph
+        If add_hanging_output_variables is True, then adds all output variables of ALL affected operations to the graph 
         """
 
         # D = Union of all source descendants
@@ -349,14 +382,16 @@ class Graph():
         for node_index in S:
             node = self.rxgraph[node_index]
             if is_operation(node):
-                for input_node in self.rxgraph.predecessors(self.node_table[node]):
-                    pred_succ_vars.add(self.node_table[input_node])
-                for output_node in self.rxgraph.successors(self.node_table[node]):
-                    pred_succ_vars.add(self.node_table[output_node])
+                if add_hanging_input_variables:
+                    for input_node in self.rxgraph.predecessors(self.node_table[node]):
+                        pred_succ_vars.add(self.node_table[input_node])
+                if add_hanging_output_variables:
+                    for output_node in self.rxgraph.successors(self.node_table[node]):
+                        pred_succ_vars.add(self.node_table[output_node])
         S = S.union(pred_succ_vars)
         return S
 
-    def visualize(self, filename = 'image', trim_loops = False):
+    def visualize(self, filename = 'image', trim_loops = False, format = 'svg'):
         from csdl_alpha.src.graph.variable import Variable
         # inverse_node_table = {v: k for k, v in self.node_table.items()}
 
@@ -372,9 +407,15 @@ class Graph():
 
 
         dot = self.to_dot(node_attr_fn=self.name_node, trim_loops=trim_loops)
-        dot.write_svg(f'{filename}.svg')
-        # dot.write_dot(f'{filename}.dot')
-        # graphviz_draw(self, node_attr_fn = self.name_node, filename= 'graph.png')
+
+        if format == 'svg':
+            dot.write_svg(f'{filename}.svg')
+        elif format == 'png':
+            # dot.write_dot(f'{filename}.dot')
+            dot.write_png(f'{filename}.png')
+            # graphviz_draw(self, node_attr_fn = self.name_node, filename= 'graph.png')
+        else:
+            raise ValueError(f"Invalid format {format}")
 
     def save(self, filename):
         dot = self.to_dot(node_attr_fn=self.name_node)
@@ -562,3 +603,32 @@ def get_node_info_string(node, graph):
     if is_variable(node):
         node_info += f"\nValue:                 {node.value}"
     return node_info
+
+
+def _copy_to_current_graph(
+        graph_to_replace:'Graph',
+        input_map:dict['Variable':'Variable'] ,
+        delete_nodes:set['Variable'] = None,
+    ):
+    """_summary_
+
+    Parameters
+    ----------
+    graph : Graph
+        Replaces the current graph with the graph passed in
+    input_map : dict[Variable:Variable] 
+        maps <input leaf node in graph_to_replace> to <new input variable> 
+    """
+
+    import csdl_alpha as csdl
+    current_graph = csdl.get_current_recorder().active_graph
+    # current_graph.rxgraph = graph_to_replace.rxgraph.copy()
+    current_graph.rxgraph = rx.digraph_union(current_graph.rxgraph, graph_to_replace.rxgraph)
+
+    current_graph.update_node_table()
+
+    from csdl_alpha.src.operations.copyvar import copyto
+    for leaf_node in input_map:
+        copyto(input_map[leaf_node], leaf_node)
+
+    current_graph.update_node_table()

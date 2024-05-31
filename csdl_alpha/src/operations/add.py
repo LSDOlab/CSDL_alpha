@@ -18,27 +18,11 @@ class Add(ElementwiseOperation):
     def compute_inline(self, x, y):
         return x + y
 
-    def evaluate_jacobian(self, x, y):
-        return csdl.Constant(x.size, val = 1), csdl.Constant(y.size, val = 1)
-
-    def evaluate_jacobian2(self, derivs_out):
-        for key in derivs_out:
-            #key = (output1,x)
-            #key = (output1,y)
-
-            derivs_out[key] = csdl.Constant(derivs_out[key].size, val = 1)
-
-        # return csdl.Constant(x.size, val = 1), csdl.Constant(y.size, val = 1)
-    
-    def evaluate_jacobian(self, x, y):
-        return csdl.Constant(x.size, val = 1), csdl.Constant(y.size, val = 1)
-
-    def evaluate_jvp(self, x, y, vx, vy):
-        # do we to flatten the inputs vx and vy (since they are already vectors)?
-        return add(vx.flatten(), vy.flatten())
-
-    def evaluate_vjp(self, x, y, vout):
-        return vout.flatten(), vout.flatten()
+    def evaluate_vjp(self, cotangents, x, y, z):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[z])
+        if cotangents.check(y):
+            cotangents.accumulate(y, cotangents[z])
 
 # TODO: Do we need a broadcast add? There's a lot of code duplication b/w both classes
 class BroadcastAdd(Operation):
@@ -55,15 +39,12 @@ class BroadcastAdd(Operation):
     def compute_inline(self, x, y):
         return x + y
 
-    def evaluate_jacobian(self, x, y):
-        # first jac is dense with 1s, second jac is identity
-        return csdl.Constant(y.size, val = 1), csdl.Constant(y.size, val = 1)
-
-    def evaluate_jvp(self, x, y, vx, vy):
-        return add(vx.flatten()*csdl.Constant(y.size, val = 1), vy.flatten())
-
-    def evaluate_vjp(self, x, y, vout):
-        return csdl.sum(vout), vout.flatten()
+    def evaluate_vjp(self, cotangents, x, y, z):
+        if cotangents.check(x):
+            import csdl_alpha as csdl
+            cotangents.accumulate(x, csdl.sum(cotangents[z]))
+        if cotangents.check(y):
+            cotangents.accumulate(y, cotangents[z])
 
 class SparseAdd(ComposedOperation):
 
@@ -118,7 +99,7 @@ def add(x:VariableLike,y:VariableLike)->Variable:
     elif y.size == 1:
         op = BroadcastAdd(y.flatten(),x)
     else:
-        raise ValueError(f'Shapes not compatible for sparse add operation. x shape: {x.shape}, y shape: {y.shape}')
+        raise ValueError(f'Shapes not compatible for add operation. x shape: {x.shape}, y shape: {y.shape}')
 
     
     # TODO: add later
@@ -213,8 +194,13 @@ class TestAdd(csdl_tests.CSDLTest):
         s9 = csdl.add(x, z)
         compare_values += [csdl_tests.TestingPair(s9, t2, tag = 's9')]
 
-        self.run_tests(compare_values = compare_values,)
+        # add tensor variables
+        s9 = csdl.add(csdl.Variable(value = np.ones((100,))), csdl.Variable(value = np.ones((100,))))
+        temp = s9[0]
+        temp.add_name('temp')
+        compare_values += [csdl_tests.TestingPair(temp, 2*np.ones((100,))[0].flatten(), tag = 's10')]
 
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_errors(self):
         self.prep()

@@ -13,14 +13,11 @@ class Mult(ElementwiseOperation):
     def compute_inline(self, x, y):
         return x*y
 
-    def evaluate_jacobian(self, x, y):
-        return y, x
-
-    def evaluate_jvp(self, x,y, vx, vy):
-        return y.flatten()*vx + x.flatten()*vy
-
-    def evaluate_vjp(self, x, y, vout):
-        return x.flatten()*vout, y.flatten()*vout
+    def evaluate_vjp(self,cotangents, x, y, z):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[z]*y)
+        if cotangents.check(y):
+            cotangents.accumulate(y, cotangents[z]*x)
 
 class BroadcastMult(Operation):
 
@@ -32,6 +29,12 @@ class BroadcastMult(Operation):
 
     def compute_inline(self, x, y):
         return x*y
+
+    def evaluate_vjp(self, cotangents, x, y, z):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[z].inner(y))
+        if cotangents.check(y):
+            cotangents.accumulate(y, cotangents[z]*x)
 
 def mult(x,y):
     """Elementwise multiplication of two tensors x and y.
@@ -137,7 +140,7 @@ class TestMult(csdl_tests.CSDLTest):
         s8 = 3.0*z
         compare_values += [csdl_tests.TestingPair(s8, t2, tag = 's8')]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_docstring(self):
         self.docstest(mult)

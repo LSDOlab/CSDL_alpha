@@ -209,7 +209,11 @@ class TestTensorDot(csdl_tests.CSDLTest):
         t2 = np.tensordot(z_val, t_val, axes=([0,1], [0,1])).flatten()
         compare_values += [csdl_tests.TestingPair(s2, t2)]
 
-        self.run_tests(compare_values = compare_values,)
+        # Inner product of z and t:
+        s2 = csdl.tensordot(1.0, 2.0)
+        compare_values += [csdl_tests.TestingPair(s2, np.ones((1,1))*2.0)]
+
+        self.run_tests(compare_values = compare_values,verify_derivatives=True)
 
     def test_docstring(self):
         self.docstest(tensordot)

@@ -108,7 +108,7 @@ class TestSub(csdl_tests.CSDLTest):
         s9 = csdl.sub(x, z)
         compare_values += [csdl_tests.TestingPair(s9, t2, tag = 's9')]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
 
     def test_functionality_expand(self,):
@@ -174,12 +174,11 @@ class TestSub(csdl_tests.CSDLTest):
         s9 = x-z
         compare_values += [csdl_tests.TestingPair(s9, t2, tag = 's9')]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_docstring(self):
         self.docstest(sub)
 if __name__ == '__main__':
-    
     test_instance = TestSub()
     test_instance.test_functionality()
     test_instance.test_functionality_expand()

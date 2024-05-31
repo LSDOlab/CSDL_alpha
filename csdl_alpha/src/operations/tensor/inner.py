@@ -1,4 +1,4 @@
-from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
+from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
@@ -82,7 +82,7 @@ class TestInner(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(csdl.inner(x,y_val), np.inner(x_val, y_val).flatten())]
         compare_values += [csdl_tests.TestingPair(csdl.inner(a,b), np.sum(a_val * b_val).flatten())]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_errors(self,):
         self.prep()

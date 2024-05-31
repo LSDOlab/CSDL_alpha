@@ -1,4 +1,5 @@
-from .src.data import inline_save, import_h5py, save_optimization_variables, save_all_variables, inline_csv_save
+from functools import wraps
+from .src.data import inline_export, inline_import, save_optimization_variables, save_all_variables
 from .src.graph.variable import Variable, ImplicitVariable, SparseMatrix
 from .src.model import Model
 from .src.recorder import Recorder
@@ -11,7 +12,7 @@ import warnings
 
 manager = RecManager()
 
-def get_current_recorder():
+def get_current_recorder() -> Recorder:
     if manager.active_recorder is None:
         raise ValueError("No active recorder found. Start a new recorder by csdl.Recorder().start()")
     return manager.active_recorder
@@ -38,18 +39,6 @@ class namespace:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         exit_namespace()
-
-class Namespace(namespace):
-    def __init__(self, namespace: str):
-        """Depricated: use namespace instead. Namespacing context manager.
-
-        Parameters
-        ----------
-        namespace : str
-            The name of the namespace to enter.
-        """
-        warnings.warn("Namespace is depricated. Use namespace instead.", DeprecationWarning)
-        super().__init__(namespace)
 
 def enter_namespace(namespace: str):
     """
@@ -86,3 +75,8 @@ def exit_subgraph():
 def print_all_recorders():
     print(manager)
     
+
+@wraps(Recorder.visualize_graph)
+def visualize_graph(*args, **kwargs):
+    recorder = get_current_recorder()
+    recorder.visualize_graph(*args, **kwargs)

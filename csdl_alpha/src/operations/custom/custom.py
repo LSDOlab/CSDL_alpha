@@ -2,89 +2,36 @@ from csdl_alpha.utils.parameters import Parameters
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.utils.inputs import variablize, get_type_string, ingest_value
-from csdl_alpha.src.graph.node import Node
-from csdl_alpha.utils.typing import VariableLike
+from csdl_alpha.src.operations.custom.utils import (
+    prepare_compute_derivatives,
+    process_custom_derivatives_metadata,
+    postprocess_compute_derivatives,
+    preprocess_custom_inputs,
+    postprocess_custom_outputs,
+)
+
 import warnings
 import numpy as np
 
 # warnings.simplefilter("always")
 
 class CustomOperation(Operation):
-    def __init__(self, *args, **kwargs):
-        if hasattr(self, 'initialize'):
-            warnings.warn('The initialize method is deprecated. Use __init__ and check_parameter instead.', DeprecationWarning)
-            self.parameters = Parameters()
-            self.parameters.hold(kwargs)
-            self.initialize()
-            self.parameters.check(kwargs)
-
+    def __init__(self):
         self.input_dict = {}
         self.output_dict = {}
         self.derivative_parameters = {}
-
-# https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
-def _readonly(self, *args, **kwargs):
-    raise RuntimeError("Cannot modify inputs dictionary.")
-
-# https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
-class CustomInputsDict(dict):
-    __setitem__ = _readonly
-    __delitem__ = _readonly
-    pop = _readonly
-    popitem = _readonly
-    clear = _readonly
-    update = _readonly
-    setdefault = _readonly
-
-def preprocess_custom_inputs(inputs):
-    return CustomInputsDict(inputs)
-
-def postprocess_custom_outputs(given_outputs:dict, declared_outputs:dict):
-    processed_outputs = {}
-    for given_key, given_output in given_outputs.items():
-
-        # If they give an output that isn't a VariableLike, raise an error
-        try:
-            given_output = ingest_value(given_output)
-        except Exception as e:
-            raise TypeError(f'Error with output \'{given_key}\': {e}')
-
-        # If they give an output that wasn't declared, raise an error
-        if given_key not in declared_outputs:
-            raise KeyError(f'Output \'{given_key}\' was not declared but was computed')
-        
-        # If they give an output that doesn't have the right shape, raise an error
-        if given_output.size == 1: # broadcasting????
-            given_output = np.ones(declared_outputs[given_key].shape) * given_output.flatten()
-        elif given_output.shape != declared_outputs[given_key].shape:
-            raise ValueError(f'Output \'{given_key}\' must have shape {declared_outputs[given_key].shape}, but shape {given_output.shape} was given')
-
-        processed_outputs[given_key] = given_output
-
-    for declared_key, declared_output_variable in declared_outputs.items():
-
-        # If they didn't give an output that was declared, raise an error
-        if declared_key not in processed_outputs:
-            raise KeyError(f'Output \'{declared_key}\' was declared but was not computed')
-
-    return processed_outputs
+        self.name = 'custom'
 
 class CustomExplicitOperation(CustomOperation):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """Wraps the evaluate method. No input arguments are required. 
         """
 
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.evaluate = self._wrap_evaluate(self.evaluate)
         self.locked = False
-
-    def initialize(self):
-        """
-        Depricated, use __init__ instead.
-        """
-        pass
 
     def evaluate(self):
         raise NotImplementedError('not implemented')
@@ -104,6 +51,7 @@ class CustomExplicitOperation(CustomOperation):
 
             eval_outputs = evaluate(*args, **kwargs)
             Operation.__init__(self, *list(self.input_dict.values()))
+            process_custom_derivatives_metadata(self.derivative_parameters, self.output_dict, self.input_dict)
 
             self.set_outputs(list(self.output_dict.values()))
 
@@ -112,12 +60,15 @@ class CustomExplicitOperation(CustomOperation):
             return eval_outputs
         return new_evaluate
 
+    def compute_forward(self, inputs, outputs):
+        self.compute(inputs, outputs)
+
     def compute_inline(self, *args):
         inputs = {key:input for key, input in zip(self.input_dict.keys(), args)}
         comp_outputs = {}
 
         inputs = preprocess_custom_inputs(inputs)
-        self.compute(inputs, comp_outputs)
+        self.compute_forward(inputs, comp_outputs)
         comp_outputs = postprocess_custom_outputs(comp_outputs, self.output_dict)
 
         output = [comp_outputs[key] for key in self.output_dict.keys()]
@@ -184,9 +135,14 @@ class CustomExplicitOperation(CustomOperation):
         self,
         of, wrt,
         dependent=True,
-        rows=None, cols=None,
+        rows=None,
+        cols=None,
         val=None,
-        method='exact', step=None, form=None, step_calc=None,
+        method='exact', 
+        step=None,
+        form=None,
+        step_calc=None,
+        sparse = False,
     ):
         """Declare derivative parameters for computing derivatives.
 
@@ -212,6 +168,8 @@ class CustomExplicitOperation(CustomOperation):
             The form of the derivative, by default None.
         step_calc : str, optional
             The step calculation method, by default None.
+        sparse : bool, optional
+            Whether the user computed derivative is sparse (scipy sparse), by default False.
 
         Raises
         ------
@@ -267,6 +225,7 @@ class CustomExplicitOperation(CustomOperation):
                         step=step,
                         form=form,
                         step_calc=step_calc,
+                        sparse=sparse,
                     )
         elif len(of_list) > 0:
             for a in of_list:
@@ -281,6 +240,7 @@ class CustomExplicitOperation(CustomOperation):
                     step=step,
                     form=form,
                     step_calc=step_calc,
+                    sparse=sparse,
                 )
         elif len(wrt_list) > 0:
             for b in wrt_list:
@@ -295,6 +255,7 @@ class CustomExplicitOperation(CustomOperation):
                     step=step,
                     form=form,
                     step_calc=step_calc,
+                    sparse=sparse,
                 )
         else:
             if (of, wrt) in self.derivative_parameters.keys():
@@ -310,13 +271,122 @@ class CustomExplicitOperation(CustomOperation):
             self.derivative_parameters[of, wrt]['step'] = step
             self.derivative_parameters[of, wrt]['form'] = form
             self.derivative_parameters[of, wrt]['step_calc'] = step_calc
+            self.derivative_parameters[of, wrt]['sparse'] = sparse
     
-    def evaluate_diagonal_jacobian(self, *args):
-        raise NotImplementedError('not implemented') 
+    def evaluate_vjp(self, cotangents, *inputs_and_outputs):
 
-    def evaluate_jvp(self, *args):
-        raise NotImplementedError('not implemented')
+        inputs = inputs_and_outputs[:self.num_inputs]
+        outputs = inputs_and_outputs[self.num_inputs:]
 
-    def evaluate_vjp(self, *args):
-        raise NotImplementedError('not implemented')
+        output_cots = []
+        for output in outputs:
+            if not cotangents.check(output):
+                output_cots.append(Variable(value = np.zeros(output.shape)))
+            else:
+                output_cots.append(cotangents[output])
+        input_cots = []
+        for input in inputs:
+            if cotangents.check(input):
+                input_cots.append(input)
 
+        vjps = self.build_custom_operation_vjp(
+            input_cotangents = input_cots,
+            output_cotangents = output_cots,
+            deriv_order = 1)
+        cots = vjps.finalize_and_return_outputs()
+        
+        if not isinstance(cots, tuple):
+            cots = (cots,)
+        for i, input in enumerate(input_cots):
+            cotangents.accumulate(input, cots[i])
+
+    def build_custom_operation_vjp(
+            self,
+            input_cotangents:list[Variable],
+            output_cotangents:list[Variable],
+            deriv_order:int)->'CustomJacOperation':
+
+        if deriv_order > 1:
+            raise NotImplementedError('Higher order custom derivatives not yet implemented')
+
+        return CustomJacOperation(self, input_cotangents, output_cotangents, deriv_order)
+
+class CustomJacOperation(Operation):
+    
+    def __init__(
+            self,
+            custom_operation:CustomOperation,
+            cotangent_inputs:list[Variable],
+            cotangent_outputs:list[Variable],
+            order:int)->'CustomJacOperation':
+        
+        # forward inputs
+        self.orig_inputs = custom_operation.inputs
+        self.num_orig_inputs = len(self.orig_inputs)
+        self.reverse_input_dict:dict[Variable,str] = {var:key for key,var in custom_operation.input_dict.items()}
+        
+        # forward outputs
+        self.orig_outputs = custom_operation.outputs
+        self.num_orig_outputs = len(self.orig_outputs)
+        self.reverse_output_dict:dict[Variable,str] = {var:key for key,var in custom_operation.output_dict.items()}
+        
+        # cotangents
+        self.input_cotangents = cotangent_inputs
+        self.cotangents_outputs = cotangent_outputs
+        
+        # derivative order and original operation
+        self.order = order
+        self.custom_operation = custom_operation
+
+        # The inputs of the operation are all the orginal inputs, the computed outputs AND the cotangents of the outputs
+        vjp_custom_inputs = self.orig_inputs + self.orig_outputs + self.cotangents_outputs
+        super().__init__(*vjp_custom_inputs)
+        self.name = f'custom_jac_{order}'
+
+        # We only want to output the cotangents that are actually necessary
+        self.set_dense_outputs([input.shape for input in self.input_cotangents])
+
+    def compute_inline(self, *orig_inputs_and_outputs_and_cots:list[np.array])->list[np.array]:
+        """Perform the derivative accumulation procedure here.
+        Two main steps:
+        1. Call the user's compute_derivatives method and retrieve jacobians
+        -- If the original input values are the same as the previous execution, we can use the previous jacobians
+        2. Accumulate the cotangents using simple matrix vector products
+        """
+        input_values:list[np.array] = orig_inputs_and_outputs_and_cots[:self.num_orig_inputs]
+        output_values:list[np.array] = orig_inputs_and_outputs_and_cots[self.num_orig_inputs:self.num_orig_inputs + self.num_orig_outputs]
+        cot_values:list[np.array] = orig_inputs_and_outputs_and_cots[self.num_orig_inputs + self.num_orig_outputs:]
+        
+        inputs:dict[str,Variable] = {self.reverse_input_dict[key]:input for key, input in zip(self.orig_inputs, input_values)}
+        outputs:dict[str,Variable] = {self.reverse_output_dict[key]:output for key, output in zip(self.orig_outputs, output_values)}
+
+        # Call user derivatives
+        derivatives_dict = prepare_compute_derivatives(self.custom_operation.derivative_parameters)
+        inputs = preprocess_custom_inputs(inputs)
+        outputs = preprocess_custom_inputs(outputs)
+        self.custom_operation.compute_derivatives(inputs, outputs, derivatives_dict)
+        postprocess_compute_derivatives(derivatives_dict, self.custom_operation.derivative_parameters)
+        
+        # Accumulate and return
+        input_cots:list[np.array] = []
+        for input in self.input_cotangents:
+            # The cotangents are assumed to 2D vectors for now
+            input_cots.append(np.zeros((1,input.size)))
+            for i, output in enumerate(self.orig_outputs):
+                output_str = self.reverse_output_dict[output]
+                input_str = self.reverse_input_dict[input]
+
+                cot_vector = cot_values[i].reshape(1, output.size)
+                deriv_matrix = (derivatives_dict[output_str, input_str]).reshape(output.size, input.size)
+
+                # for debugging:
+                # print(output.name, input.name, input_cots[-1], cot_vector, deriv_matrix)
+                input_cots[-1] += cot_vector@deriv_matrix
+
+            # When we return it, it needs to be the correct shape of the input
+            input_cots[-1] = input_cots[-1].reshape(input.shape)
+
+        if len(input_cots) == 1:
+            return input_cots[0]
+        else:
+            return tuple(input_cots)

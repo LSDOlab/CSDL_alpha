@@ -96,7 +96,9 @@ class TestOuter(csdl_tests.CSDLTest):
         t2 = np.tensordot(x_val, z_val, axes=0)
         compare_values += [csdl_tests.TestingPair(csdl.outer(x,z), t2)]
         compare_values += [csdl_tests.TestingPair(csdl.outer(x_val,z), t2)]
-        self.run_tests(compare_values = compare_values,)
+
+        compare_values += [csdl_tests.TestingPair(csdl.outer(3.0,2.0), np.array([[6.0]]))]
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_errors(self,):
         pass

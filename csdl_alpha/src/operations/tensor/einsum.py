@@ -180,8 +180,7 @@ def einsum(*args, action=None)->Variable:
     
     for i, arg, arg_str in zip(range(len(args)), args, arg_strings):
         if len(arg.shape) != len(arg_str):
-            raise ValueError(f"{i}th input tensor's shape {arg.shape} does not match the number of dimensions in the \
-                             {i}th input {arg_str} in the specified `action` string.")
+            raise ValueError(f"{i}th input tensor's shape {arg.shape} does not match the number of dimensions in the {i}th input {arg_str} in the specified `action` string.")
         
         if not all(arg_str.count(char) == 1 for char in arg_str):
             raise ValueError('Each character in the input string must appear exactly once.')
@@ -275,7 +274,7 @@ class TestEinsum(csdl_tests.CSDLTest):
         t8 = np.einsum('ji,jk->ik', z_val, t_val)
         compare_values += [csdl_tests.TestingPair(s8, t8, tag='s8')]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_docstring(self):
         self.docstest(einsum)

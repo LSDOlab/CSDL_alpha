@@ -1,11 +1,12 @@
 from csdl_alpha.src.operations.implicit_operations.nonlinear_solvers.nonlinear_solver import NonlinearSolver, check_variable_shape_compatibility, check_run_time_tolerance
+from csdl_alpha.src.operations.implicit_operations.nonlinear_solvers.fixed_point import FixedPoint
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import scalarize, ingest_value
 import numpy as np
 
 from typing import Union
 
-class GaussSeidel(NonlinearSolver):
+class GaussSeidel(FixedPoint):
     
     def __init__(
             self,
@@ -13,16 +14,24 @@ class GaussSeidel(NonlinearSolver):
             print_status = True,
             tolerance=1e-10,
             max_iter=100,
+            elementwise_states=False,
         ):
         """
-        A Gauss-Seidel solver
+        A nonlinear block Gauss-Seidel solver
+
+        The states are updated after each other in the order they are added:
+        x0_new = x0_state_update(x0_old, x1_old, ... xn_old)
+        x1_new = x1_state_update(x0_new, x1_old, ... xn_old)
+        ...
+        xn_new = xn_state_update(x0_new, x1_new, ... xn_old)
         """
         # well now this just seems redundant
         super().__init__(
             name = name,
             print_status = print_status,
             tolerance = tolerance,
-            max_iter = max_iter
+            max_iter = max_iter,
+            elementwise_states = elementwise_states,
         )
 
     def add_state(
@@ -34,7 +43,6 @@ class GaussSeidel(NonlinearSolver):
             tolerance: Union[Variable, float] = None
         ):
         """
-        
         state: Variable
             The state variable to be solved for.
         residual: Variable
@@ -58,7 +66,6 @@ class GaussSeidel(NonlinearSolver):
 
         self.add_state_metadata(state, 'state_update', state_update, is_input=False)
 
-
         # Check if user provided an initial value
         if initial_value is None:
             self.add_state_metadata(state, 'initial_value', state.value)
@@ -78,71 +85,22 @@ class GaussSeidel(NonlinearSolver):
         # Check if user provided a tolerance
         self.add_tolerance(state, tolerance)
 
-    def _inline_solve_(self):
-        """
-        Solves the implicit operation graph using Nonlinear Gauss-Seidel
-        """
-
-        # perform NLBGS iterations:
+    def _inline_update_states(self):
         # while not converged:
-        #    x0_new = x0_old - r0(x0_old, x1_old, ... xn_old)
-        #    x1_new = x1_old - r1(x0_new, x1_old, ... xn_old)
+        #    x0_new = x0_state_update(x0_old, x1_old, ... xn_old)
+        #    x1_new = x1_state_update(x0_new, x1_old, ... xn_old)
         #    ...
-        #    xn_new = xn_old - rn(x0_new, x1_new, ... xn_old)
-
-        iter = 0
-
-        self._inline_set_initial_values()
-
-        while True:
-            # loop through all residuals
-            for current_state, current_residual in self.state_to_residual_map.items():
-                # compute residuals
-                self.update_residual()
-
-                # get current state value and residual value
-                current_state_value = current_state.value
-                current_residual_value = current_residual.value
-
-                # update current state value
-                if self.state_metadata[current_state]['state_update'] is None:
-                    current_state.value = current_state_value - current_residual_value
-                else:
-                    current_state.value = self.state_metadata[current_state]['state_update'].value
-            # update residuals to check
+        #    xn_new = xn_state_update(x0_new, x1_new, ... xn_old)
+        for current_state, current_residual in self.state_to_residual_map.items():
+            # compute residuals
             self.update_residual()
 
-            # check convergence
-            converged = True
-            for current_state, current_residual in self.state_to_residual_map.items():
+            # get current state value and residual value
+            current_state_value = current_state.value
+            current_residual_value = current_residual.value
 
-                # get current residual and error
-                current_residual_value = current_residual.value
-
-                # Uncomment to print iteration:
-                # error = np.linalg.norm(current_residual_value.flatten())
-                # print(f'iteration {iter}, {current_residual} error: {error}')
-
-                # compute tolerance:
-                tol = self.state_metadata[current_state]['tolerance']
-                if isinstance(tol, Variable):
-                    tol = tol.value
-
-                if np.any(np.isnan(current_residual_value)):
-                    raise ValueError(f'Residual is NaN for {current_residual.name}')
-                
-                # if current_residual_value > tol:
-                # if any of the residuals do not meet tolerance, no need to compute errors for other residuals
-                if not check_run_time_tolerance(current_residual_value, tol):
-                    converged = False
-                    break
-
-            # if solved or maxiter, end loop
-            if converged:
-                break
-            iter += 1
-            if iter >= self.metadata['max_iter']:
-                break
-        # print status
-        if self.print_status:
-            print(self._inline_print_nl_status(iter, converged))
+            # update current state value
+            if self.state_metadata[current_state]['state_update'] is None:
+                current_state.value = current_state_value - current_residual_value
+            else:
+                current_state.value = self.state_metadata[current_state]['state_update'].value

@@ -22,6 +22,10 @@ class Reshape(Operation):
     def compute_inline(self, x):
         return x.reshape(self.new_shape)
 
+    def evaluate_vjp(self, cotangents, x, out):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[out].reshape(x.shape))
+
 def reshape(x:Variable, shape: tuple[int]) -> Variable:
     """Reshape a tensor x to a new shape.
 
@@ -124,6 +128,29 @@ class TestReshape(csdl_tests.CSDLTest):
 
         y = y.flatten()
         compare_values += [csdl_tests.TestingPair(y,x_val_large.flatten())]
+
+        self.run_tests(compare_values = compare_values,)
+
+    def test_derivatives(self):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+        x_val = 3.0
+        x = csdl.Variable(name = 'x', value = x_val)
+
+        x_val_large = np.ones((3,1,2))
+        x_large = csdl.Variable(name = 'x_large', value = x_val_large)
+
+        compare_values = []
+        y = x_large.flatten()
+        compare_values += [csdl_tests.TestingPair(y,x_val_large.flatten())]
+
+        y = x_large.reshape((6,1))
+        compare_values += [csdl_tests.TestingPair(y,x_val_large.reshape((6,1)))]
+
+        y = x_large.reshape((2,1,3,1))
+        compare_values += [csdl_tests.TestingPair(y,x_val_large.reshape((2,1,3,1)))]
 
         self.run_tests(compare_values = compare_values,)
 

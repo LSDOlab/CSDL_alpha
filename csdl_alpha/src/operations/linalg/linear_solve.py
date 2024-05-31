@@ -19,6 +19,16 @@ class LinearSolve(Operation):
     def compute_inline(self, A, b):
         return np.linalg.solve(A, b)
     
+    def evaluate_vjp(self, cotangents, A, b, x):
+        import csdl_alpha as csdl
+
+        solved_system =  csdl.solve_linear(A.T(), cotangents[x])
+        if cotangents.check(b):
+            cotangents.accumulate(b, solved_system)
+        if cotangents.check(A):
+            vjp = -csdl.outer(x,solved_system).T().reshape(A.shape)
+            cotangents.accumulate(A, vjp)
+
 def solve_linear(
         A:VariableLike,
         b:VariableLike,
@@ -84,10 +94,18 @@ class TestLinear(csdl_tests.CSDLTest):
         import csdl_alpha as csdl
         import numpy as np
 
-        A_shape = (4,4)
-        b_shape = (4,1)
-        A_val = (np.arange(np.prod(A_shape)).reshape(A_shape)+1.0)**2.0
-        b_val = np.arange(np.prod(b_shape)).reshape(b_shape)
+        n = 4
+        # condition number too high?
+        # A_shape = (n,n)
+        # b_shape = (n,1)
+        # A_val = (np.arange(np.prod(A_shape)).reshape(A_shape)+1.0)**2.0
+        # b_val = np.arange(np.prod(b_shape)).reshape(b_shape)
+
+        main_diag = np.arange(n)+1
+        A_val = np.diag(main_diag) + np.diag(main_diag[:-1]+1, 1) + np.diag(main_diag[:-1]+2, -1)
+        b_val = 2*np.arange(n)
+
+
         A = csdl.Variable(value = A_val)
         b = csdl.Variable(value = b_val)
 
@@ -117,7 +135,7 @@ class TestLinear(csdl_tests.CSDLTest):
         x = csdl.solve_linear(A,b_val, solver = csdl.linear_solvers.DirectSolver())
         compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
     
     def test_errors(self,):
         self.prep()

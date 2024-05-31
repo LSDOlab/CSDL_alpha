@@ -17,15 +17,23 @@ class Log(ElementwiseOperation):
     def compute_inline(self, x, y):
         return np.log(x) / np.log(y)
 
-    def evaluate_jacobian(self, x, y):
-        return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
+    # def evaluate_jacobian(self, x, y):
+    #     return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
 
-    def evaluate_jvp(self, x, y, vx, vy):
-        return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
+    # def evaluate_jvp(self, x, y, vx, vy):
+    #     return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
 
-    def evaluate_vjp(self, x, y, vout):
-        return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
+    # def evaluate_vjp(self, x, y, vout):
+    #     return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
     
+    def evaluate_vjp(self, cotangents, x, y, z):
+        import csdl_alpha as csdl
+        vout = cotangents[z]
+        if cotangents.check(x):
+            cotangents.accumulate(x, vout / (x * csdl.log(y)))
+        if cotangents.check(y):
+            cotangents.accumulate(y, -vout * csdl.log(x) / (y * (csdl.log(y))**2))
+
 # We need a broadcast log even when the methods are exactly the same because Broadcast cannot inherit from ElementwiseOperation
 # TODO: Avoid code duplication
 class LeftBroadcastLog(Operation):
@@ -42,15 +50,23 @@ class LeftBroadcastLog(Operation):
     def compute_inline(self, x, y):
         return np.log(x) / np.log(y)
 
-    def evaluate_jacobian(self, x, y):
-        return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
+    # def evaluate_jacobian(self, x, y):
+    #     return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
 
-    def evaluate_jvp(self, x, y, vx, vy):
-        return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
+    # def evaluate_jvp(self, x, y, vx, vy):
+    #     return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
 
-    def evaluate_vjp(self, x, y, vout):
-        return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
+    # def evaluate_vjp(self, x, y, vout):
+    #     return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
     
+    def evaluate_vjp(self, cotangents, x, y, z):
+        import csdl_alpha as csdl
+        vout = cotangents[z]
+        if cotangents.check(x):
+            cotangents.accumulate(x, csdl.sum(vout / (x * csdl.log(y))))
+        if cotangents.check(y):
+            cotangents.accumulate(y, -vout * csdl.log(x) / (y * (csdl.log(y))**2))
+
 class RightBroadcastLog(Operation):
     '''
     Logarithm after the second input is broadcasted to the shape of the first input.
@@ -65,15 +81,23 @@ class RightBroadcastLog(Operation):
     def compute_inline(self, x, y):
         return np.log(x) / np.log(y)
 
-    def evaluate_jacobian(self, x, y):
-        return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
+    # def evaluate_jacobian(self, x, y):
+    #     return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
 
-    def evaluate_jvp(self, x, y, vx, vy):
-        return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
+    # def evaluate_jvp(self, x, y, vx, vy):
+    #     return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
 
-    def evaluate_vjp(self, x, y, vout):
-        return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
+    # def evaluate_vjp(self, x, y, vout):
+    #     return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
     
+    def evaluate_vjp(self, cotangents, x, y, z):
+        import csdl_alpha as csdl
+        vout = cotangents[z]
+        if cotangents.check(x):
+            cotangents.accumulate(x, vout / (x * csdl.log(y)))
+        if cotangents.check(y):
+            cotangents.accumulate(y, - csdl.sum(vout *csdl.log(x) / (y * (csdl.log(y))**2)))
+
 def log(x, base=None):
     '''
     Computes the natural logarithm of all entries in the input tensor 
@@ -125,10 +149,10 @@ def log(x, base=None):
 
     if x.shape == y.shape:
         op = Log(x, y)
-    elif x.shape == (1,):
-        op = LeftBroadcastLog(x, y)
-    elif y.shape == (1,):
-        op = RightBroadcastLog(x, y)
+    elif x.size == 1:
+        op = LeftBroadcastLog(x.flatten(), y)
+    elif y.size == 1:
+        op = RightBroadcastLog(x, y.flatten())
     else:
         raise ValueError('Shapes not compatible for log operation.')
         
@@ -175,7 +199,6 @@ class TestLog(csdl_tests.CSDLTest):
         s6 = csdl.log(z, 3.0*np.ones((3,2)))
         t6 = np.log(z_val) / np.log(3.0)
         compare_values += [csdl_tests.TestingPair(s6, t6, tag = 's6')]
-
         
         # log of a tensor constant with a tensor variable base
         s7 = csdl.log(3.0*np.ones((3,2)), z)
@@ -186,7 +209,12 @@ class TestLog(csdl_tests.CSDLTest):
         s8 = csdl.log(3.0, z)
         compare_values += [csdl_tests.TestingPair(s8, t6, tag = 's8')]
 
-        self.run_tests(compare_values = compare_values,)
+        # log of a scalar constant with a tensor variable base
+        s8 = csdl.log(0.001)
+        t6 = np.log(0.001).flatten()
+        compare_values += [csdl_tests.TestingPair(s8, t6, tag = 's8', decimal = 3)]
+
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_example(self,):
         self.docstest(log)

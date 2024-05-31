@@ -18,6 +18,13 @@ class Div(ElementwiseOperation):
     def compute_inline(self, x, y):
         return x/y
 
+    def evaluate_vjp(self,cotangents, x, y, z):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[z]/y)
+        if cotangents.check(y):
+            cotangents.accumulate(y, -cotangents[z]*z/y)
+            # cotangents.accumulate(y, -cotangents[z]*x/y**2)
+
 @set_properties()
 class BroadcastDiv1(Operation):
     '''
@@ -32,6 +39,13 @@ class BroadcastDiv1(Operation):
     def compute_inline(self, x, y):
         return x/y
 
+    def evaluate_vjp(self,cotangents, x, y, z):
+        if cotangents.check(x):
+            import csdl_alpha as csdl
+            cotangents.accumulate(x, csdl.sum(cotangents[z]/y))
+        if cotangents.check(y):
+            cotangents.accumulate(y, -cotangents[z]*z/y)
+
 @set_properties()
 class BroadcastDiv2(Operation):
     '''
@@ -45,6 +59,13 @@ class BroadcastDiv2(Operation):
 
     def compute_inline(self, x, y):
         return x/y
+
+    def evaluate_vjp(self,cotangents, x, y, z):
+        import csdl_alpha as csdl
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[z]/y)
+        if cotangents.check(y):
+            cotangents.accumulate(y, -csdl.sum(cotangents[z]*z)/y)
 
 def div(x:VariableLike,y:VariableLike)->Variable:
     """Elementwise addition of two tensors x and y.
@@ -140,7 +161,7 @@ class TestDiv(csdl_tests.CSDLTest):
         z = x_val/y
         compare_values += [csdl_tests.TestingPair(z, x_val/y_val)]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_errors(self,):
         self.prep()

@@ -99,7 +99,7 @@ class TestAbsolute(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(s4, t4, tag = 's4')]
         compare_values += [csdl_tests.TestingPair(s5, t4, tag = 's4')]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values,verify_derivatives=True)
 
 
     def test_example(self,):

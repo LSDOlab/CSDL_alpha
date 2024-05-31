@@ -26,7 +26,7 @@ sum_states.name = 'state_sum'
 
 # apply coupling:
 # ONE SOLVER COUPLING:
-solver = csdl.GaussSeidel('gs_x_simpler')
+solver = csdl.nonlinear_solvers.GaussSeidel('gs_x_simpler')
 solver.add_state(x, y)
 solver.run()
 

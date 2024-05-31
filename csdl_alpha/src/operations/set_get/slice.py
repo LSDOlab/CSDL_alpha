@@ -67,7 +67,7 @@ class Slicer():
         Check if the key is a valid type and if the list of index sets is valid.
         """
         if not isinstance(k, self.valid_types):
-            raise TypeError(f"Invalid key {k}. Must be an integer, slice, or tuple index list.")
+            raise TypeError(f"Invalid key {k}. Must be an integer, slice, or index list.")
         
         # If a list of index sets but only one element, then just set it as an integer
         if isinstance(k, list) and len(k) == 1:

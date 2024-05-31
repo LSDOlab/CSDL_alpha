@@ -12,15 +12,10 @@ class Neg(ElementwiseOperation):
 
     def compute_inline(self, x):
         return -x
-    
-    def evaluate_jacobian(self, x):
-        return csdl.Constant(x.size, val = -1)
 
-    def evaluate_jvp(self, x, vx):
-        return -vx
-
-    def evaluate_vjp(self, x, vout):
-        return -vout
+    def evaluate_vjp(self, cotangents, x, neg_x):
+        if cotangents.check(x):
+            cotangents.accumulate(x, -cotangents[neg_x])
 
 def negate(x):
     """Compute -1*x of a variable x
@@ -46,7 +41,7 @@ def negate(x):
     x = validate_and_variablize(x, raise_on_sparse = False)
     return Neg(x).finalize_and_return_outputs()
 
-class TestPower(csdl_tests.CSDLTest):
+class TestNegate(csdl_tests.CSDLTest):
     
     def test_functionality(self,):
         self.prep()
@@ -59,7 +54,7 @@ class TestPower(csdl_tests.CSDLTest):
 
         compare_values = []
         compare_values += [csdl_tests.TestingPair(y, -x_val)]
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_docstring(self):
         self.docstest(negate)

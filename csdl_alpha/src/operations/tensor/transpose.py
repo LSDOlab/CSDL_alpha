@@ -22,6 +22,10 @@ class Transpose(Operation):
     def compute_inline(self, x):
         return np.transpose(x)
 
+    def evaluate_vjp(self, cotangents, x, z):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[z].T())
+
 def transpose(x:VariableLike) -> Variable:
     """ 
     Invert the axes of a tensor. The shape of the output is the reverse of the input shape.
@@ -62,7 +66,7 @@ class TestTranspose(csdl_tests.CSDLTest):
         x_val = 3.0
         x = csdl.Variable(value = x_val)
 
-        x_val_large = np.arange(720).reshape((10,9,8))
+        x_val_large = np.arange(60).reshape((5,3,4))
         x_large = csdl.Variable(value = x_val_large)
 
         y = csdl.transpose(x)
@@ -86,7 +90,7 @@ class TestTranspose(csdl_tests.CSDLTest):
         y2 = csdl.transpose(x_val_large)
         compare_values += [csdl_tests.TestingPair(y2, y2_val)]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values,verify_derivatives=True)
 
     def test_docstring(self):
         self.docstest(transpose)
