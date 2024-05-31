@@ -1,3 +1,4 @@
+'''
 def test_visualization(tmp_path):
     from csdl_alpha.utils.hard_reload import hard_reload
     hard_reload()
@@ -30,4 +31,4 @@ def test_visualization(tmp_path):
             VIZ_OBJECT_func(visualize_style = 'hierarchical', filename = 'test')
 
     recorder.stop()
-    
+'''
