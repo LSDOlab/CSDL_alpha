@@ -44,7 +44,8 @@ def reverse(
     
     if not elementwise:
         if loop:
-            loop_d = csdl.frange(of_var.size)
+            # Assume derivatives do not stack by default. Possible make this an option in the future.
+            loop_d = csdl.frange(of_var.size, inline_lazy_stack=True)
         else:
             loop_d = range(of_var.size)
         for row_index in loop_d:

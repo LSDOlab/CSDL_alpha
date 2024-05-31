@@ -192,7 +192,102 @@ class Testfrange(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(a, np.array([6]))]
         compare_values += [csdl_tests.TestingPair(b, np.array([22]))]
         compare_values += [csdl_tests.TestingPair(c, np.array([38]))]
-        self.run_tests(compare_values=compare_values)
+        self.run_tests(compare_values=compare_values, verify_derivatives=True)
+
+    def test_multi_vals_delay_inline(self):
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a = csdl.Variable(value=0, name='a')
+        b = csdl.Variable(value=0, name='b')
+        c = csdl.Variable(value=0, name='c')
+
+        loop = frange(vals=([0,1,2,3], [4,5,6,7]), inline_lazy_stack=True)
+        for i, j in loop:
+            a = a + i
+            b = b + j
+            c = c + i*j
+
+        assert loop.op.inline_lazy_stack == True
+        assert loop.op.outputs[-1].value is None
+        loop.op.get_stacked(a)
+        assert loop.op.inline_lazy_stack == False
+
+        compare_values = []
+        compare_values += [csdl_tests.TestingPair(a, np.array([6]))]
+        compare_values += [csdl_tests.TestingPair(b, np.array([22]))]
+        compare_values += [csdl_tests.TestingPair(c, np.array([38]))]
+        self.run_tests(compare_values=compare_values, verify_derivatives=True)
+
+    def test_multi_vals_delay_inline_nest(self):
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a = csdl.Variable(value=0, name='a')
+        b = csdl.Variable(value=0, name='b')
+        c = csdl.Variable(value=0, name='c')
+        e = csdl.Variable(value=0.2, name='c')
+
+        loop = frange(vals=([0,1,2,3], [4,5,6,7]), inline_lazy_stack=True)
+        for i, j in loop:
+            a = a + i*e*5.0
+            for k in frange(0, 1):
+                a = a**1.0
+                d = a+1.0
+            b = b + j
+            c = c + i*j
+
+        assert loop.op.inline_lazy_stack == True
+        assert loop.op.outputs[-1].value is None
+        loop.op.get_stacked(a)
+        assert loop.op.inline_lazy_stack == False
+
+        deriv = csdl.derivative(c, [a])
+
+        compare_values = []
+        compare_values += [csdl_tests.TestingPair(a, np.array([6]))]
+        compare_values += [csdl_tests.TestingPair(b, np.array([22]))]
+        compare_values += [csdl_tests.TestingPair(c, np.array([38]))]
+        compare_values += [csdl_tests.TestingPair(d, np.array([7]))]
+        self.run_tests(compare_values=compare_values, verify_derivatives=True)
+
+    def test_multi_vals_delay_inline_nest2(self):
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a = csdl.Variable(value=0, name='a')
+        b = csdl.Variable(value=0, name='b')
+        c = csdl.Variable(value=0, name='c')
+        e = csdl.Variable(value=0.2, name='c')
+
+        loop = frange(vals=([0,1,2,3], [4,5,6,7]), inline_lazy_stack=True)
+        for i, j in loop:
+            a = a + i*e*5.0
+            for k in frange(0, 1, inline_lazy_stack=True):
+                a = a**1.0
+                d = a+1.0
+            b = b + j
+            c = c + i*j
+
+        assert loop.op.inline_lazy_stack == True
+        assert loop.op.outputs[-1].value is None
+        loop.op.get_stacked(a)
+        assert loop.op.inline_lazy_stack == False
+
+        deriv = csdl.derivative(c, [a])
+
+        compare_values = []
+        compare_values += [csdl_tests.TestingPair(a, np.array([6]))]
+        compare_values += [csdl_tests.TestingPair(b, np.array([22]))]
+        compare_values += [csdl_tests.TestingPair(c, np.array([38]))]
+        compare_values += [csdl_tests.TestingPair(d, np.array([7]))]
+        self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
     def test_stack(self):
         self.prep()
@@ -213,7 +308,8 @@ class Testfrange(csdl_tests.CSDLTest):
         # recorder.visualize_graph('stacked', visualize_style='hierarchical')
 
         loop_vars = loop.op.loop_vars
-        b_stack =  loop.op.outputs[-1]
+        assert loop.op.outputs[-1].value is not None
+        b_stack = loop.op.get_stacked(b)
         assert np.all(b_stack.value == np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
         assert b_stack == loop.op.get_stacked(b)
 
@@ -237,8 +333,10 @@ class Testfrange(csdl_tests.CSDLTest):
         # recorder.visualize_graph('stacked', visualize_style='hierarchical')
 
         loop_vars = loop.op.loop_vars
-        b_stack = loop.op.outputs[-2]
-        c_stack = loop.op.outputs[-1]
+        b_stack = loop.op.get_stacked(b)
+        # b_stack = loop.op.outputs[-2]
+        c_stack = loop.op.get_stacked(c)
+        # c_stack = loop.op.outputs[-1]
 
         real_b = np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]])
         real_c = [4]
@@ -388,100 +486,4 @@ if __name__ == '__main__':
     # test.test_stack_multi()
     # test.test_stack_multidim()
     # test.test_feedback()
-    test.test_pure_accrue()
-
-# class TestVRange(csdl_tests.CSDLTest):
-#     def test_simple_loop(self):
-#         self.prep()
-#         import csdl_alpha as csdl
-#         from csdl_alpha.api import vrange
-#         import numpy as np
-
-#         a = csdl.Variable(value=2, name='a')
-#         b = b0 = csdl.Variable(value=3, name='b')
-#         for i in vrange(0, 10):
-#             b2 = a + b
-#             c = a*2
-        
-#         x = a+b2+b0+c
-
-#         self.run_tests(
-#             compare_values=[
-#                 csdl_tests.TestingPair(a, np.array([2])),
-#                 csdl_tests.TestingPair(b, np.array([3])),
-#                 csdl_tests.TestingPair(b0, np.array([3])),
-#                 csdl_tests.TestingPair(b2, np.array([5])),
-#                 csdl_tests.TestingPair(c, np.array([2*2])),
-#                 csdl_tests.TestingPair(x, np.array([2+5+3+4]))
-#             ]
-#         )
-
-#     def test_setitem(self):
-#         self.prep()
-#         import csdl_alpha as csdl
-#         from csdl_alpha.api import vrange
-#         import numpy as np
-
-#         a = csdl.Variable(shape=(3,3), value=12*np.ones((3,3)))
-        
-#         for i in vrange(0, 3):
-#             for j in vrange(0, 3):
-#                 b = a.set((i, j), i+j)
-
-#         self.run_tests(
-#             compare_values=[
-#                 csdl_tests.TestingPair(b, np.array([[12, 12, 12], [12, 12, 12], [12, 12, 4]]))
-#             ]
-#         )
-
-
-
-#     def test_range_inputs(self):
-#         self.prep()
-#         import csdl_alpha as csdl
-#         from csdl_alpha.api import vrange
-
-#         with pytest.raises(ValueError):
-#             vrange(10, 0)
-
-#         v_range = vrange(vals=[1, 2, 3, 4, 5])
-#         assert v_range.vals == [1, 2, 3, 4, 5]
-
-
-
-# Tests with feedback - turned off right now
-# class TestVRange(csdl_tests.CSDLTest):
-#     def test_simple_loop(self):
-#         self.prep()
-#         import csdl_alpha as csdl
-#         from csdl_alpha.api import vrange
-#         import numpy as np
-
-#         a = csdl.Variable(value=2, name='a')
-#         b = b0 = csdl.Variable(value=3, name='b')
-#         for i in vrange(0, 10):
-#             b = a + b
-#             c = a*2
-        
-#         x = a+b+b0+c
-
-#         self.run_tests(
-#             compare_values=[
-#                 csdl_tests.TestingPair(a, np.array([2])),
-#                 csdl_tests.TestingPair(b, np.array([3+2*10])),
-#                 csdl_tests.TestingPair(b0, np.array([3])),
-#                 csdl_tests.TestingPair(c, np.array([2*2])),
-#                 csdl_tests.TestingPair(x, np.array([2+(3+2*10)+3+2*2]))
-#             ]
-#         )
-
-#     def test_range_inputs(self):
-#         self.prep()
-#         import csdl_alpha as csdl
-#         from csdl_alpha.api import vrange
-
-#         with pytest.raises(ValueError):
-#             vrange(10, 0)
-
-#         v_range = vrange(vals=[1, 2, 3, 4, 5])
-#         assert v_range.vals == [1, 2, 3, 4, 5]
+    # test.test_pure_accrue()

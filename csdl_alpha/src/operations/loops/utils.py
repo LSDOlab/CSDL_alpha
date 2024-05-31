@@ -89,7 +89,7 @@ def build_feedback_data(loop_operation:Loop, cotangents)->list[FeedBackData]:
         fbd = FeedBackData(
             external_input = loop_vars[i][1],
             body_input = loop_vars[i][0],
-            input_stack = loop_operation.outputs[-(num_feedbacks-i)],
+            input_stack = loop_operation.get_stacked(loop_vars[i][2]),
             body_external_output = loop_vars[i][2]
         )
 

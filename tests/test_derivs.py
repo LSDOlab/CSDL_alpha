@@ -160,7 +160,7 @@ class TestDeriv(csdl_tests.CSDLTest):
 
         # recorder = csdl.get_current_recorder()
         # # recorder.stop()
-        # # recorder.visualize_graph()
+        # recorder.visualize_graph(visualize_style='hierarchical')
         # # exit()
         
         # # print(dy_dx2.value)
@@ -174,10 +174,10 @@ class TestDeriv(csdl_tests.CSDLTest):
 
         # exit()
 
-        # compare_values = []
+        compare_values = []
         # compare_values += [csdl_tests.TestingPair(dy_dx2, dy_dx2.value)]
         # compare_values += [csdl_tests.TestingPair(dy_dx1, dy_dx1.value)]
-        self.run_tests(compare_values=[], verify_derivatives=True)
+        self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
     def test_deriv_composed5(self):
         """

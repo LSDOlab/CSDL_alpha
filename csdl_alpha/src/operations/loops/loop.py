@@ -15,7 +15,18 @@ class IterationVariable(Variable):
 
 class Loop(SubgraphOperation):
 
-    def __init__(self, inputs, outputs, graph, vals, iter_vars, loop_vars, name = 'loop', parent = None) -> None:
+    def __init__(
+            self,
+            inputs:list[Variable],
+            outputs:list[Variable],
+            graph,
+            vals,
+            iter_vars:list[Variable],
+            loop_vars:list[tuple[tuple[Variable, Variable, Variable]]],
+            inline_lazy_stack:bool,
+            name:str = 'loop',
+            parent:'Loop' = None,
+        ) -> None:
         """
         Initialize a Loop object.
 
@@ -49,6 +60,9 @@ class Loop(SubgraphOperation):
         self.length = len(self.vals[0])
         self.parent = parent
 
+        # check inline lazy stack here.
+        self.inline_lazy_stack = inline_lazy_stack
+
         self.loop_var_lookup:dict[Variable:Variable] = {}
         self.num_loop_vars = len(loop_vars)
         for i in range(self.num_loop_vars):
@@ -59,7 +73,8 @@ class Loop(SubgraphOperation):
         self.assign_subgraph(graph)
 
     def get_stacked(self, variable:Variable) -> Variable:
-        """Gets the stacked input per iteration for a given loop outout with feedback
+        """Gets the stacked input per iteration for a given loop outout with feedback.
+        If inline_lazy_stack is True, this triggers the lazy inline evaluation of the stacked variable.
 
         Parameters
         ----------
@@ -71,6 +86,13 @@ class Loop(SubgraphOperation):
         Variable
             Stacked variable corresponding to the loop output. Shape is (num_iterations, *variable.shape)
         """
+        import csdl_alpha as csdl
+        recorder = csdl.get_current_recorder()
+        if self.inline_lazy_stack:
+            self.inline_lazy_stack = False
+            if recorder.inline:
+                self.compute_inline()
+            
         return self.loop_var_lookup[variable]
 
 
@@ -92,6 +114,11 @@ class Loop(SubgraphOperation):
         for hist in self.loop_var_history.values():
             hist.clear()
 
+        # If inline stack is True, we do not allocate memory for the stacked feedback variables
+        if not self.inline_lazy_stack:
+            for ii in range(self.num_loop_vars):
+                self.outputs[-(self.num_loop_vars-ii)].value = np.zeros(self.outputs[-(self.num_loop_vars-ii)].shape)
+
         # run loop
         for i in range(self.length):
                 
@@ -103,9 +130,10 @@ class Loop(SubgraphOperation):
             for iter_var, val in zip(self.iter_vars, self.vals):
                 iter_var.set_value(val[i])
 
-            # output stacked variables
-            for ii in range(self.num_loop_vars):
-                self.outputs[-(self.num_loop_vars-ii)].value[i] = self.loop_vars[ii][0].value
+            # compute stacked variables
+            if not self.inline_lazy_stack:
+                for ii in range(self.num_loop_vars):
+                    self.outputs[-(self.num_loop_vars-ii)].value[i] = self.loop_vars[ii][0].value
                 
             self.graph.execute_inline()
 
@@ -333,7 +361,8 @@ class Loop(SubgraphOperation):
         for feedback_data in feedbacks + parent_external_inputs + parent_external_outputs:
             vjp_loop_vars.append((feedback_data.body_input_cotangent, feedback_data.external_input_cotangent, feedback_data.out_cotangent))
 
-            stacked_outputs.append(build_stacked_variable(feedback_data.body_input_cotangent, self.length))
+            # We assume that loop derivatives are not inline stacked for now
+            stacked_outputs.append(build_stacked_variable(feedback_data.body_input_cotangent, self.length, True))
             
             # Checks:
             if debug:
@@ -356,6 +385,7 @@ class Loop(SubgraphOperation):
             loop_vars = vjp_loop_vars,
             name = f'vjp_{self.name}',
             parent = self,
+            inline_lazy_stack = True,
         )
         vjp_loop_op.finalize_and_return_outputs()
 
@@ -369,7 +399,15 @@ class Loop(SubgraphOperation):
             cotangents.accumulate(parent_external_input.external_body_IO, parent_external_input.out_cotangent)
 
 class frange():
-    def __init__(self, arg1:int=None, arg2:int=None, increment:int=1, *, vals:Union[list[int],tuple[list[int]]] = None):
+    def __init__(
+            self,
+            arg1:int=None,
+            arg2:int=None,
+            increment:int=1,
+            *,
+            vals:Union[list[int],tuple[list[int]]] = None,
+            inline_lazy_stack = False,
+        ):
         """Initialize the Loop object.
 
         Parameters
@@ -382,6 +420,8 @@ class frange():
             The increment value for each iteration of the loop. By default, it is set to 1.
         vals : list[int] or tuple[list[int]], optional
             A list or tuple of lists of values to iterate over.
+        inline_lazy_stack : bool, optional
+            If True, will not allocate memory for all stacked feedback variables until the 'get_stack' is called. By default, False.
 
         Raises
         ------
@@ -427,7 +467,7 @@ class frange():
         self._recorder = manager.active_recorder
         self._recorder._enter_subgraph(add_missing_variables=True, name = 'loop')
         self._graph = self._recorder.active_graph
-        # self._graph_node = self._recorder.active_graph_node
+        self.inline_lazy_stack = inline_lazy_stack
 
         # initialize iteration variable:
         self.iteration_variables = []
@@ -541,7 +581,7 @@ class frange():
 
         for loop_var in loop_vars:
             # stack_output = Variable(name = f'stack_out_{loop_var[1].name}', shape=(len(self.vals[0]),) + loop_var[0].shape, value=0)
-            stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]))
+            stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]), self.inline_lazy_stack)
             self.iter2_outputs.append(stack_output)
             
         # add the loop operation to the graph
@@ -552,8 +592,9 @@ class frange():
             self._graph, 
             self.vals, 
             self.iteration_variables, 
-            loop_vars
-            )
+            loop_vars,
+            inline_lazy_stack = self.inline_lazy_stack,
+        )
 
     def _check_ops_and_shapes(self, ops, shapes):
         if ops != self.ops:
@@ -595,8 +636,18 @@ class frange():
 def build_stacked_variable(
         feedback_var:Variable,
         num_iter:int,
+        inline_lazy_stack:bool,
     ):
-    stack_output = Variable(name = f'stack_out_{feedback_var.name}', shape=(num_iter,) + feedback_var.shape, value=0)
+    # If inline lazy stack, do not allocate memory for the stacked feedback variables
+    if inline_lazy_stack:
+        val = None
+    else:
+        val = 0
+    stack_output = Variable(
+        name = f'stack_out_{feedback_var.name}',
+        shape=(num_iter,) + feedback_var.shape,
+        value=val,
+    )
     return stack_output
 
 def add_compute_inline_reset(deriv_loop:Loop, old_loop:Loop):
