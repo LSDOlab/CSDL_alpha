@@ -80,7 +80,7 @@ class BLockMatrix(Operation):
                     upper = self.indices[i][3]
                     cotangents.accumulate(input, block_out[lower:upper, left:right])
 
-def blockmat(l):
+def blockmat(l)->Variable:
     """
     Assemble a block matrix from a list or list of lists of matrices.
 

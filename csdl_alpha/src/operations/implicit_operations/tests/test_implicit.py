@@ -399,6 +399,38 @@ class TestImplicit(csdl_tests.CSDLTest):
         with pytest.raises(ValueError) as e_info:
             solver.run()
 
+    def test_linear_system(self,):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+        # solver = csdl.nonlinear_solvers.Newton()
+        # x = csdl.ImplicitVariable((1,), value=0.34)
+        # y = x*2.0+1.0
+        # solver.add_state(x, y)
+        # solver.run()
+
+        solver = csdl.nonlinear_solvers.Newton()
+        x = csdl.ImplicitVariable((1,), value=0.34, name = 'x')
+        x1 = csdl.ImplicitVariable((2,), value=0.34, name = 'x1')
+        y = x+1.0
+        y.add_name('residual')
+        y1 = x1*2.0+1.0
+        y1.add_name('residual2')
+        solver.add_state(x, y)
+        solver.add_state(x1, y1)
+        solver.run()
+
+        compare_values = []
+        compare_values += [csdl_tests.TestingPair(y, np.array([0.0]), tag = 'residual')]
+        compare_values += [csdl_tests.TestingPair(x, np.array([-1.0]), tag = 'state')]
+        compare_values += [csdl_tests.TestingPair(y1, np.array([0.0, 0.0]), tag = 'residual2')]
+        compare_values += [csdl_tests.TestingPair(x1, np.array([-0.5, -0.5]), tag = 'state2')]
+        self.run_tests(
+            compare_values = compare_values,
+            verify_derivatives=True
+        )
+
 if __name__ == '__main__':
     t = TestImplicit()
     t.test_arg_errors()

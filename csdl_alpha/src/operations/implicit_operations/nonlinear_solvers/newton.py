@@ -77,6 +77,7 @@ class Newton(FixedPoint):
         """
         full_residual_jacobian = self.get_full_residual_jacobian()
         self.add_intersection_target(full_residual_jacobian)
+        self.add_intersection_source(full_residual_jacobian)
 
     def _inline_update_states(self):
         # get residuals

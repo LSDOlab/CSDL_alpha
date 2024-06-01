@@ -188,7 +188,8 @@ class NonlinearSolver(object):
             S, S_inputs, S_outputs = G.extract_subgraph(            
                 sources = self._intersection_sources,
                 targets = self._intersection_targets,
-                keep_variables = True,    
+                keep_variables = True,
+                check_targets = list(self.state_to_residual_map.values()),
             )
         except Exception as e:
             raise ValueError(f"Error extracting non-linear solver residual function subgraph: {e.message}")
@@ -359,6 +360,7 @@ class NonlinearSolver(object):
                 self.add_state_metadata(state, 'index_upper', self.total_state_size)
 
             self.full_residual_jacobian = csdl.blockmat(block_mat)
+            self.full_residual_jacobian.add_name(f'{self.name}_jac')
             return self.full_residual_jacobian
         else:
             return self.full_residual_jacobian

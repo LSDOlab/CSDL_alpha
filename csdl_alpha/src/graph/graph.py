@@ -4,7 +4,7 @@ import numpy as np
 import csdl_alpha.utils.error_utils as error_utils
 from csdl_alpha.src.operations.loops.loop import Loop
 import sympy as sp
-# from csdl_alpha.utils.error_utils import GraphError
+from typing import Union
 
 class Graph():
 
@@ -109,6 +109,8 @@ class Graph():
             sources,
             targets,
             keep_variables = True,    
+            check_sources = True,
+            check_targets = True,
         ):
         """
         TODO: move this to a function?
@@ -129,6 +131,8 @@ class Graph():
         S = self._get_intersection(
             sources = sources,
             targets = targets,
+            check_sources = check_sources,
+            check_targets = check_targets,
         )
 
         # Compute the outputs to the subgraph
@@ -322,8 +326,8 @@ class Graph():
             self:'Graph',
             sources:list[Variable],
             targets:list[Variable],
-            check_sources:bool = True,
-            check_targets:bool = True,
+            check_sources:Union[bool, list[Variable]] = True,
+            check_targets:Union[bool, list[Variable]] = True,
             add_hanging_input_variables:bool = True,
             add_hanging_output_variables:bool = True,
         )-> list[int]:
@@ -347,14 +351,39 @@ class Graph():
         D = set()
         for source_index in source_indices:
             D = D.union(rx.descendants(self.rxgraph, source_index))
+            D.add(source_index)
 
         A = set()
         for target_index in target_indices:
             A = A.union(rx.ancestors(self.rxgraph, target_index))
             A.add(target_index)
+        
+        # Find which variables to check influence
+        if check_sources == True:
+            check_sources_bool = True
+            check_source_indices = source_indices
+        elif isinstance(check_sources, list):
+            check_sources_bool = True
+            check_source_indices = [self.node_table[source] for source in check_sources]
+        elif check_sources == False:
+            check_sources_bool = False
+        else:
+            raise TypeError("check_sources should be a list of nodes or a boolean")
 
-        if check_sources:
-            for source_index in source_indices:
+        if check_targets == True:
+            check_targets_bool = True
+            check_target_indices = target_indices
+        elif isinstance(check_targets, list):
+            check_targets_bool = True
+            check_target_indices = [self.node_table[target] for target in check_targets]
+        elif check_targets == False:
+            check_targets_bool = False
+        else:
+            raise TypeError("check_targets should be a list of nodes or a boolean")
+
+        # Check if there is a path between sources and targets
+        if check_sources_bool:
+            for source_index in check_source_indices:
                 if source_index not in A:
                     targets_string = error_utils.get_node_name_string(targets)
                     raise error_utils.GraphError(
@@ -362,8 +391,8 @@ class Graph():
                         tag = 'no_path',
                         relevant_nodes = self.rxgraph[source_index],
                     )
-        if check_targets:
-            for target_index in target_indices:
+        if check_targets_bool:
+            for target_index in check_target_indices:
                 if target_index not in D:
                     sources_string = error_utils.get_node_name_string(sources)
                     raise error_utils.GraphError(
