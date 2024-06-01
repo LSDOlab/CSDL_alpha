@@ -84,6 +84,45 @@ class ArcTan(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]/(1.0 + x**2))
 
+@set_properties(linear=False)
+class Tanh(ElementwiseOperation):
+    def __init__(self,x):
+        super().__init__(x)
+        self.name = 'tanh'
+
+    def compute_inline(self, x):
+        return np.tanh(x)
+
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[y]*(1-tanh(x)**2))
+
+@set_properties(linear=False)
+class Sinh(ElementwiseOperation):
+    def __init__(self,x):
+        super().__init__(x)
+        self.name = 'sinh'
+
+    def compute_inline(self, x):
+        return np.sinh(x)
+
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[y]*cosh(x))
+
+@set_properties(linear=False)
+class Cosh(ElementwiseOperation):
+    def __init__(self,x):
+        super().__init__(x)
+        self.name = 'cosh'
+
+    def compute_inline(self, x):
+        return np.cosh(x)
+
+    def evaluate_vjp(self, cotangents, x, y):
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[y]*sinh(x))
+
 def sin(x:VariableLike) -> Variable:
     """Elementwise sine of a CSDL Variable
 
@@ -135,6 +174,31 @@ def arcsin(x:VariableLike) -> Variable:
     """
     x = validate_and_variablize(x, raise_on_sparse = False)
     return ArcSin(x).finalize_and_return_outputs()
+
+def sinh(x:VariableLike) -> Variable:
+    """Elementwise hyperbolic sine of a CSDL Variable
+
+    Parameters
+    ----------
+    x : Variable
+        CSDL Variable to take the hyperbolic sine of
+
+    Returns
+    -------
+    y: Variable
+        The elementwise hyperbolic sine of x
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y = csdl.sinh(x)
+    >>> y.value
+    array([ 1.17520119,  3.62686041, 10.01787493])
+    """
+    x = validate_and_variablize(x)
+    return Sinh(x).finalize_and_return_outputs()
 
 def cos(x:VariableLike) -> Variable:
     """Elementwise cosine of a CSDL Variable
@@ -188,6 +252,31 @@ def arccos(x:VariableLike) -> Variable:
     x = validate_and_variablize(x)
     return ArcCos(x).finalize_and_return_outputs()
 
+def cosh(x:VariableLike) -> Variable:
+    """Elementwise hyperbolic cosine of a CSDL Variable
+
+    Parameters
+    ----------
+    x : Variable
+        CSDL Variable to take the hyperbolic cosine of
+
+    Returns
+    -------
+    y: Variable
+        The elementwise hyperbolic cosine of x
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y = csdl.cosh(x)
+    >>> y.value
+    array([ 1.54308063,  3.76219569, 10.067662  ])
+    """
+    x = validate_and_variablize(x)
+    return Cosh(x).finalize_and_return_outputs()
+
 def tan(x:VariableLike) -> Variable:
     """Elementwise tangent of a CSDL Variable
 
@@ -237,6 +326,31 @@ def arctan(x:VariableLike) -> Variable:
     """
     x = validate_and_variablize(x)
     return ArcTan(x).finalize_and_return_outputs()
+
+def tanh(x:VariableLike) -> Variable:
+    """Elementwise hyperbolic tangent of a CSDL Variable
+
+    Parameters
+    ----------
+    x : Variable
+        CSDL Variable to take the hyperbolic tangent of
+
+    Returns
+    -------
+    y: Variable
+        The elementwise hyperbolic tangent of x
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+    >>> y = csdl.tanh(x)
+    >>> y.value
+    array([0.76159416, 0.96402758, 0.99505475])
+    """
+    x = validate_and_variablize(x)
+    return Tanh(x).finalize_and_return_outputs()
 
 class TestTrig(csdl_tests.CSDLTest):
     
@@ -304,6 +418,18 @@ class TestTrig(csdl_tests.CSDLTest):
         t6a = np.arctan(y_val)
         compare_values += [csdl_tests.TestingPair(s6a, t6a)]
 
+        s7a = csdl.tanh(y)
+        t7a = np.tanh(y_val)
+        compare_values += [csdl_tests.TestingPair(s7a, t7a)]
+
+        s8a = csdl.sinh(y)
+        t8a = np.sinh(y_val)
+        compare_values += [csdl_tests.TestingPair(s8a, t8a)]
+
+        s9a = csdl.cosh(y)
+        t9a = np.cosh(y_val)
+        compare_values += [csdl_tests.TestingPair(s9a, t9a)]
+
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_examples(self):
@@ -313,3 +439,6 @@ class TestTrig(csdl_tests.CSDLTest):
         self.docstest(arcsin)
         self.docstest(arccos)
         self.docstest(arctan)
+        self.docstest(tanh)
+        self.docstest(sinh)
+        self.docstest(cosh)

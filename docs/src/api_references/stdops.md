@@ -29,6 +29,9 @@
     csdl_alpha.arcsin
     csdl_alpha.arccos
     csdl_alpha.arctan
+    csdl_alpha.sinh
+    csdl_alpha.cosh
+    csdl_alpha.tanh
     csdl_alpha.cross
     csdl_alpha.blockmat
     csdl_alpha.norm
@@ -103,6 +106,12 @@
 .. autofunction:: csdl_alpha.arccos
 
 .. autofunction:: csdl_alpha.arctan
+
+.. autofunction:: csdl_alpha.sinh
+
+.. autofunction:: csdl_alpha.cosh
+
+.. autofunction:: csdl_alpha.tanh
 
 .. autofunction:: csdl_alpha.cross
 

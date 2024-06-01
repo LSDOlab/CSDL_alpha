@@ -24,7 +24,7 @@ from .set_get.getindex import get_index
 from .set_get.loop_slice import _loop_slice as slice
 
 # Trigonometric operations
-from .trig import sin, cos, tan, arcsin, arccos, arctan
+from .trig import sin, cos, tan, arcsin, arccos, arctan, sinh, cosh, tanh
 
 # Cartesian operations
 from .cross import cross
