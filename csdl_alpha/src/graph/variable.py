@@ -109,20 +109,23 @@ class Variable(Node):
         _, self.value = process_shape_and_value(self.shape, value)
 
     # TODO: add checks for parents
-    def set_as_design_variable(self, upper: float = None, lower: float = None, scalar: float = None):
-        # if not self.is_input:
-        #     raise Exception("Variable is not an input variable")
-        self.recorder._add_design_variable(self, upper, lower, scalar)
+    # TODO: allow float and arrays
+    # TODO: add  checks for shape of upper, scaler etc
+    def set_as_design_variable(self, upper: float = None, lower: float = None, scaler: float = None):
+        scaler = ingest_value(scaler)
+        upper = ingest_value(upper)
+        lower = ingest_value(lower)
+        self.recorder._add_design_variable(self, upper, lower, scaler)
 
-    def set_as_constraint(self, upper: float = None, lower: float = None, scalar: float = None):
-        # if self.is_input:
-        #     raise Exception("Variable is an input variable")
-        self.recorder._add_constraint(self, upper, lower, scalar)
+    def set_as_constraint(self, upper: float = None, lower: float = None, scaler: float = None):
+        scaler = ingest_value(scaler)
+        upper = ingest_value(upper)
+        lower = ingest_value(lower)
+        self.recorder._add_constraint(self, upper, lower, scaler)
 
-    def set_as_objective(self, scalar: float = None):
-        # if self.is_input:
-        #     raise Exception("Variable is an input variable")
-        self.recorder._add_objective(self, scalar)
+    def set_as_objective(self, scaler: float = None):
+        scaler = ingest_value(scaler)
+        self.recorder._add_objective(self, scaler)
 
     from csdl_alpha.src.operations.set_get.slice import Slice
     def set(self, slices:Slice, value:'VariableLike') -> 'Variable':

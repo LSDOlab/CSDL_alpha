@@ -1,6 +1,6 @@
 from csdl_alpha.src.graph.graph import Graph
 from csdl_alpha.utils.inputs import get_type_string
-import inspect
+import numpy as np
 
 class Recorder:
     """
@@ -38,6 +38,7 @@ class Recorder:
             Specifies whether to automatically create a hierarchy, by default False.
         """
         from csdl_alpha.api import manager
+        from csdl_alpha.src.graph.variable import Variable
         self.manager = manager
         self.inline = inline
         self.debug = debug
@@ -50,9 +51,9 @@ class Recorder:
         self._in_loop = False
         self._reset_loops = False
 
-        self.design_variables = {}
-        self.constraints = {}
-        self.objectives = {}
+        self.design_variables:dict[Variable, tuple[np.array, np.array, np.array]] = {}
+        self.constraints:dict[Variable, tuple[np.array, np.array, np.array]] = {}
+        self.objectives:dict[Variable, np.array] = {}
 
         self.namespace_tree = Namespace(None)
         self.active_namespace = self.namespace_tree
@@ -344,7 +345,7 @@ class Recorder:
             raise ValueError(f"Node {node_to.name} not in graph")
         graph.add_edge(node_from, node_to)
 
-    def _add_design_variable(self, variable, upper, lower, scalar):
+    def _add_design_variable(self, variable, upper, lower, scaler):
         """
         Adds a design variable to the recorder.
 
@@ -352,11 +353,11 @@ class Recorder:
             variable: The design variable.
             upper: The upper bound of the design variable.
             lower: The lower bound of the design variable.
-            scalar: The scalar value of the design variable.
+            scaler: The scaler value of the design variable.
         """
-        self.design_variables[variable] = (upper, lower, scalar)
+        self.design_variables[variable] = (scaler, lower, upper)
 
-    def _add_constraint(self, variable, upper, lower, scalar):
+    def _add_constraint(self, variable, upper, lower, scaler):
         """
         Adds a constraint to the recorder.
 
@@ -364,19 +365,19 @@ class Recorder:
             variable: The constraint variable.
             upper: The upper bound of the constraint.
             lower: The lower bound of the constraint.
-            scalar: The scalar value of the constraint.
+            scaler: The scaler value of the constraint.
         """
-        self.constraints[variable] = (upper, lower, scalar)
+        self.constraints[variable] = (scaler, lower, upper)
 
-    def _add_objective(self, variable, scalar):
+    def _add_objective(self, variable, scaler):
         """
         Adds an objective to the recorder.
 
         Args:
             variable: The objective variable.
-            scalar: The scalar value of the objective.
+            scaler: The scaler value of the objective.
         """
-        self.objectives[variable] = scalar
+        self.objectives[variable] = (scaler,)
 
     def _delete_current_graph(self):
         """
