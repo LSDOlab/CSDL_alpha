@@ -20,6 +20,17 @@ class TestVariable(csdl_tests.CSDLTest):
         assert isinstance(a.value[0], np.float64)
         assert isinstance(b.value[0], np.float64)
 
+    def test_np_matrix_convert(self):
+        self.prep()
+        import csdl_alpha as csdl
+        import numpy as np
+
+        a = csdl.Variable(value=np.matrix([[1.0, 2.0],[3.0, 4.0]]), name='a')
+        assert not isinstance(a.value, np.matrix)
+
+        a.set_value(np.matrix([[1.0, 2.0],[3.0, 4.0]]))
+        assert not isinstance(a.value, np.matrix)
+
     def test_variable_inputs(self):
         import csdl_alpha as csdl
         import numpy as np

@@ -8,6 +8,10 @@ def ingest_value(value, dtype=np.float64):
     if isinstance(value, (float, int, np.integer, np.floating)):
         value = np.array([value], dtype=dtype)
     elif isinstance(value, np.ndarray):
+
+        if isinstance(value, np.matrix):
+            value = np.array(value)
+
         if value.dtype != dtype:
             value = value.astype(dtype)
     elif value is not None:
