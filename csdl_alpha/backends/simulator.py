@@ -92,7 +92,7 @@ class PySimulator(SimulatorBase):
         else:
             objectives = None
 
-        return constraints, objectives
+        return objectives, constraints
 
     def compute_optimization_derivatives(self):
         

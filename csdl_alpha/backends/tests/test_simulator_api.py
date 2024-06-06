@@ -60,7 +60,7 @@ def test_pysimulator():
     sim = PySimulator(recorder = rec)
 
     # ITER 1:
-    c, o = sim.run_forward()
+    o, c = sim.run_forward()
     assert o is None
     np.testing.assert_almost_equal(c, np.array([5.0, 6.0]))
 
@@ -70,7 +70,7 @@ def test_pysimulator():
 
     # ITER 2:
     sim.update_design_variables(np.array([4.0, 5.0]))
-    c, o = sim.run_forward()
+    o, c = sim.run_forward()
     assert o is None
     np.testing.assert_almost_equal(c, np.array([9.0, 20.0]))
     
@@ -97,7 +97,7 @@ def test_pysimulator2():
     sim = PySimulator(recorder = rec)
 
     # ITER 1:
-    c, o = sim.run_forward()
+    o, c = sim.run_forward()
     np.testing.assert_almost_equal(c, np.array([5.0, 5.0, 5.0, 5.0]))
     np.testing.assert_almost_equal(o, np.array([6.0]))
 
@@ -110,7 +110,7 @@ def test_pysimulator2():
     new_x1 = np.arange(4).reshape((2,2))+6
     new_x_concat = np.hstack((new_x0.flatten(), new_x1.flatten()))
     sim.update_design_variables(new_x_concat)
-    c, o = sim.run_forward()
+    o, c= sim.run_forward()
     np.testing.assert_almost_equal(c, (new_x0.flatten()+new_x1.flatten()))
     np.testing.assert_almost_equal(o, (new_x0.flatten()*new_x1.flatten())[0])
 

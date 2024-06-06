@@ -147,3 +147,4 @@ _conf_master.py
 
 # data
 *.csv
+*.out

@@ -1,5 +1,5 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties
-from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
+from csdl_alpha.src.operations.operation_subclasses import ComposedOperation, check_expand_subgraphs
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
@@ -107,9 +107,13 @@ def norm(*args, axes=None, ord=2)->Variable:
                                  Use norm(A) to find the norm of a tensor Variable.')
         
     args = [validate_and_variablize(x) for x in args] 
-    op = Norm(*args, axes=axes, ord=ord)
-    
-    return op.finalize_and_return_outputs()
+
+    if check_expand_subgraphs():
+    # if 1:
+        return evaluate_norm(args, axes, ord)
+    else:
+        op = Norm(*args, axes=axes, ord=ord)
+        return op.finalize_and_return_outputs()
 
 class TestNorm(csdl_tests.CSDLTest):
     def test_functionality(self,):

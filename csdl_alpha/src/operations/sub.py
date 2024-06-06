@@ -42,9 +42,10 @@ def sub(x:VariableLike,y:VariableLike)->Variable:
     array([2., 3., 4.])
     """
     x = validate_and_variablize(x)
-    x = validate_and_variablize(x)
+    y = validate_and_variablize(y)
     
     if check_expand_subgraphs():
+    # if 1:
         return evaluate_sub(x,y)
     else:
         op = Sub(x,y)

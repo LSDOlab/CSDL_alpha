@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, get_type_string
-from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
+from csdl_alpha.src.operations.operation_subclasses import ComposedOperation, check_expand_subgraphs
 import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
 
@@ -213,9 +213,13 @@ def einsum(*args, action=None)->Variable:
     # summation_axes    = tuple([unique_axes_str.index(char) for char in out_string])
     # reorder_axes_str  = '->'.join([summed_str, out_string])
 
-    op = Einsum(*args, exp_actions=exp_actions, exp_shape=exp_shape, summation_axes=summation_axes)
 
-    return op.finalize_and_return_outputs()
+    if check_expand_subgraphs():
+    # if 1:
+        return evaluate_einsum(args, exp_actions, exp_shape, summation_axes)
+    else:
+        op = Einsum(*args, exp_actions=exp_actions, exp_shape=exp_shape, summation_axes=summation_axes)
+        return op.finalize_and_return_outputs()
 
 
 class TestEinsum(csdl_tests.CSDLTest):
