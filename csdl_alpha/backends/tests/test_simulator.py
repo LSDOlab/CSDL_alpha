@@ -54,15 +54,15 @@ def test_optimization_meta():
     assert len(cmeta) == 3
     assert len(ometa) == 1
 
-    assert np.allclose(ometa, np.ones((o_size,)))
-    assert np.allclose(cmeta[0], np.ones((c_size,)))
-    assert np.allclose(dmeta[0], np.ones((dv_size,)))
+    np.testing.assert_almost_equal(ometa, np.ones((o_size,)))
+    np.testing.assert_almost_equal(cmeta[0], np.ones((c_size,)))
+    np.testing.assert_almost_equal(dmeta[0], np.ones((dv_size,)))
     
-    assert np.allclose(cmeta[1], -np.inf*np.ones((c_size,)))
-    assert np.allclose(dmeta[1], -np.inf*np.ones((dv_size,)))
+    np.testing.assert_almost_equal(cmeta[1], -np.inf*np.ones((c_size,)))
+    np.testing.assert_almost_equal(dmeta[1], -np.inf*np.ones((dv_size,)))
 
-    assert np.allclose(cmeta[2], np.inf*np.ones((c_size,)))
-    assert np.allclose(dmeta[2], np.inf*np.ones((dv_size,)))
+    np.testing.assert_almost_equal(cmeta[2], np.inf*np.ones((c_size,)))
+    np.testing.assert_almost_equal(dmeta[2], np.inf*np.ones((dv_size,)))
 
 def test_optimization_meta_1():
     """
@@ -75,12 +75,14 @@ def test_optimization_meta_1():
     ins[0].set_as_design_variable(upper = 0.0, scaler = 2.0)
     ins[1].set_as_design_variable(lower = np.arange(9).reshape(3,3), upper = 10.0, scaler = 1e3*np.arange(9).reshape(3,3))
 
+    rec.start()
     outs[0].set_as_constraint()
-    outs[1].set_as_objective()
+    outs[1][0,0].set_as_objective()
+    rec.stop()
 
     dv_size = sum(in_var.size for in_var in ins)
     c_size = outs[0].size
-    o_size = outs[1].size
+    o_size = 1
 
     from csdl_alpha.backends.simulator import SimulatorBase
     sim = SimulatorBase(recorder = rec)
@@ -95,20 +97,20 @@ def test_optimization_meta_1():
     # print('value:', dmeta[3])
 
     # scaler:
-    assert np.allclose(ometa, np.ones((o_size,)))
-    assert np.allclose(cmeta[0], np.ones((c_size,)))
-    assert np.allclose(dmeta[0][:9], 2.0*np.ones((9,)))
-    assert np.allclose(dmeta[0][9:], 1e3*np.arange(9))
+    np.testing.assert_almost_equal(ometa, np.ones((o_size,)))
+    np.testing.assert_almost_equal(cmeta[0], np.ones((c_size,)))
+    np.testing.assert_almost_equal(dmeta[0][:9], 2.0*np.ones((9,)))
+    np.testing.assert_almost_equal(dmeta[0][9:], 1e3*np.arange(9))
     
     # lower:
-    assert np.allclose(cmeta[1], -np.inf*np.ones((c_size,)))
-    assert np.allclose(dmeta[1][:9], -np.inf*np.ones((9,)))
-    assert np.allclose(dmeta[1][9:], np.arange(9))
+    np.testing.assert_almost_equal(cmeta[1], -np.inf*np.ones((c_size,)))
+    np.testing.assert_almost_equal(dmeta[1][:9], -np.inf*np.ones((9,)))
+    np.testing.assert_almost_equal(dmeta[1][9:], np.arange(9))
 
     # upper:
-    assert np.allclose(cmeta[2], np.inf*np.ones((c_size,)))
-    assert np.allclose(dmeta[2][:9], np.zeros((9,)))
-    assert np.allclose(dmeta[2][9:], 10.0+np.zeros((9,)))
+    np.testing.assert_almost_equal(cmeta[2], np.inf*np.ones((c_size,)))
+    np.testing.assert_almost_equal(dmeta[2][:9], np.zeros((9,)))
+    np.testing.assert_almost_equal(dmeta[2][9:], 10.0+np.zeros((9,)))
 
 def test_optimization_meta_2():
     """
@@ -121,11 +123,13 @@ def test_optimization_meta_2():
     ins[0].set_as_design_variable(upper = 0.0, scaler = 2.0)
     ins[1].set_as_design_variable(lower = np.arange(9).reshape(3,3), upper = 10.0, scaler = 1e3*np.arange(9).reshape(3,3))
 
-    outs[1].set_as_objective()
+    rec.start()
+    outs[1][0,0].set_as_objective()
+    rec.stop()
 
     dv_size = sum(in_var.size for in_var in ins)
     c_size = outs[0].size
-    o_size = outs[1].size
+    o_size = 1
 
     from csdl_alpha.backends.simulator import SimulatorBase
     sim = SimulatorBase(recorder = rec)
@@ -140,20 +144,20 @@ def test_optimization_meta_2():
     # print('value:', dmeta[3])
 
     # scaler:
-    assert np.allclose(ometa, np.ones((o_size,)))
+    np.testing.assert_almost_equal(ometa, np.ones((o_size,)))
     assert cmeta[0] is None
-    assert np.allclose(dmeta[0][:9], 2.0*np.ones((9,)))
-    assert np.allclose(dmeta[0][9:], 1e3*np.arange(9))
+    np.testing.assert_almost_equal(dmeta[0][:9], 2.0*np.ones((9,)))
+    np.testing.assert_almost_equal(dmeta[0][9:], 1e3*np.arange(9))
     
     # lower:
     assert cmeta[1] is None
-    assert np.allclose(dmeta[1][:9], -np.inf*np.ones((9,)))
-    assert np.allclose(dmeta[1][9:], np.arange(9))
+    np.testing.assert_almost_equal(dmeta[1][:9], -np.inf*np.ones((9,)))
+    np.testing.assert_almost_equal(dmeta[1][9:], np.arange(9))
 
     # upper:
     assert cmeta[2] is None
-    assert np.allclose(dmeta[2][:9], np.zeros((9,)))
-    assert np.allclose(dmeta[2][9:], 10.0+np.zeros((9,)))
+    np.testing.assert_almost_equal(dmeta[2][:9], np.zeros((9,)))
+    np.testing.assert_almost_equal(dmeta[2][9:], 10.0+np.zeros((9,)))
 
 if __name__ == "__main__":
     test_optimization_determine()

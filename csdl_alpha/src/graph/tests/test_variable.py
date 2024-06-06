@@ -1,6 +1,8 @@
 import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable 
 
+import pytest
+
 class TestVariable(csdl_tests.CSDLTest):
     def test_docstrings(self):
         self.docstest(Variable.flatten) 
@@ -52,3 +54,20 @@ class TestVariable(csdl_tests.CSDLTest):
         assert d.shape == (10,10)
         assert np.all(d.value == np.ones((10,10)))
     
+
+    def test_variable_optimization(self):
+        import csdl_alpha as csdl
+        import numpy as np
+        self.prep()
+
+        c = csdl.Variable((2,), value=1)
+        with pytest.raises(ValueError):
+            c.set_as_objective()
+
+        a = csdl.Variable((1,), value=1)
+        a.set_as_objective()
+
+        b = csdl.Variable((1,), value=1)
+        with pytest.raises(ValueError):
+            b.set_as_objective()
+

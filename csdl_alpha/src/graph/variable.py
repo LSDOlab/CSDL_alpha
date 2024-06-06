@@ -125,6 +125,9 @@ class Variable(Node):
 
     def set_as_objective(self, scaler: float = None):
         scaler = ingest_value(scaler)
+
+        if self.size != 1:
+            raise ValueError("Objective must be a scalar")
         self.recorder._add_objective(self, scaler)
 
     from csdl_alpha.src.operations.set_get.slice import Slice

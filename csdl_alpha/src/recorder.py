@@ -377,6 +377,8 @@ class Recorder:
             variable: The objective variable.
             scaler: The scaler value of the objective.
         """
+        if len(self.objectives) > 0:
+            raise ValueError("Objective has already been set")
         self.objectives[variable] = (scaler,)
 
     def _delete_current_graph(self):

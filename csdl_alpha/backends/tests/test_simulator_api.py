@@ -56,27 +56,27 @@ def test_pysimulator():
     for input_var in ins:
         input_var.set_as_design_variable()
     for output_var in outs:
-        output_var.set_as_objective()
+        output_var.set_as_constraint()
     sim = PySimulator(recorder = rec)
 
     # ITER 1:
     c, o = sim.run_forward()
-    assert c is None
-    np.testing.assert_almost_equal(o, np.array([5.0, 6.0]))
+    assert o is None
+    np.testing.assert_almost_equal(c, np.array([5.0, 6.0]))
 
     g, j = sim.compute_optimization_derivatives()
-    assert j is None
-    np.testing.assert_almost_equal(g, np.array([[1.0, 1.0],[3.0, 2.0]]))
+    assert g is None
+    np.testing.assert_almost_equal(j, np.array([[1.0, 1.0],[3.0, 2.0]]))
 
     # ITER 2:
     sim.update_design_variables(np.array([4.0, 5.0]))
     c, o = sim.run_forward()
-    assert c is None
-    np.testing.assert_almost_equal(o, np.array([9.0, 20.0]))
+    assert o is None
+    np.testing.assert_almost_equal(c, np.array([9.0, 20.0]))
     
     g, j = sim.compute_optimization_derivatives()
-    assert j is None
-    np.testing.assert_almost_equal(g, np.array([[1.0, 1.0],[5.0, 4.0]]))
+    assert g is None
+    np.testing.assert_almost_equal(j, np.array([[1.0, 1.0],[5.0, 4.0]]))
 
 def test_pysimulator2():
     from csdl_alpha.utils.hard_reload import hard_reload
@@ -87,20 +87,22 @@ def test_pysimulator2():
     
     ins, outs, rec = get_sample_rec(shape = (2,2))
 
+    rec.start()
     for input_var in ins:
         input_var.set_as_design_variable()
     outs[0].set_as_constraint()
-    outs[1].set_as_objective()
+    outs[1][0,0].set_as_objective()
+    rec.stop()
 
     sim = PySimulator(recorder = rec)
 
     # ITER 1:
     c, o = sim.run_forward()
     np.testing.assert_almost_equal(c, np.array([5.0, 5.0, 5.0, 5.0]))
-    np.testing.assert_almost_equal(o, np.array([6.0, 6.0, 6.0, 6.0]))
+    np.testing.assert_almost_equal(o, np.array([6.0]))
 
     g, j = sim.compute_optimization_derivatives()
-    np.testing.assert_almost_equal(g, np.hstack((3*np.eye(4), 2*np.eye(4))))
+    np.testing.assert_almost_equal(g, np.hstack((3*np.eye(4), 2*np.eye(4)))[0].reshape(1,-1))
     np.testing.assert_almost_equal(j, np.hstack((np.eye(4), np.eye(4))))
 
     # ITER 2:
@@ -110,10 +112,10 @@ def test_pysimulator2():
     sim.update_design_variables(new_x_concat)
     c, o = sim.run_forward()
     np.testing.assert_almost_equal(c, (new_x0.flatten()+new_x1.flatten()))
-    np.testing.assert_almost_equal(o, (new_x0.flatten()*new_x1.flatten()))
+    np.testing.assert_almost_equal(o, (new_x0.flatten()*new_x1.flatten())[0])
 
     g, j = sim.compute_optimization_derivatives()
-    np.testing.assert_almost_equal(g, np.hstack((np.diagflat(new_x1), np.diagflat(new_x0))))
+    np.testing.assert_almost_equal(g, np.hstack((np.diagflat(new_x1), np.diagflat(new_x0)))[0].reshape(1,-1))
     np.testing.assert_almost_equal(j, np.hstack((np.eye(4), np.eye(4))))
 
 if __name__ == "__main__":
