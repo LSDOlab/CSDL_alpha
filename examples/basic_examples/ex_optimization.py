@@ -1,3 +1,4 @@
+"""Optimization Modopt (Work in progress)"""
 import csdl_alpha as csdl
 
 # This example demonstrates how to define and solve an simple optimization problem using modopt

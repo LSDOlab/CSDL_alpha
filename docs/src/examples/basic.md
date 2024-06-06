@@ -14,4 +14,5 @@ examples page.
 ../_temp/examples/basic_examples/ex_custom_operation
 ../_temp/examples/basic_examples/ex_beam
 ../_temp/examples/basic_examples/ex_sellar
+../_temp/examples/basic_examples/ex_optimization
 ```
