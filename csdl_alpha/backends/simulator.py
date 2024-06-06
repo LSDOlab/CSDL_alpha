@@ -45,11 +45,12 @@ class SimulatorBase():
         tuple[ tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray], tuple[np.ndarray,np.ndarray,np.ndarray], np.ndarray, ]
             (dscaler, dlower, dupper, d0), (cscaler, clower, cupper), oscaler
         """
+        self.check_if_optimization()
         return self.opt_metadata['d'], self.opt_metadata['c'], self.opt_metadata['o']
 
     def check_if_optimization(self):
         if not self.is_opt:
-            raise ValueError("A valid optimization problem must be specified to use this method.")
+            raise ValueError("A valid optimization problem must be specified")
 
     def run(self):
         raise NotImplementedError('run method not implemented')
