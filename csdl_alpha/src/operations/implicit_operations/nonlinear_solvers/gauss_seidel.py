@@ -11,10 +11,11 @@ class GaussSeidel(FixedPoint):
     def __init__(
             self,
             name = 'gs_nlsolver',
-            print_status = True,
-            tolerance=1e-10,
-            max_iter=100,
-            elementwise_states=False,
+            print_status:bool = True,
+            tolerance:float=1e-10,
+            max_iter:int=100,
+            elementwise_states:bool=False,
+            residual_jac_kwargs:dict = None,
         ):
         """
         A nonlinear block Gauss-Seidel solver
@@ -32,6 +33,7 @@ class GaussSeidel(FixedPoint):
             tolerance = tolerance,
             max_iter = max_iter,
             elementwise_states = elementwise_states,
+            residual_jac_kwargs = residual_jac_kwargs,
         )
 
     def add_state(

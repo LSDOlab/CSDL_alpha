@@ -52,6 +52,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': csdl.Variable(value=0.28), 'tolerance': 1e-10}, {}))
         cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': 0.27, 'tolerance': csdl.Variable(value=1e-8)}, {}))
         cases.append((csdl.nonlinear_solvers.GaussSeidel, {}, {'elementwise_states': True}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {}, {'residual_jac_kwargs': {'loop':False}}))
         
         # Jacobi tests:
         cases.append((csdl.nonlinear_solvers.Jacobi, {}, {}))

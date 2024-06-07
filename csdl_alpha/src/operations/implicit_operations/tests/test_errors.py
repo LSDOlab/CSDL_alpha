@@ -130,3 +130,7 @@ class TestErrors(csdl_tests.CSDLTest):
             solver.add_state(x, y)
             solver.run()
             solver.run()
+
+        with pytest.raises(TypeError):
+            solver = csdl.nonlinear_solvers.GaussSeidel(residual_jac_kwargs='s')
+

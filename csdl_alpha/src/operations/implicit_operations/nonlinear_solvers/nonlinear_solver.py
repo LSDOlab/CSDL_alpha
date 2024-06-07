@@ -14,10 +14,11 @@ class NonlinearSolver(object):
     def __init__(
             self,
             name = 'nlsolver', 
-            print_status = True,
-            tolerance=1e-10,
-            max_iter=100,
-            elementwise_states=False,
+            print_status:bool = True,
+            tolerance:float=1e-10,
+            max_iter:int=100,
+            elementwise_states:bool=False,
+            residual_jac_kwargs:dict = None,
         ):
         self.name = name
         self.print_status = print_status
@@ -57,7 +58,12 @@ class NonlinearSolver(object):
         self.full_residual_jacobian = None
         self.total_state_size = 0
         self.elementwise_states = elementwise_states
-
+        if residual_jac_kwargs is None:
+            residual_jac_kwargs = {}
+        elif not isinstance(residual_jac_kwargs, dict):
+            raise TypeError(f"residual_jac_kwargs must be a dictionary. {get_type_string(residual_jac_kwargs)} given.")
+        self.residual_jac_kwargs = residual_jac_kwargs
+        
     def add_metadata(self, key, datum, is_input=True):
         if isinstance(datum, Variable) and is_input:
             self.meta_input_variables.add(datum)
@@ -344,10 +350,17 @@ class NonlinearSolver(object):
                 # Create block matrix for linear system
                 current_residual_block = []
 
+                # feed in user-defined kwargs for derivative
+                residual_jac_kwargs = self.residual_jac_kwargs
+                residual_jac_kwargs['elementwise'] = self.elementwise_states
+                residual_jac_kwargs['as_block'] = False
+
+                # Compute the derivatives
                 if for_deriv:
-                    deriv = csdl.derivative(residual, states_list, graph = self.residual_graph, elementwise=self.elementwise_states)
+                    residual_jac_kwargs['graph'] = self.residual_graph
+                    deriv = csdl.derivative(residual, states_list, **residual_jac_kwargs)
                 else:
-                    deriv = csdl.derivative(residual, states_list, elementwise=self.elementwise_states)
+                    deriv = csdl.derivative(residual, states_list, **residual_jac_kwargs)
 
                 for _state in states_list:
                     current_residual_block.append(deriv[_state])

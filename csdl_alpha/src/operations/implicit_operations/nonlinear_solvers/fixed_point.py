@@ -14,6 +14,7 @@ class FixedPoint(NonlinearSolver):
             tolerance,
             max_iter,
             elementwise_states,
+            residual_jac_kwargs,
         ):
         """
         Base class for standard fixed point iteration solvers. Not to be used directly.
@@ -25,6 +26,7 @@ class FixedPoint(NonlinearSolver):
             tolerance = tolerance,
             max_iter = max_iter,
             elementwise_states = elementwise_states,
+            residual_jac_kwargs = residual_jac_kwargs,
         )
 
     def add_state(*args, **kwargs):

@@ -9,37 +9,39 @@ from typing import Union
 class BracketedSearch(NonlinearSolver):
     
     def __init__(
-                self,
-                name:str = 'bracketed_search',
-                print_status:bool = True,
-                tolerance:VariableLike=1e-10,
-                max_iter:int=100,
-                elementwise_states=False,
-            ):
-            """Initialize the BracketedSearch solver.
+            self,
+            name:str = 'bracketed_search',
+            print_status:bool = True,
+            tolerance:VariableLike=1e-10,
+            max_iter:int=100,
+            elementwise_states=False,
+            residual_jac_kwargs = None,
+        ):
+        """Initialize the BracketedSearch solver.
 
-            Parameters
-            ----------
-            name : str, optional
-                The name of the solver. Defaults to 'bracketed_search'.
-            print_status : bool, optional
-                Whether to print the solver status during execution. Defaults to True.
-            tolerance : VariableLike, optional
-                The tolerance value used to determine convergence. Defaults to 1e-10.
-            max_iter : int, optional
-                The maximum number of iterations allowed. Defaults to 100.
-            """
+        Parameters
+        ----------
+        name : str, optional
+            The name of the solver. Defaults to 'bracketed_search'.
+        print_status : bool, optional
+            Whether to print the solver status during execution. Defaults to True.
+        tolerance : VariableLike, optional
+            The tolerance value used to determine convergence. Defaults to 1e-10.
+        max_iter : int, optional
+            The maximum number of iterations allowed. Defaults to 100.
+        """
 
-            super().__init__(
-                name = name,
-                print_status = print_status,
-                tolerance = tolerance,
-                max_iter = max_iter,
-                elementwise_states = elementwise_states,
-            )
+        super().__init__(
+            name = name,
+            print_status = print_status,
+            tolerance = tolerance,
+            max_iter = max_iter,
+            elementwise_states = elementwise_states,
+            residual_jac_kwargs = residual_jac_kwargs,
+        )
 
-            self.add_metadata('tolerance', tolerance)
-            self.add_metadata('max_iter', max_iter)
+        self.add_metadata('tolerance', tolerance)
+        self.add_metadata('max_iter', max_iter)
 
     def add_state(
             self,
