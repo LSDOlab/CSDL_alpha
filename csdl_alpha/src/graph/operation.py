@@ -145,7 +145,7 @@ class Operation(Node):
         raise NotImplementedError('not implemented') 
 
     def compute_jax(self, *args):
-        raise NotImplementedError('not implemented') 
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def evaluate_jacobian(self, *args):
         raise NotImplementedError('not implemented') 

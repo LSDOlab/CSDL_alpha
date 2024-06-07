@@ -26,6 +26,10 @@ class Reshape(Operation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[out].reshape(x.shape))
 
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return x.reshape(self.new_shape)  
+
 def reshape(x:Variable, shape: tuple[int]) -> Variable:
     """Reshape a tensor x to a new shape.
 
