@@ -64,6 +64,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': csdl.Variable(value=0.281), 'tolerance': 1e-10}, {}))
         cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': 0.271, 'tolerance': csdl.Variable(value=1.1e-8)}, {}))
         cases.append((csdl.nonlinear_solvers.Jacobi, {}, {'elementwise_states': True}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {}, {'residual_jac_kwargs': {'loop':False}}))
 
         # Newtons method tests:
         cases.append((csdl.nonlinear_solvers.Newton, {}, {}))

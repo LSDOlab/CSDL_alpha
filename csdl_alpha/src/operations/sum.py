@@ -24,6 +24,13 @@ class Sum(Operation):
         else:
             return np.sum(x, axis=self.axes)
 
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        if self.axes is None:
+            return jnp.sum(x)
+        else:
+            return jnp.sum(x, axis=self.axes)
+        
     def evaluate_vjp(self, cotangents, x, y):
         import csdl_alpha as csdl
         if self.axes is None:
