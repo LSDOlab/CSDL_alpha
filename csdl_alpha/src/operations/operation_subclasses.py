@@ -82,6 +82,11 @@ class ComposedOperation(SubgraphOperation):
 
     def evaluate_composed(self, *args):
         raise NotImplementedError("Composed operations must implement the evaluate_composed method")
+    
+    def compute_jax(self, *args):
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        jax_fn = create_jax_function(self.get_subgraph(), self.outputs, self.inputs)
+        return tuple(jax_fn(*args))
 
     def finalize_and_return_outputs(self):
         self.recorder._enter_subgraph(name = self.name)

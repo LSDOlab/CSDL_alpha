@@ -16,6 +16,34 @@ class ImplicitOperation(SubgraphOperation):
         
         return [output.value for output in self.outputs]
     
+    def compute_jax(self, *args):
+        # want to give the nonlinear solver a function that computes the residuals
+
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        # outputs have the states, residuals aren't an output
+        # need to make states an input to the jax function, and residuals an output
+        states = list(self.nonlinear_solver.state_to_residual_map.keys())
+        residuals = list(self.nonlinear_solver.state_to_residual_map.values())
+        output_state_indices = [i for i, output in enumerate(self.outputs) if output in states]
+        output_state_indices.sort()
+        non_state_output_vars = [output for output in self.outputs if output not in states]
+        jax_fn_inputs = self.inputs + states
+        jax_fn_outputs = non_state_output_vars + residuals
+
+        # jax function will return the outputs and residuals given inputs and states.
+        # TODO: maybe have this made by implicit_operation and passed in (or from nonlinear_solver)
+        jax_function = create_jax_function(self._subgraph, jax_fn_outputs, jax_fn_inputs)
+        def jax_residual_function(states):
+            """Computes residuals given states"""
+            return jax_function(*args, *states)[len(non_state_output_vars):]
+
+        states = self.nonlinear_solver.solve_implicit_jax(jax_residual_function, self.inputs, *args)
+
+        outputs = jax_function(*args, *states)[:len(non_state_output_vars)]
+        for i, ind in enumerate(output_state_indices):
+            outputs.insert(ind, states[i])
+        return tuple(outputs)
+    
     def prep_vjp(self):
         """
         Prepare operation for reverse mode differentiation

@@ -12,6 +12,10 @@ class Neg(ElementwiseOperation):
 
     def compute_inline(self, x):
         return -x
+    
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return -x  
 
     def evaluate_vjp(self, cotangents, x, neg_x):
         if cotangents.check(x):

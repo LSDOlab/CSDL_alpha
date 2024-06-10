@@ -17,6 +17,10 @@ class Div(ElementwiseOperation):
 
     def compute_inline(self, x, y):
         return x/y
+    
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return x/y
 
     def evaluate_vjp(self,cotangents, x, y, z):
         if cotangents.check(x):
