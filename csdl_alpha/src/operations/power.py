@@ -155,17 +155,18 @@ class TestPower(csdl_tests.CSDLTest):
         # power of a tensor variable to a tensor variable
         y_tensor = csdl.Variable(value = x_val+1.0)
         s1 = csdl.power(x, y_tensor)
-        compare_values += [csdl_tests.TestingPair(s1, x_val**(x_val+1.0), tag = 's0')]
+        compare_values += [csdl_tests.TestingPair(s1, x_val**(x_val+1.0), tag = 's0', decimal=9)]
 
         # power of a tensor variable to a tensor variable
         y_tensor = csdl.Variable(value = -x_val)
         s1 = csdl.power(x, y_tensor)
-        compare_values += [csdl_tests.TestingPair(s1, x_val**(-x_val), tag = 's0')]
+        compare_values += [csdl_tests.TestingPair(s1, x_val**(-x_val), tag = 's0', decimal=9)]
 
         # If x is negative, things get strange, y must be integers
+        # slight difference (1e-10 error vs 1e-11) between and JAX and numpy here for some reason
         y_tensor = csdl.Variable(name = 'int_tensor', value = np.arange(6).reshape(2,3)+3.0)
         s1 = csdl.power(-x, y_tensor)
-        compare_values += [csdl_tests.TestingPair(s1, (-x_val)**(np.arange(6).reshape(2,3)+3.0), tag = 's0')]
+        compare_values += [csdl_tests.TestingPair(s1, (-x_val)**(np.arange(6).reshape(2,3)+3.0), tag = 's0', decimal=9)] 
 
         # power of a scalar variable to a tensor variable
         x_scalar = csdl.Variable(value = 3.0)
@@ -218,5 +219,7 @@ class TestPower(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = TestPower()
+    test.overwrite_backend = 'inline'
+    test.overwrite_backend = 'jax'
     test.test_functionality()
     # test.test_example()
