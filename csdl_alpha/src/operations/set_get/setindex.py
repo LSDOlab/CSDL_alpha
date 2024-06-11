@@ -42,6 +42,10 @@ class SetVarIndex(Operation):
         # np.add.at(x_updated, evaluated_slice, y)
         # return x_updated
     def compute_jax(self, x, y, *slice_args):
+        if self.slice.var_slice is True:
+            from csdl_alpha.backends.jax.utils import fallback_to_inline_jax
+            return fallback_to_inline_jax(self, x, y, *slice_args)[0]
+
         if y.size == 1:
             return x.at[self.slice.jnpevaluate(*slice_args)].set(y[0])
         else:
