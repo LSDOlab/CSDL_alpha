@@ -5,7 +5,7 @@ import csdl_alpha.utils.error_utils as error_utils
 from csdl_alpha.utils.error_utils import GraphError
 import numpy as np
 
-from csdl_alpha.src.operations.derivative.bookkeeping import VarTangents
+from csdl_alpha.src.operations.derivatives.bookkeeping import VarTangents
 
 from csdl_alpha.utils.typing import VariableLike
 from typing import Union, Any
@@ -63,7 +63,7 @@ class NonlinearSolver(object):
         elif not isinstance(residual_jac_kwargs, dict):
             raise TypeError(f"residual_jac_kwargs must be a dictionary. {get_type_string(residual_jac_kwargs)} given.")
         self.residual_jac_kwargs = residual_jac_kwargs
-        
+
     def add_metadata(self, key, datum, is_input=True):
         if isinstance(datum, Variable) and is_input:
             self.meta_input_variables.add(datum)
@@ -282,7 +282,7 @@ class NonlinearSolver(object):
             if state not in wrts_set:
                 wrts.append(state)
 
-        from csdl_alpha.src.operations.derivative.reverse import vjp
+        from csdl_alpha.src.operations.derivatives.reverse import vjp
         
         # TODO: Should VJP function should be INSIDE or OUTSIDE the nonlinear solver?
         # Compute vector-Jacobian product of the residuals in the residual graph

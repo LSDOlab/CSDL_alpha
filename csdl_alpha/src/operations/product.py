@@ -3,7 +3,7 @@ from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
-from csdl_alpha.src.operations.derivative.utils import get_uncontract_action
+from csdl_alpha.src.operations.derivatives.utils import get_uncontract_action
 
 import numpy as np
 

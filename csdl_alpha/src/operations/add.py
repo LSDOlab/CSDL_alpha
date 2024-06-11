@@ -43,8 +43,8 @@ class BroadcastAdd(Operation):
         return x + y
     
     def compute_jax(self, x, y):
-        import jax.numpy as jnp
-        return x + y 
+        z  = x + y
+        return z
 
     def evaluate_vjp(self, cotangents, x, y, z):
         if cotangents.check(x):

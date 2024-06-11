@@ -50,7 +50,7 @@ from .tensor.einsum import einsum
 # Sparse operations are in sparse submodule
 from . import sparse
 
-from .derivative.derivative import derivative
+from .derivatives.derivative import derivative
 
 # Special operations
 from .special.bessel import bessel

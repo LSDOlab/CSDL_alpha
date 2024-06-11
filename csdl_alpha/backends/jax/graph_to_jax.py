@@ -1,5 +1,11 @@
 import csdl_alpha as csdl
 from csdl_alpha.src.graph.graph import Graph
+from csdl_alpha.src.recorder import Recorder
+from csdl_alpha.src.graph.variable import Variable
+from csdl_alpha.utils.inputs import listify_variables
+
+import numpy as np
+from typing import Union
 
 
 # Get the graph
@@ -66,3 +72,56 @@ def create_jax_function(
         return [all_jax_variables[output] for output in outputs]
     
     return jax_function
+
+def create_jax_interface(
+        inputs:Union[Variable, list[Variable], tuple[Variable]],
+        outputs:Union[Variable, list[Variable], tuple[Variable]],
+        graph:Graph = None)->callable:
+    """_summary_
+
+    Parameters
+    ----------
+    inputs : Union[Variable, list[Variable], tuple[Variable]]
+        Inputs to the jax function
+    outputs : Union[Variable, list[Variable], tuple[Variable]]
+        Outputs to the jax function
+    graph : Graph, optional
+        which graph to create the jax interface for, by default None
+
+    Returns
+    -------
+    jax interface: callable
+        A function with type signature: jax_interface(dict[Variable, np.array])->dict[Variable, np.array], where the input and output variables must match the inputs and outputs respectively.
+    """
+    import jax
+
+    # preprocessing:
+    inputs = listify_variables(inputs)
+    outputs = listify_variables(outputs)
+    if graph is None:
+        graph = csdl.get_current_recorder().active_graph
+
+    # Create the JAX function
+    # Insert JAX preprocessing here:
+    # enabling x64 etc
+    # jax.config.update("jax_enable_x64", True)
+
+    jax_function = create_jax_function(graph, outputs, inputs)
+    jax_function = jax.jit(jax_function)
+
+    # Create the JAX interface
+    def jax_interface(inputs_dict:dict[Variable, np.array])->dict[Variable, np.array]:
+        jax_interface_inputs = []
+        # print('INPUTS:')
+        for input_var in inputs:
+            jax_interface_inputs.append(jax.numpy.array(inputs_dict[input_var]))
+        jax_outputs = jax_function(*jax_interface_inputs)
+
+        outputs_dict = {}
+        # print('OUTPUTS:')
+        for i, output in enumerate(outputs):
+            outputs_dict[output] = np.array(jax_outputs[i])
+            # print(outputs_dict[output])
+        return outputs_dict
+    
+    return jax_interface

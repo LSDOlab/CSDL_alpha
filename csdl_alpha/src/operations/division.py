@@ -17,7 +17,10 @@ class Div(ElementwiseOperation):
 
     def compute_inline(self, x, y):
         return x/y
-
+    
+    def compute_jax(self, x, y):
+        return self.compute_inline(x, y)
+    
     def evaluate_vjp(self,cotangents, x, y, z):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[z]/y)
@@ -38,6 +41,9 @@ class BroadcastDiv1(Operation):
 
     def compute_inline(self, x, y):
         return x/y
+    
+    def compute_jax(self, x, y):
+        return self.compute_inline(x, y)
 
     def evaluate_vjp(self,cotangents, x, y, z):
         if cotangents.check(x):
@@ -59,6 +65,9 @@ class BroadcastDiv2(Operation):
 
     def compute_inline(self, x, y):
         return x/y
+    
+    def compute_jax(self, x, y):
+        return self.compute_inline(x, y)
 
     def evaluate_vjp(self,cotangents, x, y, z):
         import csdl_alpha as csdl

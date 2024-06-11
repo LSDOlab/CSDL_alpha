@@ -1,6 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
-from csdl_alpha.src.operations.derivative.reverse import _vjp, preprocess_reverse
-from csdl_alpha.src.operations.derivative.bookkeeping import listify_and_verify_variables
+from csdl_alpha.src.operations.derivatives.reverse import _vjp, preprocess_reverse
+from csdl_alpha.src.operations.derivatives.bookkeeping import listify_and_verify_variables
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.graph import Graph

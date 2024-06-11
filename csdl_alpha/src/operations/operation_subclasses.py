@@ -167,7 +167,7 @@ class ComposedOperation(SubgraphOperation):
         rec = csdl.get_current_recorder()
         # rec.visualize_graph()
 
-        from csdl_alpha.src.operations.derivative.reverse import vjp
+        from csdl_alpha.src.operations.derivatives.reverse import vjp
         # This is the function that gets executed within the composed operation
         # It takes the cotangents and the original inputs
         # We first re-compute the composed operation and then compute the VJP again

@@ -163,7 +163,9 @@ class Loop(SubgraphOperation):
         
         # input to function is [non-feedback inputs] + [feedback_graph_inputs] + [iteration variables]
         graph_function = create_jax_function(self.graph, true_outputs, graph_inputs+self.iter_vars)
-
+        # import jax
+        # graph_function = jax.jit(graph_function)
+        
         def loop_function(carry, x):
             # carry: it's just all the true outputs of the loop
             # x: [loop_var1, loop_var2, ...]
@@ -185,7 +187,7 @@ class Loop(SubgraphOperation):
         iter_var_list = []
         for i in range(self.length):
             iter_var_list.append([iter_var.vals[i] for iter_var in self.iter_vars])
-        iter_var_array = np.array(iter_var_list, dtype=np.float32)
+        iter_var_array = jnp.array(iter_var_list, dtype=jnp.float32)
 
         # build carry input
         carry = [jnp.zeros(output.shape) for output in true_outputs]
@@ -221,7 +223,7 @@ class Loop(SubgraphOperation):
         from csdl_alpha.src.operations.loops.utils import build_feedback_data, FeedBackData, build_reversed_iteration_variables, build_external_inputs_data, build_external_outputs_data
 
         import csdl_alpha as csdl
-        from csdl_alpha.src.operations.derivative.reverse import vjp
+        from csdl_alpha.src.operations.derivatives.reverse import vjp
         from csdl_alpha.src.graph.graph import _copy_to_current_graph
         outer_graph = csdl.get_current_recorder().active_graph
 

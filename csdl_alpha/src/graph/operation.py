@@ -142,22 +142,22 @@ class Operation(Node):
         pass
 
     def compute_inline(self, *args):
-        raise NotImplementedError('not implemented') 
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def compute_jax(self, *args):
         raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def evaluate_jacobian(self, *args):
-        raise NotImplementedError('not implemented') 
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def evaluate_sparse_jacobian(self, *args):
-        raise NotImplementedError('not implemented') 
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def evaluate_jvp(self, *args):
-        raise NotImplementedError('not implemented')
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}')
 
     def evaluate_vjp(self, *args):
-        raise NotImplementedError(f'not implemented (operation: {self})')
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}')
     
 
 def set_properties(**kwargs):

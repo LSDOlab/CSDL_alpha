@@ -174,3 +174,20 @@ class VarSlice(Slice):
                 map[0](map[1], arg_int)
         return tuple(self.slices)
 
+
+    def jnpevaluate(self, *args:tuple[float])->tuple:
+
+        import jax.numpy as jnp
+
+        for arg_index, arg_value in enumerate(args):
+            # arg_index is the index of the CSDL variable
+            # arg_value is the value of that CSDL variable
+            if isinstance(arg_value, np.ndarray):
+                arg_int = jnp.int32(arg_value[0]) # value that has been cast to an integer to replace slice variable
+            else:
+                arg_int = jnp.int32(arg_value) # value that has been cast to an integer to replace slice variable
+
+            maps = self.var2slicemap[arg_index]
+            for map in maps:
+                map[0](map[1], arg_int)
+        return tuple(self.slices)

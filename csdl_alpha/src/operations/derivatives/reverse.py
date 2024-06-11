@@ -1,5 +1,5 @@
 from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
-from csdl_alpha.src.operations.derivative.bookkeeping import listify_and_verify_variables, build_derivative_node_order, VarTangents
+from csdl_alpha.src.operations.derivatives.bookkeeping import listify_and_verify_variables, build_derivative_node_order, VarTangents
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
 from typing import Union

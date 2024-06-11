@@ -27,6 +27,9 @@ class GetVarIndex(Operation):
     def compute_inline(self, x, *slice_args):
         return x[self.slice.evaluate(*slice_args)].reshape(self.out_shape)
 
+    def compute_jax(self, x, *slice_args):
+        return x[self.slice.jnpevaluate(*slice_args)].reshape(self.out_shape)
+
     def evaluate_vjp(self, cotangents, x, *slice_args_and_outputs):
         import csdl_alpha as csdl
         x_indexed = slice_args_and_outputs[-1]

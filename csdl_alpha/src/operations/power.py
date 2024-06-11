@@ -19,6 +19,10 @@ class Power(ElementwiseOperation):
     def compute_inline(self, x, y):
         return x ** y
     
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return (x ** y)
+    
     def evaluate_vjp(self, cotangents, x, y, z):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[z]*y*x**(y-1))
@@ -39,6 +43,10 @@ class LeftBroadcastPower(Operation):
 
     def compute_inline(self, x, y):
         return x ** y
+    
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return (x ** y)
     
     def evaluate_vjp(self, cotangents, x, y, z):
         if cotangents.check(x):
@@ -61,7 +69,11 @@ class RightBroadcastPower(Operation):
 
     def compute_inline(self, x, y):
         return x ** y
-    
+
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return (x ** y)
+
     def evaluate_vjp(self, cotangents, x, y, z):
         if cotangents.check(x):
             import csdl_alpha as csdl
