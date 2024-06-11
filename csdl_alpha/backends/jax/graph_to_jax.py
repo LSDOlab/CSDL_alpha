@@ -21,7 +21,7 @@ def get_jax_inputs(node, all_jax_variables:dict)->list:
 
 def update_jax_variables(node, jax_outputs, all_jax_variables:dict):
     for i, output in enumerate(node.outputs):
-        all_jax_variables[output] = jax_outputs[i]
+        all_jax_variables[output] = (jax_outputs[i]).reshape(output.shape)
 
 def create_jax_function(
         graph:Graph,
@@ -69,6 +69,9 @@ def create_jax_function(
             update_jax_variables(node, jax_outputs, all_jax_variables)
 
         # Return the outputs
+        for output in outputs:
+            if output not in all_jax_variables:
+                all_jax_variables[output] = output.value
         return [all_jax_variables[output] for output in outputs]
     
     return jax_function
@@ -104,7 +107,7 @@ def create_jax_interface(
     # Create the JAX function
     # Insert JAX preprocessing here:
     # enabling x64 etc
-    # jax.config.update("jax_enable_x64", True)
+    jax.config.update("jax_enable_x64", True)
 
     jax_function = create_jax_function(graph, outputs, inputs)
     jax_function = jax.jit(jax_function)
