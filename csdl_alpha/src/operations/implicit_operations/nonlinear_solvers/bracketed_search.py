@@ -3,7 +3,9 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
 import numpy as np
 import math
-
+import jax
+import jax.numpy as jnp
+import jax.lax as lax
 from typing import Union
 
 class BracketedSearch(NonlinearSolver):
@@ -175,7 +177,83 @@ class BracketedSearch(NonlinearSolver):
 
         if self.print_status:
             print(self._inline_print_nl_status(iter, converged))
-
-
         
+    def _jax_solve_(self, jax_residual_function, input_vars, *inputs):
+        # I'm going to assemble everything into a big vector, solve it, and then unpack it
+
+        # First, I need to know the size of the vector, and the indices of each state
+        indices_dict = {}
+        size = 0
+        for state in self.state_to_residual_map.keys():
+            state_size = math.prod(state.shape)
+            indices_dict[state] = slice(size, size+state_size)
+            size += state_size
+
+        x_upper = jnp.empty(size)
+        x_lower = jnp.empty(size)
+        r_update = jnp.ones(size) # need this to start greater than tolerance
+        tolerance = jnp.empty(size)
+
+        def compute(x):
+            states = []
+            for state, index in indices_dict.items():
+                states.append(x[index].reshape(state.shape))
+            output_residuals = jax_residual_function(states)
+            res_array = jnp.empty(size)
+            for i, ind in enumerate(indices_dict.values()):
+                res_array = res_array.at[ind].set(output_residuals[i].flatten())
+            return res_array
+
+        def to_array(x):
+            if isinstance(x, Variable):
+                return inputs[input_vars.index(x)]
+            elif isinstance(x, (np.ndarray, jnp.ndarray)):
+                return x
+            elif isinstance(x, (float, int)):
+                return jnp.array([x])
+
+        # Now, I need to populate the x vectors with the initial bracket values
+        # and populate the tolerance vector
+        for state in self.state_to_residual_map.keys():
+            bracket = self.state_metadata[state]['bracket']
+            ith_tolerance = self.state_metadata[state]['tolerance']
+            # bracket indices could be Variable or ndarray of shape (1,) or state.shape
+            # or float or int
+            # I want to turn them all into jax arrays
+            
+            # now I can flatten them and put them in the x vectors
+            x_lower = x_lower.at[indices_dict[state]].set(to_array(bracket[0]).flatten())
+            x_upper = x_upper.at[indices_dict[state]].set(to_array(bracket[1]).flatten())
+            tolerance = tolerance.at[indices_dict[state]].set(to_array(ith_tolerance).flatten())
+
+        # Now, I need to populate the r vectors with the residuals of the initial bracket values
+        # I'm also going to record whether the sign of the lower is negative (True) or positive (False)
+        r_lower = compute(x_lower)
+        # compute(x_upper, r_upper)
+        r_sign = r_lower < 0
+
+        # Now, I need to iterate until the bracket is small enough
+        def loop_body(val): # x_lower, x_upper, r_update, i
+            x_lower = val[0]
+            x_upper = val[1]
+            i = val[3]
+            i += 1
+            x_mid = (x_upper + x_lower) / 2
+            r_update = compute(x_mid)
+            lower_mask = (r_update < 0) == r_sign
+            x_lower = lax.select(lower_mask, x_mid, x_lower)
+            x_upper = lax.select(~lower_mask, x_mid, x_upper)
+            return (x_lower, x_upper, r_update, i)
+
+        def loop_cond(val): # x_lower, x_upper, r_update, i
+            r_update = val[2]
+            i = val[3]
+            return ~(jnp.all(jnp.less_equal(jnp.abs(r_update), tolerance)) | jnp.greater_equal(i, self.metadata['max_iter']))
+        
+        x_lower, x_upper, r_update, i = lax.while_loop(loop_cond, loop_body, (x_lower, x_upper, r_update, 0))
+        x_final = (x_upper + x_lower) / 2 # might as well
+        states = []
+        for state, index in indices_dict.items():
+            states.append(x_final[index].reshape(state.shape))
+        return states
 

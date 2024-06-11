@@ -380,6 +380,30 @@ class NonlinearSolver(object):
 
     def _inline_solve_(self):
         raise NotImplementedError("Solve method must be implemented by subclass")
+    
+    def _jax_solve_(self, jax_residual_function, input_vars, *inputs):
+        """Solves the nonlinear equation using JAX.
+
+        This method is responsible for solving the nonlinear equation using the JAX library.
+        It takes a JAX residual function and input variables as arguments.
+
+        Parameters
+        ----------
+        jax_residual_function : function
+            The JAX residual function that represents the nonlinear equation. 
+            Takes in a list of states and outputs a list of residuals, in order of state_to_residual_map.
+        input_vars : tuple
+            The input csdl variables to the ImplicitOperation.
+        *inputs : tuple
+            The jax variables corresponding to input_vars.
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented by the subclass.
+
+        """
+        raise NotImplementedError("Solve method must be implemented by subclass")
 
     def _inline_set_initial_values(self):
         """
@@ -443,6 +467,12 @@ class NonlinearSolver(object):
         #     print(arg)
 
         self._inline_solve_()
+
+    def solve_implicit_jax(self, *args):
+        """
+        Solves the nonlinear system of equations.
+        """
+        return self._jax_solve_(*args)
 
 def check_variable_shape_compatibility(
         var_to_check:Variable, 

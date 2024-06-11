@@ -30,6 +30,10 @@ class Power(ElementwiseOperation):
             import csdl_alpha as csdl
             cotangents.accumulate(y, cotangents[z]*z*csdl.log(x))
 
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return (x ** y)
+
 class LeftBroadcastPower(Operation):
     '''
     First input is broadcasted to the shape of the second input.

@@ -54,7 +54,7 @@ def create_jax_function(
     sorted_nodes:list = [node for node in all_sorted_nodes if not isinstance(node, csdl.Variable)]
     
     # Build the JAX function itself
-    def jax_function(*args):
+    def jax_function(*args)->list:
         # Set the input values
         all_jax_variables = {}
         for node, arg in zip(inputs, args):
