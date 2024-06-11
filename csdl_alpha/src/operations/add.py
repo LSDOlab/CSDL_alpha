@@ -17,6 +17,9 @@ class Add(ElementwiseOperation):
 
     def compute_inline(self, x, y):
         return x + y
+    
+    def compute_jax(self, x, y):
+        return self.compute_inline(x, y)
 
     def compute_jax(self, x, y):
         return self.compute_inline(x, y)
