@@ -18,6 +18,11 @@ def verify_derivatives(
     ofs, wrts = listify_ofs_and_wrts(ofs, wrts)
     if backend not in ['inline', 'jax']:
         raise ValueError(f"Backend {backend} not supported")
+    if backend == 'inline':
+        forward_evaluation = None
+    else:
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_interface
+        forward_evaluation = create_jax_interface(wrts, ofs)
 
     # finite difference values to check against
     import csdl_alpha as csdl
@@ -25,7 +30,7 @@ def verify_derivatives(
     finite_differenced_values = {}
     graph = csdl.get_current_recorder().active_graph
     start = time.time()
-    finite_differenced_values = csdl.derivative_utils.finite_difference(ofs, wrts, step_size=step_size)
+    finite_differenced_values = csdl.derivative_utils.finite_difference(ofs, wrts, step_size=step_size, forward_evaluation=forward_evaluation)
     end = time.time()
     print(f"Finite difference took {end - start} seconds")
 
@@ -60,7 +65,13 @@ def verify_derivatives(
     if backend == 'inline':
         graph.execute_inline()
     else:
-        raise NotImplementedError(f"Backend {backend} not implemented")
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_interface
+        deriv_evaluation = create_jax_interface(wrts, [deriv[key] for key in deriv])
+        jax_derivs = deriv_evaluation({wrt:wrt.value for wrt in wrts})
+        for of_ind, of in enumerate(ofs):
+            for wrt_ind, wrt in enumerate(wrts):
+                analytical_derivative_values[(of, wrt)]['value'] = jax_derivs[deriv[of, wrt]]
+
     end = time.time()
     print(f"Analytical took {end - start} seconds")
 

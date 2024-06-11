@@ -41,6 +41,11 @@ class SetVarIndex(Operation):
         # x_updated[evaluated_slice] = 0.0
         # np.add.at(x_updated, evaluated_slice, y)
         # return x_updated
+    def compute_jax(self, x, y, *slice_args):
+        if y.size == 1:
+            return x.at[self.slice.jnpevaluate(*slice_args)].set(y[0])
+        else:
+            return x.at[self.slice.jnpevaluate(*slice_args)].set(y)
 
     def evaluate_vjp(self, cotangents, x, y, *slice_args_and_outputs):
         import csdl_alpha as csdl

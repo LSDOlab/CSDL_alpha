@@ -22,6 +22,10 @@ class Cross(Operation):
     def compute_inline(self, x, y):
         return np.cross(x, y, axis=self.axis)
 
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return jnp.cross(x, y, axis=self.axis)
+
     def evaluate_vjp(self, cotangents, x, y, z):
         import csdl_alpha as csdl
         if cotangents.check(x):

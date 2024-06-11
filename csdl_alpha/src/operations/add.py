@@ -227,5 +227,6 @@ class TestAdd(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = TestAdd()
+    # test.overwrite_backend = 'jax'
     test.test_functionality()
     test.test_errors()

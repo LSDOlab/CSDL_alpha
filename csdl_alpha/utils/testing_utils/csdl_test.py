@@ -36,7 +36,14 @@ class CSDLTest():
             ignore_constants = False,
             turn_off_recorder = True,
         ):
-        self.backend_type = self._config.getoption("--backend")
+        try:
+            self.backend_type = self._config.getoption("--backend")
+        except:
+            try:
+                self.backend_type = self.overwrite_backend
+            except:
+                raise ValueError("To run tests without pytest, set CSDLTest.overwrite_backend to 'inline' or 'jax' before tests.")
+            
         if self.backend_type not in ['inline', 'jax']:
             raise ValueError(f"Backend type {self.backend_type} not supported for testing. Use 'inline', 'jax'")
         
@@ -82,7 +89,7 @@ class CSDLTest():
             )
 
         # 3.
-        self.rerun(recorder)
+        self.rerun(recorder, all_inputs)
 
     def check_values(
             self,
@@ -92,20 +99,17 @@ class CSDLTest():
             all_outputs,
             ):
         if self.backend_type == 'jax':
-            from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
-            jax_func = create_jax_function(
-                graph = recorder.active_graph,
-                outputs = all_outputs,
+            from csdl_alpha.backends.jax.graph_to_jax import create_jax_interface
+            self.jax_forward_interface = create_jax_interface(
                 inputs = all_inputs,
+                outputs = all_outputs,
+                graph = recorder.active_graph,
             )
-            import jax
             import jax.numpy as jnp
-            jax_func = jax.jit(jax_func)
-            jnp_outputs = jax_func(*[jnp.array(input.value) for input in all_inputs])
+            output_values = self.jax_forward_interface({input_var:input_var.value for input_var in all_inputs})
             
             for ind, testing_pair in enumerate(compare_values):
-                testing_pair.csdl_variable.value = 0.0
-                testing_pair.csdl_variable.value = np.array(jnp_outputs[ind])
+                testing_pair.csdl_variable.value = output_values[testing_pair.csdl_variable]
         for ind, testing_pair in enumerate(compare_values):
             testing_pair.compare(ind+1)
 
@@ -118,31 +122,29 @@ class CSDLTest():
             step_size,
             ignore_constants,
         ):
+        if ignore_derivative_fd_error is None:
+            ignore_derivative_fd_error = set()
+
+        recorder.start()
+        # from csdl_alpha.src.operations.derivatives.utils import verify_derivatives_inline
+        
+        wrts = all_inputs
+        ofs = [testing_pair.csdl_variable for testing_pair in compare_values]
+        of_wrt_meta_data = {}
+        for testing_pair in compare_values:
+            tag = testing_pair.tag
+            if tag is None:
+                tag = ''
+            rel_error = 10**(-testing_pair.decimal)
+            for wrt in wrts:
+                if (wrt in ignore_derivative_fd_error) or (testing_pair.csdl_variable in ignore_derivative_fd_error):
+                    rel_error = 2.0
+                of_wrt_meta_data[(testing_pair.csdl_variable, wrt)] = {
+                    'tag': tag,
+                    'max_rel_error': rel_error,   
+                }
+            
         if self.backend_type == 'inline':
-            if ignore_derivative_fd_error is None:
-                ignore_derivative_fd_error = set()
-
-            recorder.start()
-            # from csdl_alpha.src.operations.derivatives.utils import verify_derivatives_inline
-            
-            wrts = all_inputs
-            ofs = [testing_pair.csdl_variable for testing_pair in compare_values]
-            of_wrt_meta_data = {}
-            for testing_pair in compare_values:
-                tag = testing_pair.tag
-                if tag is None:
-                    tag = ''
-                rel_error = 10**(-testing_pair.decimal)
-                for wrt in wrts:
-                    if (wrt in ignore_derivative_fd_error) or (testing_pair.csdl_variable in ignore_derivative_fd_error):
-                        rel_error = 2.0
-                    of_wrt_meta_data[(testing_pair.csdl_variable, wrt)] = {
-                        'tag': tag,
-                        'max_rel_error': rel_error,   
-                    }
-            
-            # verify_derivatives_inline(ofs, wrts, step_size, of_wrt_meta_data = of_wrt_meta_data)
-
             import csdl_alpha as csdl
             csdl.derivative_utils.verify_derivatives(
                 ofs,
@@ -151,16 +153,23 @@ class CSDLTest():
                 verification_options=of_wrt_meta_data,
             )
 
-            recorder.stop()
         else:
-            raise ValueError(f"no trigger")
+            import csdl_alpha as csdl
+            csdl.derivative_utils.verify_derivatives(
+                ofs,
+                wrts,
+                step_size,
+                verification_options=of_wrt_meta_data,
+                backend = 'jax'
+            )
         # exit('END 2')
+        recorder.stop()
 
-    def rerun(self, recorder):
+    def rerun(self, recorder, all_inputs):
         if self.backend_type == 'inline':
             recorder.execute()
         else:
-            raise ValueError(f"no trigger")
+            self.jax_forward_interface({input_var:input_var.value for input_var in all_inputs})
 
     def docstest(self, obj):
         # self.prep()

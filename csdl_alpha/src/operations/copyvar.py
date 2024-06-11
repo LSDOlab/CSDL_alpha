@@ -15,6 +15,9 @@ class CopyVar(ElementwiseOperation):
 
     def compute_inline(self, x):
         return x.copy()
+    
+    def compute_jax(self, x):
+        return x+0.0
 
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
@@ -45,7 +48,10 @@ class CopyVarTo(Operation):
 
     def compute_inline(self, x):
         return x.copy()
-
+    
+    def compute_jax(self, x):
+        return x+0.0
+    
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y])
