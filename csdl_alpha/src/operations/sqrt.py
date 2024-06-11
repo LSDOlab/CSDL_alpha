@@ -20,6 +20,10 @@ class Sqrt(ElementwiseOperation):
     def compute_inline(self, x):
         return np.sqrt(x)
     
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.sqrt(x)
+
     def evaluate_vjp(self, cotangents, x, y):
         import csdl_alpha as csdl
         if cotangents.check(x):

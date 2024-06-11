@@ -26,6 +26,10 @@ class ReorderAxes(Operation):
     def compute_inline(self, x):
         return np.transpose(x, self.out_axes)
     
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.transpose(x, self.out_axes)
+    
     def evaluate_vjp(self, cotangents, x, z):
         if cotangents.check(x):
             import csdl_alpha as csdl

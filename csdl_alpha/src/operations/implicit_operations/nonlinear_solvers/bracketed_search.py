@@ -185,7 +185,7 @@ class BracketedSearch(NonlinearSolver):
         indices_dict = {}
         size = 0
         for state in self.state_to_residual_map.keys():
-            state_size = math.prod(state.shape)
+            state_size = state.size
             indices_dict[state] = slice(size, size+state_size)
             size += state_size
 

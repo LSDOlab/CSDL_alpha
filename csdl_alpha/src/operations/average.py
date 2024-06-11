@@ -25,6 +25,13 @@ class Average(Operation):
         else:
             return np.average(x, axis=self.axes)
 
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        if self.axes is None:
+            return jnp.average(x)
+        else:
+            return jnp.average(x, axis=self.axes)
+
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             import csdl_alpha as csdl

@@ -19,6 +19,10 @@ class LinearSolve(Operation):
     def compute_inline(self, A, b):
         return np.linalg.solve(A, b)
     
+    def compute_jax(self, A, b):
+        import jax.numpy as jnp
+        return jnp.linalg.solve(A, b)
+
     def evaluate_vjp(self, cotangents, A, b, x):
         import csdl_alpha as csdl
 

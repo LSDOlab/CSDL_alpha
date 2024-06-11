@@ -199,4 +199,5 @@ class TestCustom(csdl_tests.CSDLTest):
                 csdl_tests.TestingPair(f, np.array([27]), tag = 'f'),
                 csdl_tests.TestingPair(g, np.array([81]), tag = 'g'),
             ],
+            verify_derivatives=True,
         )

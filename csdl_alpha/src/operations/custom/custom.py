@@ -75,6 +75,22 @@ class CustomExplicitOperation(CustomOperation):
         if len(output) == 1:
             output = output[0]
         return output
+    
+    def compute_jax(self, *args):
+        import jax
+
+        def new_inline_func(*args):
+            processed_inputs = [np.array(input) for input in args]
+            return self.compute_inline(*processed_inputs)
+
+        output = jax.pure_callback(
+            new_inline_func,
+            [jax.ShapeDtypeStruct(self.output_dict[output_var].shape, np.float64) for output_var in self.output_dict],
+            *args)
+        if len(output) == 1:
+            output = output[0]
+        
+        return tuple(output)
 
     # def set_inline_values(self):
     #     inputs = {key: input.value for key, input in self.input_dict.items()}
@@ -390,3 +406,19 @@ class CustomJacOperation(Operation):
             return input_cots[0]
         else:
             return tuple(input_cots)
+    
+    def compute_jax(self, *args):
+        import jax
+
+        def new_inline_func(*args):
+            processed_inputs = [np.array(input) for input in args]
+            return self.compute_inline(*processed_inputs)
+
+        output = jax.pure_callback(
+            new_inline_func,
+            [jax.ShapeDtypeStruct(in_cot.shape, np.float64) for in_cot in self.input_cotangents],
+            *args)
+        if len(output) == 1:
+            output = output[0]
+        
+        return tuple(output)

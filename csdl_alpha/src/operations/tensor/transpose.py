@@ -21,6 +21,10 @@ class Transpose(Operation):
 
     def compute_inline(self, x):
         return np.transpose(x)
+    
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.transpose(x)
 
     def evaluate_vjp(self, cotangents, x, z):
         if cotangents.check(x):

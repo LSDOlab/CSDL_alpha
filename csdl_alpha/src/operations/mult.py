@@ -33,6 +33,9 @@ class BroadcastMult(Operation):
     def compute_inline(self, x, y):
         return x*y
 
+    def compute_jax(self, x, y):
+        return self.compute_inline(x, y)
+    
     def evaluate_vjp(self, cotangents, x, y, z):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[z].inner(y))

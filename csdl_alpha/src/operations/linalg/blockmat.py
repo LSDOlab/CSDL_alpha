@@ -6,7 +6,7 @@ import csdl_alpha.utils.testing_utils as csdl_tests
 import numpy as np
 import pytest
 
-class BLockMatrix(Operation):
+class BlockMatrix(Operation):
     '''
     Assemble a block matrix from a list of matrices or a list of lists.
     '''
@@ -61,6 +61,15 @@ class BLockMatrix(Operation):
             l = self.num_row_blocks
             row_idx = np.cumsum([0] + l)
             return np.block([list(args[row_idx[i]:row_idx[i+1]]) for i in range(len(l))])
+
+    def compute_jax(self, *args):
+        import jax.numpy as jnp
+        if self.num_row_blocks is None:
+            return jnp.block([x for x in args])
+        else:
+            l = self.num_row_blocks
+            row_idx = np.cumsum([0] + l)
+            return jnp.block([list(args[row_idx[i]:row_idx[i+1]]) for i in range(len(l))])
 
     def evaluate_vjp(self, cotangents, *inputs_and_block):
         inputs = inputs_and_block[:-1]
@@ -150,7 +159,7 @@ def blockmat(l)->Variable:
         args = [validate_and_variablize(x) for x in l]
         num_row_blocks = None
 
-    op = BLockMatrix(*args, num_row_blocks=num_row_blocks, shape=(num_rows, num_cols))
+    op = BlockMatrix(*args, num_row_blocks=num_row_blocks, shape=(num_rows, num_cols))
     
     return op.finalize_and_return_outputs()
 

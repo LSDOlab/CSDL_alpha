@@ -57,6 +57,11 @@ class TestCustom(csdl_tests.CSDLTest):
         dg_dz_real = f.value
         assert np.isclose(dg_dz.value[0], dg_dz_real)
 
+        self.run_tests(
+            compare_values = [csdl_tests.TestingPair(f, f.value), csdl_tests.TestingPair(g, g.value)],
+            verify_derivatives=True,
+        )
+
     def test_derivs(self):
         self.prep()
  
@@ -155,6 +160,16 @@ class TestCustom(csdl_tests.CSDLTest):
         dg_dz = derivs[g_sum, z]
         dg_dz_real = 3.0*np.ones(x.size).reshape(1,-1)
         np.testing.assert_array_equal(dg_dz.value, dg_dz_real)
+
+        self.run_tests(
+            compare_values = [
+                csdl_tests.TestingPair(f, f.value),
+                csdl_tests.TestingPair(g, g.value),
+                csdl_tests.TestingPair(f_sum, f_sum.value),
+                csdl_tests.TestingPair(g_sum, g_sum.value)
+            ],
+            verify_derivatives=True,
+        )
 
 if __name__ == '__main__':
     t = TestCustom()
