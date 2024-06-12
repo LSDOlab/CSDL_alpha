@@ -152,13 +152,17 @@ class Loop(SubgraphOperation):
         import jax.numpy as jnp
         from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
 
-        true_outputs = self.outputs[:-len(self.loop_vars)] # operation outputs that aren't the stacked ones
-        feedback_input_indices = [self.inputs.index(loop_var[1]) for loop_var in self.loop_vars] # index of inputs that correspond to feedback vars
+        if len(self.loop_vars) > 0:
+            true_outputs = self.outputs[:-len(self.loop_vars)] # operation outputs that aren't the stacked ones
+        else:
+            true_outputs = self.outputs # operation outputs that aren't the stacked ones
+
+        feedback_input_indices = [self.inputs.index(loop_var[1]) for loop_var in self.loop_vars] # (TODO: SLOW)index of inputs that correspond to feedback vars
         feedback_graph_inputs = [loop_var[0] for loop_var in self.loop_vars] # input node in graph that corresponds to feedback vars
-        feedback_output_indices = [true_outputs.index(loop_var[2]) for loop_var in self.loop_vars] # index of outputs that correspond to feedback vars
+        feedback_output_indices = [true_outputs.index(loop_var[2]) for loop_var in self.loop_vars] # (TODO: SLOW) index of outputs that correspond to feedback vars
 
         # graph_inputs is every input node on the loop's graph
-        graph_inputs = [input for i, input in enumerate(self.inputs) if i not in feedback_input_indices]
+        graph_inputs = [input for i, input in enumerate(self.inputs) if i not in feedback_input_indices] # (TODO: SLOW)
         graph_inputs += feedback_graph_inputs
         
         # input to function is [non-feedback inputs] + [feedback_graph_inputs] + [iteration variables]
@@ -175,11 +179,11 @@ class Loop(SubgraphOperation):
             fn_inputs += [carry[i] for i in feedback_output_indices]
             fn_inputs += [x[i] for i in range(len(self.iter_vars))]
 
+            # now want to pick out the feedback outputs so they'll be stacked
+            feedback_outputs = [carry[i] for i in feedback_output_indices]
+
             graph_outputs = graph_function(*fn_inputs)
             # graph outputs is carry
-
-            # now want to pick out the feedback outputs so they'll be stacked
-            feedback_outputs = [graph_outputs[i] for i in feedback_output_indices]
 
             return graph_outputs, feedback_outputs
         
@@ -195,7 +199,6 @@ class Loop(SubgraphOperation):
             carry[ind] = inputs[feedback_input_indices[i]]
 
         carry, stack = lax.scan(loop_function, carry, iter_var_array) 
-
         return tuple(carry + stack)
 
     def prep_vjp(self):

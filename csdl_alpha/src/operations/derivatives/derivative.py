@@ -38,7 +38,7 @@ def reverse(
     import numpy as np
     jacobians:dict[Variable:Variable] = {}
     for wrt_var in wrt_vars:
-        jacobians[wrt_var] = csdl.Variable(name = f'jac_{of.name}_wrt_{wrt_var.name}', value = np.zeros((of_var.size, wrt_var.size)))
+        jacobians[wrt_var] = csdl.Variable(name = f'jac_{of.name}_wrt_{wrt_var.name}_init', value = np.zeros((of_var.size, wrt_var.size)))
 
     initial_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
     
@@ -63,7 +63,7 @@ def reverse(
                 jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[row_index, :], wrt_cotangent.flatten())
                 jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
         if loop:
-            loop_d.op.name = 'r_loop'
+            loop_d.op.name = 'rev_loop'
     else:
         current_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.ones(of_var.shape))
         # vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)

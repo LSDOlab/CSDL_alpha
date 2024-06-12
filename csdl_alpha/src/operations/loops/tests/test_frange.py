@@ -313,6 +313,14 @@ class Testfrange(csdl_tests.CSDLTest):
         assert np.all(b_stack.value == np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
         assert b_stack == loop.op.get_stacked(b)
 
+        self.run_tests(
+            compare_values=[
+                csdl_tests.TestingPair(b, np.array([11])),
+                csdl_tests.TestingPair(b_stack, np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
+            ],
+            verify_derivatives=True
+        )
+
     def test_stack_multi(self):
         self.prep()
         import csdl_alpha as csdl
@@ -476,6 +484,7 @@ class Testfrange(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = Testfrange()
+    test.overwrite_backend = 'jax'
     # test.test_simple_loop()
     # test.test_simple_double_loop()
     # test.test_range_inputs()
@@ -483,7 +492,7 @@ if __name__ == '__main__':
     # test.test_setget()
     # test.test_custom_vals()
     # test.test_multi_vals()
-    # test.test_stack()
+    test.test_stack()
     # test.test_stack_multi()
     # test.test_stack_multidim()
     # test.test_feedback()
