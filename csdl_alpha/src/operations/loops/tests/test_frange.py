@@ -492,7 +492,7 @@ if __name__ == '__main__':
     # test.test_setget()
     # test.test_custom_vals()
     # test.test_multi_vals()
-    test.test_stack()
+    # test.test_stack()
     # test.test_stack_multi()
     # test.test_stack_multidim()
     # test.test_feedback()

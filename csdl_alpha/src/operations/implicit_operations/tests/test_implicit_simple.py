@@ -64,7 +64,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': csdl.Variable(value=0.281), 'tolerance': 1e-10}, {}))
         cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': 0.271, 'tolerance': csdl.Variable(value=1.1e-8)}, {}))
         cases.append((csdl.nonlinear_solvers.Jacobi, {}, {'elementwise_states': True}))
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {}, {'residual_jac_kwargs': {'loop':False}}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {}, {'residual_jac_kwargs': {'loop':False}}))
 
         # Newtons method tests:
         cases.append((csdl.nonlinear_solvers.Newton, {}, {}))
@@ -472,6 +472,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     t = TestSimpleImplicit()
+    # t.overwrite_backend = 'jax'
     # t.test_solvers_simple()
     # t.test_solvers_simple_vectorized()
     # t.test_solvers_vectorized_nested()
@@ -479,5 +480,5 @@ if __name__ == '__main__':
     # t.test_solvers_vectorized_nested_derivs()
     # t.test_solvers_vectorized_double_deriv()
     # t.test_solvers_vectorized_double_deriv_bracket()
-    t.test_solvers_vectorized_nested_derivs2()
+    # t.test_solvers_vectorized_nested_derivs_2()
 

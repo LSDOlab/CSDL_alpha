@@ -108,7 +108,6 @@ class FixedPoint(NonlinearSolver):
             residuals.append(jnp.ones(state.shape))
             if not isinstance(self.state_metadata[state]['initial_value'], Variable):
                 value = ingest_value(self.state_metadata[state]['initial_value'])
-                print(value.shape)
                 states.append(jnp.array(value))
             else:
                 states.append(input_var_dict[self.state_metadata[state]['initial_value']])

@@ -127,6 +127,11 @@ def create_jax_interface(
     # enabling x64 etc
     jax.config.update("jax_enable_x64", True)
 
+    # Option in the future?
+    # cpu = jax.devices('cpu')[0]
+    # gpu = jax.devices('gpu')[0]
+    # device = cpu
+
     jax_function = create_jax_function(graph, outputs, inputs)
     jax_function = jax.jit(jax_function)
 

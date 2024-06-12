@@ -205,6 +205,7 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         self.run_tests(
             compare_values=[
                 csdl_tests.TestingPair(x, np.sum(a_val).flatten()),
+                csdl_tests.TestingPair(b, np.arange(6).reshape(3,2)*0.01+0.2),
                 csdl_tests.TestingPair(da_da0, da_da0.value),
                 csdl_tests.TestingPair(dx_da0, dx_da0.value),
             ],
@@ -446,10 +447,12 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     t = TestFrangeDeriv()
+    t.overwrite_backend = 'jax'
+    # t.overwrite_backend = 'inline'
     # t.test_simple_loop()
     # t.test_simple_second_deriv()
     # t.test_simple_loop2()
-    # t.test_simple_loop_feedback()
+    t.test_simple_loop_feedback()
     # t.test_simple_loop_feedback_indexing()
     # t.test_simple_loop_feedback_indexing2()
     # t.test_nested()

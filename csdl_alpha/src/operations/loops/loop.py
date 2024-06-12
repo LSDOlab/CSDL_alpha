@@ -162,7 +162,8 @@ class Loop(SubgraphOperation):
         feedback_output_indices = [true_outputs.index(loop_var[2]) for loop_var in self.loop_vars] # (TODO: SLOW) index of outputs that correspond to feedback vars
 
         # graph_inputs is every input node on the loop's graph
-        graph_inputs = [input for i, input in enumerate(self.inputs) if i not in feedback_input_indices] # (TODO: SLOW)
+        # graph_inputs = [input for i, input in enumerate(self.inputs) if i not in feedback_input_indices] # (TODO: SLOW)
+        graph_inputs = [input for input in self.inputs if input in self.graph.node_table.keys()] # (TODO: SLOW)
         graph_inputs += feedback_graph_inputs
         
         # input to function is [non-feedback inputs] + [feedback_graph_inputs] + [iteration variables]
@@ -175,7 +176,8 @@ class Loop(SubgraphOperation):
             # x: [loop_var1, loop_var2, ...]
 
             # fn_inputs is [non-feedback inputs] + [feedback_graph_inputs] + [iteration variables]
-            fn_inputs = [input for i, input in enumerate(inputs) if i not in feedback_input_indices]
+            # fn_inputs = [input for i, input in enumerate(inputs) if i not in feedback_input_indices]
+            fn_inputs = [input for input,input_var in zip(inputs, self.inputs) if input_var in self.graph.node_table.keys()]
             fn_inputs += [carry[i] for i in feedback_output_indices]
             fn_inputs += [x[i] for i in range(len(self.iter_vars))]
 
@@ -191,7 +193,11 @@ class Loop(SubgraphOperation):
         iter_var_list = []
         for i in range(self.length):
             iter_var_list.append([iter_var.vals[i] for iter_var in self.iter_vars])
-        iter_var_array = jnp.array(iter_var_list, dtype=jnp.float32)
+        iter_var_array = jnp.array(iter_var_list, dtype=jnp.float64)
+
+        # Would this feature be necessary?
+        # import jax
+        # enabl_64 = jax.config.read('jax_enable_x64')
 
         # build carry input
         carry = [jnp.zeros(output.shape) for output in true_outputs]

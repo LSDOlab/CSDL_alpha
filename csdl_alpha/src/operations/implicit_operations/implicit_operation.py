@@ -22,10 +22,18 @@ class ImplicitOperation(SubgraphOperation):
         from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
         # outputs have the states, residuals aren't an output
         # need to make states an input to the jax function, and residuals an output
-        states = list(self.nonlinear_solver.state_to_residual_map.keys())
-        residuals = list(self.nonlinear_solver.state_to_residual_map.values())
-        output_state_indices = [i for i, output in enumerate(self.outputs) if output in states]
-        output_state_indices.sort()
+        # states = list(self.nonlinear_solver.state_to_residual_map.keys())
+        # residuals = list(self.nonlinear_solver.state_to_residual_map.values())
+
+        states = []
+        residuals = []
+        for state, residual  in self.nonlinear_solver.state_to_residual_map.items():
+            states.append(state)
+            residuals.append(residual)
+
+        output_state_indices = [self.outputs.index(state) for state in states]
+        sorted_output_state_indices = output_state_indices.copy()
+        sorted_output_state_indices.sort()
         non_state_output_vars = [output for output in self.outputs if output not in states]
         jax_fn_inputs = self.inputs + states
         jax_fn_outputs = non_state_output_vars + residuals
@@ -40,8 +48,9 @@ class ImplicitOperation(SubgraphOperation):
         states = self.nonlinear_solver.solve_implicit_jax(jax_residual_function, self.inputs, *args)
 
         outputs = jax_function(*args, *states)[:len(non_state_output_vars)]
-        for i, ind in enumerate(output_state_indices):
-            outputs.insert(ind, states[i])
+        for ind in sorted_output_state_indices:
+            i = output_state_indices.index(ind)
+            outputs.insert(ind, states[i]) # (TODO: SLOW)
         return tuple(outputs)
     
     def prep_vjp(self):
