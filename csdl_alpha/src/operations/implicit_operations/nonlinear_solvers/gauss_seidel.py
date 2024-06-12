@@ -106,3 +106,30 @@ class GaussSeidel(FixedPoint):
                 current_state.value = current_state_value - current_residual_value
             else:
                 current_state.value = self.state_metadata[current_state]['state_update'].value
+
+    def _jax_update_states(self, jax_residual_function, val, input_var_dict):
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        # while not converged:
+        #    x0_new = x0_state_update(x0_old, x1_old, ... xn_old)
+        #    x1_new = x1_state_update(x0_new, x1_old, ... xn_old)
+        #    ...
+        #    xn_new = xn_state_update(x0_new, x1_new, ... xn_old)
+        states = val[0]
+        residuals = val[1]
+        for i, current_state_var in enumerate(self.state_to_residual_map.keys()):
+            # compute residuals
+            residuals = jax_residual_function(states)
+
+            # get current state value and residual value
+            current_state = states[i]
+            current_residual = residuals[i]
+
+            # update current state value
+            if self.state_metadata[current_state_var]['state_update'] is None:
+                states[i] = current_state - current_residual
+            else:
+                jax_update_fn = create_jax_function(self.residual_graph, 
+                                                    [self.state_metadata[current_state_var]['state_update']], 
+                                                    list(input_var_dict.keys())+list(self.state_to_residual_map.keys()))
+                states[i] = jax_update_fn(*(list(input_var_dict.values())+states))[0]
+        return states

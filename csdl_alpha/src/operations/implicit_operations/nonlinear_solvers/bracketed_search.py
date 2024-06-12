@@ -206,7 +206,11 @@ class BracketedSearch(NonlinearSolver):
 
         def to_array(x):
             if isinstance(x, Variable):
-                return inputs[input_vars.index(x)]
+                try:
+                    return inputs[input_vars.index(x)]
+                except ValueError:
+                    # NOTE: If it's not in the input_vars, it must have a constant value (I think at least)
+                    return x.value
             elif isinstance(x, (np.ndarray, jnp.ndarray)):
                 return x
             elif isinstance(x, (float, int)):

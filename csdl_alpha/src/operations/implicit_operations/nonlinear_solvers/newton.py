@@ -101,3 +101,40 @@ class Newton(FixedPoint):
             il = self.state_metadata[current_state]['index_lower']
             iu = self.state_metadata[current_state]['index_upper']
             current_state.value = current_state.value - solved_system[il:iu].reshape(current_state.shape)
+
+    def _jax_update_states(self, jax_residual_function, val, input_var_dict):
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        import jax.numpy as jnp
+        # get residuals
+        residual_vector = jnp.zeros((self.total_state_size,))
+        states = val[0]
+        residuals = val[1]
+        for i, current_state_var in enumerate(self.state_to_residual_map.keys()):
+            # get current state value and residual value
+            current_state = states[i]
+            current_residual = residuals[i]
+
+
+            il = self.state_metadata[current_state_var]['index_lower']
+            iu = self.state_metadata[current_state_var]['index_upper']
+            residual_vector = residual_vector.at[il:iu].set(current_residual.flatten())
+
+        # get residual jacobian
+        residual_jacobian_var = self.full_residual_jacobian
+        jax_jacobian_function = create_jax_function(self.residual_graph, 
+                                                    [residual_jacobian_var], 
+                                                    list(input_var_dict.keys())+list(self.state_to_residual_map.keys()))
+        residual_jacobian = jax_jacobian_function(*(list(input_var_dict.values())+states))[0]
+        
+        
+        # Solve residual Jacobian system
+        solved_system = jnp.linalg.solve(residual_jacobian, residual_vector)
+
+        # update states
+        output_states = []
+        for i, current_state_var in enumerate(self.state_to_residual_map.keys()):
+            il = self.state_metadata[current_state_var]['index_lower']
+            iu = self.state_metadata[current_state_var]['index_upper']
+            current_state = states[i]
+            output_states.append(current_state - solved_system[il:iu].reshape(current_state.shape))
+        return output_states

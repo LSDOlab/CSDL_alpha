@@ -457,6 +457,21 @@ class NonlinearSolver(object):
                 converged = False
                 break
         return converged
+    
+    def _jax_check_converged(self, residuals, iter, input_dict):
+        import jax.numpy as jnp
+        converged = jnp.less_equal(0, 1)
+        for i, state in enumerate(self.state_to_residual_map.keys()):
+            residual = residuals[i]
+            tol = self.state_metadata[state]['tolerance']
+            if isinstance(tol, Variable):
+                tol = input_dict[tol]
+            
+            converged = converged & jnp.all(jnp.less_equal(jnp.abs(residual), tol))
+
+        converged = converged | jnp.greater_equal(iter, self.metadata['max_iter'])
+        
+        return converged
 
     def solve_implicit_inline(self, *args):
         """

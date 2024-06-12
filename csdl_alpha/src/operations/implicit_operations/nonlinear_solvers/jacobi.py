@@ -54,3 +54,30 @@ class Jacobi(GaussSeidel):
                 current_state.value = current_state_value - current_residual_value
             else:
                 current_state.value = self.state_metadata[current_state]['state_update'].value
+
+    def _jax_update_states(self, jax_residual_function, val, input_var_dict):
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        # while not converged:
+        #    x0_new = x0_state_update(x0_old, x1_old, ... xn_old)
+        #    x1_new = x1_state_update(x0_old, x1_old, ... xn_old)
+        #    ...
+        #    xn_new = xn_state_update(x0_old, x1_old, ... xn_old)
+        
+        # compute residuals once before hand
+        states = val[0]
+        residual = val[1]
+        new_states = []
+        for i, current_state_var in enumerate(self.state_to_residual_map.keys()):
+            current_state = states[i]
+            current_residual = residual[i]
+
+            # update current state value
+            if self.state_metadata[current_state_var]['state_update'] is None:
+                new_states.append(current_state - current_residual)
+            else:
+                # NOTE: computed with the old states
+                jax_update_fn = create_jax_function(self.residual_graph, 
+                                                    [self.state_metadata[current_state]['state_update']], 
+                                                    list(input_var_dict.keys())+list(self.state_to_residual_map.keys()))
+                new_states.append(jax_update_fn(*(list(input_var_dict.values())+states))[0])
+        return new_states
