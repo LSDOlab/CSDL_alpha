@@ -35,7 +35,10 @@ def update_jax_variables(node, jax_outputs, all_jax_variables:dict):
         raise ValueError(f"Jax function error with node {node}: Expected {len(node.outputs)} outputs, but got {len(jax_outputs)}")
 
     for i, output in enumerate(node.outputs):
-        all_jax_variables[output] = (jax_outputs[i]).reshape(output.shape)
+        try:
+            all_jax_variables[output] = (jax_outputs[i]).reshape(output.shape)
+        except:
+            raise ValueError(f"Error updating JAX variables for node {node.name}. Output shape: {output.shape}, JAX output shape: {jax_outputs[i].shape}")
 
 def create_jax_function(
         graph:Graph,
@@ -79,7 +82,7 @@ def create_jax_function(
         for node in sorted_nodes:
             jax_inputs = get_jax_inputs(node, all_jax_variables)
             jax_outputs = node.compute_jax(*jax_inputs) # EVERY CSDL OPERATIONS NEEDS THIS FUNCTION
-            if not isinstance(jax_outputs, tuple):
+            if not type(jax_outputs) is tuple:
                 jax_outputs = (jax_outputs,)
             update_jax_variables(node, jax_outputs, all_jax_variables)
 

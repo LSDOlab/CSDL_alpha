@@ -40,6 +40,12 @@ class FixedPoint(NonlinearSolver):
         Not implemented
         """
         raise NotImplementedError("_inline_update_states method not implemented for this solver")
+    
+    def _jax_update_states(self, jax_residual_function, val, input_var_dict):
+        """
+        Not implemented
+        """
+        raise NotImplementedError("_jax_update_states method not implemented for this solver")
 
     def _inline_solve_(self):
         """
@@ -69,3 +75,49 @@ class FixedPoint(NonlinearSolver):
         # print status
         if self.print_status:
             print(self._inline_print_nl_status(iter, converged))
+
+    def _jax_solve_(self, jax_residual_function, input_vars, *inputs):
+        """
+        Solves the implicit operation graph using Nonlinear Gauss-Seidel
+        """
+        import jax.numpy as jnp
+        import jax.lax as lax
+        input_var_dict = {input_var:input for input_var, input in zip(input_vars, inputs)}
+
+        def loop_body(val): # (states, residuals, iter)
+            # update all states
+            states = self._jax_update_states(jax_residual_function, val, input_var_dict)
+            
+            # compute residuals
+            residuals = jax_residual_function(states)
+
+            # update iter number
+            iter = val[2] + 1
+            
+            return (states, residuals, iter)
+        
+        def loop_condition(val):
+            residuals = val[1]
+            iter = val[2]
+            return ~self._jax_check_converged(residuals, iter, input_var_dict)
+        
+        # set initial values
+        states = []
+        residuals = []
+        for state in self.state_to_residual_map.keys():
+            residuals.append(jnp.ones(state.shape))
+            if not isinstance(self.state_metadata[state]['initial_value'], Variable):
+                value = ingest_value(self.state_metadata[state]['initial_value'])
+                print(value.shape)
+                states.append(jnp.array(value))
+            else:
+                states.append(input_var_dict[self.state_metadata[state]['initial_value']])
+        val = (states, residuals, 0)
+
+        # loop
+        states, residuals, iter = lax.while_loop(loop_condition, loop_body, val)
+        return states
+
+
+        
+        
