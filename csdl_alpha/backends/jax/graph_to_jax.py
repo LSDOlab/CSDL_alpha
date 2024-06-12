@@ -17,9 +17,23 @@ def get_jax_inputs(node, all_jax_variables:dict)->list:
             jax_inputs.append(jnp.array(input.value))
         else:
             jax_inputs.append(all_jax_variables[input])
+    
+    for i, input in enumerate(jax_inputs):
+        if not isinstance(input, jnp.ndarray):
+            raise ValueError(f"Jax function error with node {node}: Expected input to be a jnp.ndarray, but got {type(input)}")
+
     return jax_inputs
 
 def update_jax_variables(node, jax_outputs, all_jax_variables:dict):
+    import jax.numpy as jnp
+    if not isinstance(jax_outputs, tuple):
+        raise ValueError(f"Jax function error with node {node}: Expected output to be a tuple, but got {type(jax_outputs)}")
+    for i, output in enumerate(jax_outputs):
+        if not isinstance(output, jnp.ndarray):
+            raise ValueError(f"Jax function error with node {node}: Expected output to be a jnp.ndarray, but got {type(output)}")
+    if len(node.outputs) != len(jax_outputs):
+        raise ValueError(f"Jax function error with node {node}: Expected {len(node.outputs)} outputs, but got {len(jax_outputs)}")
+
     for i, output in enumerate(node.outputs):
         all_jax_variables[output] = (jax_outputs[i]).reshape(output.shape)
 
@@ -44,6 +58,7 @@ def create_jax_function(
         A JAX function that takes in the inputs and returns the outputs
     """
     current_graph = graph
+    import jax.numpy as jnp
     
     # Get the graph
 
@@ -71,7 +86,7 @@ def create_jax_function(
         # Return the outputs
         for output in outputs:
             if output not in all_jax_variables:
-                all_jax_variables[output] = output.value
+                all_jax_variables[output] = jnp.array(output.value)
         return [all_jax_variables[output] for output in outputs]
     
     return jax_function
