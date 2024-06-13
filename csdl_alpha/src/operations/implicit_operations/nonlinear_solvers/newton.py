@@ -111,7 +111,8 @@ class Newton(FixedPoint):
         residual_vector = jnp.zeros((self.total_state_size,))
         states = val[0]
         residuals = val[1]
-        for i, current_state_var in enumerate(self.state_to_residual_map.keys()):
+        graph_input_dict = {key: value for key, value in input_var_dict.items() if key in self.residual_graph.node_table}
+        for i, current_state_var in enumerate(self.state_to_residual_map):
             # get current state value and residual value
             current_state = states[i]
             current_residual = residuals[i]
@@ -124,8 +125,8 @@ class Newton(FixedPoint):
         residual_jacobian_var = self.full_residual_jacobian
         jax_jacobian_function = create_jax_function(self.residual_graph, 
                                                     [residual_jacobian_var], 
-                                                    list(input_var_dict.keys())+list(self.state_to_residual_map.keys()))
-        residual_jacobian = jax_jacobian_function(*(list(input_var_dict.values())+states))[0]
+                                                    [input for input in graph_input_dict]+list(self.state_to_residual_map))
+        residual_jacobian = jax_jacobian_function(*([val for val in graph_input_dict.values()]+states))[0]
         
         # Solve residual Jacobian system
         solved_system = jnp.linalg.solve(residual_jacobian, residual_vector)

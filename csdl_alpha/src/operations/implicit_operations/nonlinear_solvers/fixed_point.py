@@ -53,15 +53,14 @@ class FixedPoint(NonlinearSolver):
         """
 
         iter = 0
-
         self._inline_set_initial_values()
-
+        
         while True:
-            # update all states
-            self._inline_update_states()
-            
             # update residuals to check
             self.update_residual()
+
+            if iter >= self.metadata['max_iter']:
+                break
 
             # check convergence
             converged = self._inline_check_converged()
@@ -69,9 +68,12 @@ class FixedPoint(NonlinearSolver):
             # if solved or maxiter, end loop
             if converged:
                 break
+            
+            # update all states
+            self._inline_update_states()
+
             iter += 1
-            if iter >= self.metadata['max_iter']:
-                break
+            
         # print status
         if self.print_status:
             print(self._inline_print_nl_status(iter, converged))

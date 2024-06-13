@@ -37,15 +37,17 @@ class ImplicitOperation(SubgraphOperation):
         state_vars = list(self.nonlinear_solver.state_to_residual_map.keys())
         residuals = list(self.nonlinear_solver.state_to_residual_map.values())
         non_state_output_vars = [output for output in self.outputs if output not in state_vars]
+        graph_inputs = [input for input in self.inputs if input in self._subgraph.node_table]
+        graph_args = [arg for arg, input in zip(args, self.inputs) if input in self._subgraph.node_table]
 
-        jax_fn_inputs = self.inputs + state_vars
+        jax_fn_inputs = graph_inputs + state_vars
         jax_fn_outputs = non_state_output_vars + residuals
 
         # (1)
         jax_function = create_jax_function(self._subgraph, jax_fn_outputs, jax_fn_inputs)
         def jax_residual_function(states):
             """Computes residuals given states, ordered as in state_to_residual_map"""
-            return jax_function(*args, *states)[len(non_state_output_vars):]
+            return jax_function(*graph_args, *states)[len(non_state_output_vars):]
 
         # (2)
         input_dict = {input: arg for input, arg in zip(self.inputs, args)}
@@ -53,7 +55,7 @@ class ImplicitOperation(SubgraphOperation):
         state_dict = {state: states[i] for i, state in enumerate(state_vars)}
 
         # (3)
-        outputs = jax_function(*args, *states)[:len(non_state_output_vars)]
+        outputs = jax_function(*graph_args, *states)[:len(non_state_output_vars)]
         output_list = []
         ind = 0
         for output in self.outputs:
