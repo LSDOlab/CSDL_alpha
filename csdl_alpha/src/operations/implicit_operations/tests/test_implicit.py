@@ -433,6 +433,7 @@ class TestImplicit(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     t = TestImplicit()
+    t.overwrite_backend = 'jax'
     t.test_arg_errors()
     t.test_insufficient_res_state_dependence_1()
     t.test_insufficient_res_state_dependence_2()

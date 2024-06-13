@@ -116,7 +116,6 @@ class Newton(FixedPoint):
             current_state = states[i]
             current_residual = residuals[i]
 
-
             il = self.state_metadata[current_state_var]['index_lower']
             iu = self.state_metadata[current_state_var]['index_upper']
             residual_vector = residual_vector.at[il:iu].set(current_residual.flatten())
@@ -127,7 +126,6 @@ class Newton(FixedPoint):
                                                     [residual_jacobian_var], 
                                                     list(input_var_dict.keys())+list(self.state_to_residual_map.keys()))
         residual_jacobian = jax_jacobian_function(*(list(input_var_dict.values())+states))[0]
-        
         
         # Solve residual Jacobian system
         solved_system = jnp.linalg.solve(residual_jacobian, residual_vector)

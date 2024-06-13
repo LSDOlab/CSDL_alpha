@@ -178,7 +178,7 @@ class BracketedSearch(NonlinearSolver):
         if self.print_status:
             print(self._inline_print_nl_status(iter, converged))
         
-    def _jax_solve_(self, jax_residual_function, input_vars, *inputs):
+    def _jax_solve_(self, jax_residual_function, input_dict):
         # I'm going to assemble everything into a big vector, solve it, and then unpack it
 
         # First, I need to know the size of the vector, and the indices of each state
@@ -207,8 +207,8 @@ class BracketedSearch(NonlinearSolver):
         def to_array(x):
             if isinstance(x, Variable):
                 try:
-                    return inputs[input_vars.index(x)]
-                except ValueError:
+                    return input_dict[x]
+                except KeyError:
                     # NOTE: If it's not in the input_vars, it must have a constant value (I think at least)
                     return x.value
             elif isinstance(x, (np.ndarray, jnp.ndarray)):

@@ -1,8 +1,6 @@
-import csdl_alpha as csdl
-from csdl_alpha.src.graph.graph import Graph
-from csdl_alpha.src.recorder import Recorder
-from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import listify_variables
+from ...src.graph.graph import Graph
+from ...src.graph.variable import Variable
+from ...utils.inputs import listify_variables
 
 import numpy as np
 from typing import Union
@@ -14,6 +12,8 @@ def get_jax_inputs(node, all_jax_variables:dict)->list:
     jax_inputs = []
     for input in node.inputs:
         if input not in all_jax_variables:
+            if input.value is None:
+                raise ValueError(f"Jax function error with node {node}: Input {input} has no value")
             jax_inputs.append(jnp.array(input.value))
         else:
             jax_inputs.append(all_jax_variables[input])
@@ -42,8 +42,8 @@ def update_jax_variables(node, jax_outputs, all_jax_variables:dict):
 
 def create_jax_function(
         graph:Graph,
-        outputs:list[csdl.Variable],
-        inputs:list[csdl.Variable],
+        outputs:list[Variable],
+        inputs:list[Variable],
         )->callable:
     """Builds a JAX callable function from a CSDL graph.
 
@@ -69,7 +69,7 @@ def create_jax_function(
     import rustworkx as rx
     all_sorted_node_indices = rx.topological_sort(current_graph.rxgraph)
     all_sorted_nodes = [current_graph.rxgraph[i] for i in all_sorted_node_indices]
-    sorted_nodes:list = [node for node in all_sorted_nodes if not isinstance(node, csdl.Variable)]
+    sorted_nodes:list = [node for node in all_sorted_nodes if not isinstance(node, Variable)]
     
     # Build the JAX function itself
     def jax_function(*args)->list:
@@ -97,7 +97,7 @@ def create_jax_function(
 def create_jax_interface(
         inputs:Union[Variable, list[Variable], tuple[Variable]],
         outputs:Union[Variable, list[Variable], tuple[Variable]],
-        graph:Graph = None)->callable:
+        graph:Graph = None, device:str='gpu')->callable:
     """_summary_
 
     Parameters
@@ -115,6 +115,16 @@ def create_jax_interface(
         A function with type signature: jax_interface(dict[Variable, np.array])->dict[Variable, np.array], where the input and output variables must match the inputs and outputs respectively.
     """
     import jax
+    import csdl_alpha as csdl
+
+    # import os
+    # os.environ['XLA_FLAGS'] = (
+    #     '--xla_gpu_triton_gemm_any=True '
+    #     '--xla_gpu_enable_async_collectives=true '
+    #     '--xla_gpu_enable_latency_hiding_scheduler=true '
+    #     '--xla_gpu_enable_highest_priority_async_stream=true '
+    # )
+
 
     # preprocessing:
     inputs = listify_variables(inputs)
@@ -128,12 +138,15 @@ def create_jax_interface(
     jax.config.update("jax_enable_x64", True)
 
     # Option in the future?
-    # cpu = jax.devices('cpu')[0]
-    # gpu = jax.devices('gpu')[0]
-    # device = cpu
+    if device == 'gpu':
+        device = jax.devices('gpu')[0]
+    elif device == 'cpu':
+        device = jax.devices('cpu')[0]
+    else:
+        raise ValueError(f"Invalid device {device}")
 
     jax_function = create_jax_function(graph, outputs, inputs)
-    jax_function = jax.jit(jax_function)
+    jax_function = jax.jit(jax_function, device=device)
 
     # Create the JAX interface
     def jax_interface(inputs_dict:dict[Variable, np.array])->dict[Variable, np.array]:

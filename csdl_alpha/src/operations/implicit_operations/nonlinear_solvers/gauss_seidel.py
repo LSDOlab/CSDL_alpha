@@ -117,18 +117,11 @@ class GaussSeidel(FixedPoint):
         #    ...
         #    xn_new = xn_state_update(x0_new, x1_new, ... xn_old)
         states = val[0]
-        residuals = val[1]
         for i, current_state_var in enumerate(self.state_to_residual_map.keys()):
-            # compute residuals
-            residuals = jax_residual_function(states)
-
-            # get current state value and residual value
-            current_state = states[i]
-            current_residual = residuals[i]
-
-            # update current state value
             if self.state_metadata[current_state_var]['state_update'] is None:
-                states[i] = current_state - current_residual
+                residual_var = self.state_to_residual_map[current_state_var]
+                jax_residual_fn = create_jax_function(self.residual_graph, [residual_var], list(input_var_dict.keys())+list(self.state_to_residual_map.keys()))
+                states[i] = states[i] - jax_residual_fn(*(list(input_var_dict.values())+states))[0]
             else:
                 jax_update_fn = create_jax_function(self.residual_graph, 
                                                     [self.state_metadata[current_state_var]['state_update']], 
