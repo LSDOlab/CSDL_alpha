@@ -109,6 +109,9 @@ def _vjp(seeds:list[tuple[Variable, Variable]],
             try:
                 node.evaluate_vjp(cotangents, *node.inputs, *node.outputs)
             except Exception as e:
+                recorder = csdl.get_current_recorder()
+                if recorder.debug is True:
+                    node.print_trace()
                 raise ValueError(f"Error with VJP in operation {node.name}: {e}")
 
 

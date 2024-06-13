@@ -77,7 +77,7 @@ class Jacobi(GaussSeidel):
             else:
                 # NOTE: computed with the old states
                 jax_update_fn = create_jax_function(self.residual_graph, 
-                                                    [self.state_metadata[current_state]['state_update']], 
+                                                    [self.state_metadata[current_state_var]['state_update']], 
                                                     list(input_var_dict.keys())+list(self.state_to_residual_map.keys()))
                 new_states.append(jax_update_fn(*(list(input_var_dict.values())+states))[0])
         return new_states

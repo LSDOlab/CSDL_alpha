@@ -44,6 +44,12 @@ class TestErrors(csdl_tests.CSDLTest):
             y = x*1.0
             solver.add_state(x, y, initial_value=np.ones((2,)))
             solver.run()
+        with pytest.raises(ValueError):
+            solver = csdl.nonlinear_solvers.Newton()
+            x = csdl.ImplicitVariable((3,), value=0.34)
+            y = x*1.0
+            solver.add_state(x, y, initial_value=np.ones((2,)))
+            solver.run()
 
     def test_bracket(self):
         self.prep()
@@ -134,3 +140,6 @@ class TestErrors(csdl_tests.CSDLTest):
         with pytest.raises(TypeError):
             solver = csdl.nonlinear_solvers.GaussSeidel(residual_jac_kwargs='s')
 
+if __name__ == '__main__':
+    t = TestErrors()
+    t.test_gauss_seidel()

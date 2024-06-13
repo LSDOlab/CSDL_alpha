@@ -7,7 +7,7 @@ from csdl_alpha.src.operations.custom.tests.test_custom import Paraboloid
  
 class TestCustom(csdl_tests.CSDLTest):
     def test_simple_deriv(self):
-        self.prep()
+        self.prep(always_build_inline = True)
  
         import numpy as np
  
@@ -63,7 +63,7 @@ class TestCustom(csdl_tests.CSDLTest):
         )
 
     def test_derivs(self):
-        self.prep()
+        self.prep(always_build_inline = True)
  
         import numpy as np
  

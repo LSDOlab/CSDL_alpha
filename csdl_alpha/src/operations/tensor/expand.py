@@ -182,7 +182,8 @@ def expand(x, out_shape, action=None):
     else:
         if action is not None:
             warnings.warn('"action" will have no effect when expanding a scalar.')
-
+        
+        x = x.flatten()
         op = ScalarExpand(x, out_shape)
     
     return op.finalize_and_return_outputs()

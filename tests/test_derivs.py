@@ -33,7 +33,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         """
         Test second derivatives with composed operations etc
         """
-        self.prep()
+        self.prep(always_build_inline = True)
 
         # test basics
         x0 = csdl.Variable(value=np.arange(6).reshape(3,2)+1.0)
@@ -66,7 +66,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         """
         Test more sequences with different operations
         """
-        self.prep()
+        self.prep(always_build_inline = True)
 
         x0 = csdl.Variable(value=np.arange(6).reshape(3,2)+1.0)
         x1 = csdl.Variable(value=2.0)
@@ -88,7 +88,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         """
         Test single derivatives with composed operations
         """
-        self.prep()
+        self.prep(always_build_inline = True)
 
         x0 = csdl.Variable(name = 'x0', value=1.0)
         x1 = csdl.Variable(name = 'x1', value=2.0)
@@ -113,7 +113,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         """
         Test single derivatives with composed operations
         """
-        self.prep()
+        self.prep(always_build_inline = True)
 
         x0 = csdl.Variable(name = 'x0', value=np.array([1.0, 2.0]))
         x1 = csdl.Variable(name = 'x1', value=np.array([3.0, -2.0]))
@@ -138,7 +138,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         """
         Test single derivatives with composed operations
         """
-        self.prep(inline=False)
+        self.prep(always_build_inline = True)
 
         x0 = csdl.Variable(name = 'x0', value=np.array([1.0, 2.0]))
         x1 = csdl.Variable(name = 'x1', value=np.array([3.0, -2.0]))
@@ -176,7 +176,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         # exit()
 
         compare_values = []
-        # compare_values += [csdl_tests.TestingPair(dy_dx2, dy_dx2.value)]
+        compare_values += [csdl_tests.TestingPair(dy_dx2, dy_dx2.value)]
         # compare_values += [csdl_tests.TestingPair(dy_dx1, dy_dx1.value)]
         self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
@@ -184,7 +184,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         """
         Test zero second derivatives
         """
-        self.prep(inline=True)
+        self.prep(always_build_inline = True)
 
         x1 = csdl.Variable(name = 'x1', value=np.array([3.0, -2.0]))
 
@@ -208,7 +208,7 @@ class TestDeriv(csdl_tests.CSDLTest):
         """
         Test single derivatives with composed operations
         """
-        self.prep(inline=True)
+        self.prep(always_build_inline = True)
         recorder = csdl.get_current_recorder()
 
         x1 = csdl.Variable(name = 'x1', value=np.array([3.0, -2.0]))

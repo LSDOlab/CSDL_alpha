@@ -41,27 +41,20 @@ class FixedPoint(NonlinearSolver):
         """
         raise NotImplementedError("_inline_update_states method not implemented for this solver")
     
-    def _jax_update_states(self, jax_residual_function, val, input_var_dict):
-        """
-        Not implemented
-        """
-        raise NotImplementedError("_jax_update_states method not implemented for this solver")
-
     def _inline_solve_(self):
         """
         Solves the implicit operation graph using Nonlinear Gauss-Seidel
         """
 
         iter = 0
-
         self._inline_set_initial_values()
-
+        
         while True:
-            # update all states
-            self._inline_update_states()
-            
             # update residuals to check
             self.update_residual()
+
+            if iter >= self.metadata['max_iter']:
+                break
 
             # check convergence
             converged = self._inline_check_converged()
@@ -69,9 +62,12 @@ class FixedPoint(NonlinearSolver):
             # if solved or maxiter, end loop
             if converged:
                 break
+            
+            # update all states
+            self._inline_update_states()
+
             iter += 1
-            if iter >= self.metadata['max_iter']:
-                break
+            
         # print status
         if self.print_status:
             print(self._inline_print_nl_status(iter, converged))
@@ -116,7 +112,7 @@ class FixedPoint(NonlinearSolver):
                 states.append(jnp.array(value))
             else:
                 states.append(input_var_dict[self.state_metadata[state]['initial_value']])
-        val = (states, residuals, 0)
+        val = (states, jax_residual_function(states), 0)
 
         # loop
         states, residuals, iter = lax.while_loop(loop_condition, loop_body, val)

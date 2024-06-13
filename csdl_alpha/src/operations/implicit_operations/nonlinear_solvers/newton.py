@@ -67,6 +67,8 @@ class Newton(FixedPoint):
                     initial_value = ingest_value(initial_value)
                     if initial_value.size == 1:
                         initial_value = initial_value.flatten()*np.ones(state.shape)
+                    elif initial_value.shape != state.shape:
+                        raise ValueError(f"Initial value shape {initial_value.shape} does not match state shape {state.shape}")
                 except Exception as e:
                     raise ValueError(f"Error with initial value. {e}")
             self.add_state_metadata(state, 'initial_value', initial_value)

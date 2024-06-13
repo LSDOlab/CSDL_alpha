@@ -422,7 +422,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
 
     def test_solvers_vectorized_double_deriv_bracket(self):
         cases = []
-        self.prep()
+        self.prep(always_build_inline = True)
 
         # Bracketed search tests:
         # WARNING: In general, bracketed search does NOT work for coupled systems

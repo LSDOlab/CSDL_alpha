@@ -148,7 +148,7 @@ class CustomImpVec(csdl.experimental.CustomImplicitOperation):
 
 class TestCustomImplicit(csdl_tests.CSDLTest):
     def test_custom_implicit(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         a = csdl.Variable(value=np.ones((2,2)), name='a')
         b = csdl.Variable(value=10., name='b')
         c = csdl.Variable(value=3, name='c')
@@ -197,7 +197,7 @@ class TestCustomImplicit(csdl_tests.CSDLTest):
         )
 
     def test_custom_implicit_vec(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         a = csdl.Variable(value=np.ones((2,2)), name='a')
         b = csdl.Variable(value=np.array([[10],[11]]), name='b')
         c = csdl.Variable(value=np.array([[3],[2]]), name='c')

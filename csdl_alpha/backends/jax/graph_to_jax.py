@@ -14,6 +14,11 @@ def get_jax_inputs(node, all_jax_variables:dict)->list:
     jax_inputs = []
     for input in node.inputs:
         if input not in all_jax_variables:
+            if input.value.dtype != np.float64:
+                raise ValueError(f"Jax function error with node {node}: Expected input to be a float64, but got {input.value.dtype}")
+            if isinstance(input.value, np.matrix):
+                raise ValueError(f"Jax function error with node {node}: Expected input to be a float64, but got {input.value.dtype}")
+
             jax_inputs.append(jnp.array(input.value))
         else:
             jax_inputs.append(all_jax_variables[input])
@@ -67,6 +72,12 @@ def create_jax_function(
 
     # Figure out the order to execute the graph
     import rustworkx as rx
+    for output in outputs:
+        if output not in current_graph.node_table:
+            raise ValueError(f"Output {output} not in the graph")
+    for input in inputs:
+        if input not in current_graph.node_table:
+            raise ValueError(f"Input {input} not in the graph")
     all_sorted_node_indices = rx.topological_sort(current_graph.rxgraph)
     all_sorted_nodes = [current_graph.rxgraph[i] for i in all_sorted_node_indices]
     sorted_nodes:list = [node for node in all_sorted_nodes if not isinstance(node, csdl.Variable)]
@@ -128,12 +139,13 @@ def create_jax_interface(
     jax.config.update("jax_enable_x64", True)
 
     # Option in the future?
-    # cpu = jax.devices('cpu')[0]
-    # gpu = jax.devices('gpu')[0]
-    # device = cpu
+    cpu = jax.devices('cpu')[0]
+    gpu = jax.devices('gpu')[0]
+    device = cpu
+    device = None
 
     jax_function = create_jax_function(graph, outputs, inputs)
-    jax_function = jax.jit(jax_function)
+    jax_function = jax.jit(jax_function, device = device)
 
     # Create the JAX interface
     def jax_interface(inputs_dict:dict[Variable, np.array])->dict[Variable, np.array]:

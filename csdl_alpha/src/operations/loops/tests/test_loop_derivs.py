@@ -3,7 +3,7 @@ import pytest
 
 class TestFrangeDeriv(csdl_tests.CSDLTest):
     def test_simple_loop(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -59,7 +59,7 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         )
 
     def test_simple_second_deriv(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         import numpy as np
 
@@ -116,7 +116,7 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         )
 
     def test_simple_loop2(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -213,7 +213,7 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         )
 
     def test_simple_loop_feedback_indexing(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -254,7 +254,7 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         )
 
     def test_simple_loop_feedback_indexing2(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np

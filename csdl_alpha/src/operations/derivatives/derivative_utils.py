@@ -64,6 +64,9 @@ def verify_derivatives(
 
     if backend == 'inline':
         graph.execute_inline()
+        for of_ind, of in enumerate(ofs):
+            for wrt_ind, wrt in enumerate(wrts):
+                analytical_derivative_values[(of, wrt)]['value'] = deriv[of, wrt].value
     else:
         from csdl_alpha.backends.jax.graph_to_jax import create_jax_interface
         deriv_evaluation = create_jax_interface(wrts, [deriv[key] for key in deriv])
