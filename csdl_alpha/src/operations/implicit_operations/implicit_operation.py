@@ -6,8 +6,9 @@ class ImplicitOperation(SubgraphOperation):
 
     def __init__(self, *args, name = 'nl_op', **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        from .nonlinear_solvers.nonlinear_solver import NonlinearSolver
         self.name = name
-        self.nonlinear_solver = self.metadata['nonlinear_solver']
+        self.nonlinear_solver:NonlinearSolver = self.metadata['nonlinear_solver']
 
     def compute_inline(self, *args):
 
@@ -17,41 +18,54 @@ class ImplicitOperation(SubgraphOperation):
         return [output.value for output in self.outputs]
     
     def compute_jax(self, *args):
-        # want to give the nonlinear solver a function that computes the residuals
+        """Computes the outputs of the operation using JAX
 
-        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        Returns
+        -------
+        tuple
+            Outputs of the operation
+        """
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function, create_jax_interface
+
+        # 1) Construct a JAX function that computes the residuals given the states
+        # 2) Hand the JAX function and inputs to the nonlinear solver to solve for the states
+        # 3) Compute the outputs using the solved states
+
         # outputs have the states, residuals aren't an output
         # need to make states an input to the jax function, and residuals an output
-        # states = list(self.nonlinear_solver.state_to_residual_map.keys())
-        # residuals = list(self.nonlinear_solver.state_to_residual_map.values())
 
-        states = []
-        residuals = []
-        for state, residual  in self.nonlinear_solver.state_to_residual_map.items():
-            states.append(state)
-            residuals.append(residual)
+        state_vars = list(self.nonlinear_solver.state_to_residual_map.keys())
+        residuals = list(self.nonlinear_solver.state_to_residual_map.values())
+        non_state_output_vars = [output for output in self.outputs if output not in state_vars]
+        graph_inputs = [input for input in self.inputs if input in self._subgraph.node_table]
+        graph_args = [arg for arg, input in zip(args, self.inputs) if input in self._subgraph.node_table]
 
-        output_state_indices = [self.outputs.index(state) for state in states]
-        sorted_output_state_indices = output_state_indices.copy()
-        sorted_output_state_indices.sort()
-        non_state_output_vars = [output for output in self.outputs if output not in states]
-        jax_fn_inputs = self.inputs + states
+        jax_fn_inputs = graph_inputs + state_vars
         jax_fn_outputs = non_state_output_vars + residuals
 
-        # jax function will return the outputs and residuals given inputs and states.
-        # TODO: maybe have this made by implicit_operation and passed in (or from nonlinear_solver)
+        # (1)
         jax_function = create_jax_function(self._subgraph, jax_fn_outputs, jax_fn_inputs)
         def jax_residual_function(states):
-            """Computes residuals given states"""
-            return jax_function(*args, *states)[len(non_state_output_vars):]
+            """Computes residuals given states, ordered as in state_to_residual_map"""
+            return jax_function(*graph_args, *states)[len(non_state_output_vars):]
 
-        states = self.nonlinear_solver.solve_implicit_jax(jax_residual_function, self.inputs, *args)
+        # (2)
+        input_dict = {input: arg for input, arg in zip(self.inputs, args)}
+        states = self.nonlinear_solver.solve_implicit_jax(jax_residual_function, input_dict)
+        state_dict = {state: states[i] for i, state in enumerate(state_vars)}
 
-        outputs = jax_function(*args, *states)[:len(non_state_output_vars)]
-        for ind in sorted_output_state_indices:
-            i = output_state_indices.index(ind)
-            outputs.insert(ind, states[i]) # (TODO: SLOW)
-        return tuple(outputs)
+        # (3)
+        outputs = jax_function(*graph_args, *states)[:len(non_state_output_vars)]
+        output_list = []
+        ind = 0
+        for output in self.outputs:
+            try:
+                output_list.append(state_dict[output])
+            except:
+                output_list.append(outputs[ind])
+                ind += 1
+
+        return tuple(output_list)
     
     def prep_vjp(self):
         """

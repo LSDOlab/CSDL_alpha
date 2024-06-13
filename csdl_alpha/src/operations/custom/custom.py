@@ -87,9 +87,8 @@ class CustomExplicitOperation(CustomOperation):
             new_inline_func,
             [jax.ShapeDtypeStruct(self.output_dict[output_var].shape, np.float64) for output_var in self.output_dict],
             *args)
-        if len(output) == 1:
-            output = output[0]
-        
+        # if len(output) == 1:
+        #     output = output[0]
         return tuple(output)
 
     # def set_inline_values(self):

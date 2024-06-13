@@ -72,13 +72,12 @@ class FixedPoint(NonlinearSolver):
         if self.print_status:
             print(self._inline_print_nl_status(iter, converged))
 
-    def _jax_solve_(self, jax_residual_function, input_vars, *inputs):
+    def _jax_solve_(self, jax_residual_function, input_var_dict):
         """
         Solves the implicit operation graph using Nonlinear Gauss-Seidel
         """
         import jax.numpy as jnp
         import jax.lax as lax
-        input_var_dict = {input_var:input for input_var, input in zip(input_vars, inputs)}
 
         def loop_body(val): # (states, residuals, iter)
             # update all states
@@ -99,9 +98,7 @@ class FixedPoint(NonlinearSolver):
         
         # set initial values
         states = []
-        residuals = []
         for state in self.state_to_residual_map.keys():
-            residuals.append(jnp.ones(state.shape))
             if not isinstance(self.state_metadata[state]['initial_value'], Variable):
                 value = ingest_value(self.state_metadata[state]['initial_value'])
                 if value.shape != state.shape:

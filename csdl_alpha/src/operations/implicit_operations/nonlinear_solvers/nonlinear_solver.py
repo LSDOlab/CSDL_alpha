@@ -381,7 +381,7 @@ class NonlinearSolver(object):
     def _inline_solve_(self):
         raise NotImplementedError("Solve method must be implemented by subclass")
     
-    def _jax_solve_(self, jax_residual_function, input_vars, *inputs):
+    def _jax_solve_(self, jax_residual_function, input_dict):
         """Solves the nonlinear equation using JAX.
 
         This method is responsible for solving the nonlinear equation using the JAX library.
@@ -392,10 +392,8 @@ class NonlinearSolver(object):
         jax_residual_function : function
             The JAX residual function that represents the nonlinear equation. 
             Takes in a list of states and outputs a list of residuals, in order of state_to_residual_map.
-        input_vars : tuple
-            The input csdl variables to the ImplicitOperation.
-        *inputs : tuple
-            The jax variables corresponding to input_vars.
+        input_dict : dict
+            A dictionary mapping CSDL variable inputs to their jax values.
 
         Raises
         ------

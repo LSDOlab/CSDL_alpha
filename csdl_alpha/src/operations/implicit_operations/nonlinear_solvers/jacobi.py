@@ -66,18 +66,19 @@ class Jacobi(GaussSeidel):
         # compute residuals once before hand
         states = val[0]
         residual = val[1]
+        graph_input_dict = {key: value for key, value in input_var_dict.items() if key in self.residual_graph.node_table}
+        update_outputs = [self.state_metadata[state]['state_update'] for state in self.state_to_residual_map if self.state_metadata[state]['state_update'] is not None]
+        jax_update_fn = create_jax_function(self.residual_graph,
+                                            update_outputs,
+                                            [key for key in graph_input_dict]+list(self.state_to_residual_map))
+        j = 0
+        state_updates = jax_update_fn(*([val for val in graph_input_dict.values()]+states))
         new_states = []
         for i, current_state_var in enumerate(self.state_to_residual_map.keys()):
-            current_state = states[i]
-            current_residual = residual[i]
-
             # update current state value
             if self.state_metadata[current_state_var]['state_update'] is None:
-                new_states.append(current_state - current_residual)
+                new_states.append(states[i] - residual[i])
             else:
-                # NOTE: computed with the old states
-                jax_update_fn = create_jax_function(self.residual_graph, 
-                                                    [self.state_metadata[current_state_var]['state_update']], 
-                                                    list(input_var_dict.keys())+list(self.state_to_residual_map.keys()))
-                new_states.append(jax_update_fn(*(list(input_var_dict.values())+states))[0])
+                new_states.append(state_updates[j])
+                j += 1
         return new_states
