@@ -21,6 +21,13 @@ class Norm(ComposedOperation):
     def evaluate_composed(self, *args):
         return evaluate_norm(args, self.axes, self.ord)
     
+    def compute_jax(self, *args):
+        if len(args) == 1:
+            import jax.numpy as jnp
+            return jnp.linalg.norm(args[0], ord=self.ord, axis=self.axes)
+        else:
+            super().compute_jax(*args)
+    
 def evaluate_norm(args, axes, ord):
     power_sum = csdl.sum(*[arg**ord for arg in args], axes=axes)
     out = power_sum ** (1/ord)

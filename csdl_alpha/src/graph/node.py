@@ -18,6 +18,7 @@ class Node(object):
         self.recorder = csdl_alpha.get_current_recorder()
         self.recorder._set_namespace(self)
         self.trace = None
+        self.origin_info = None
 
         if self.recorder.debug:
             self._apply_debug()
@@ -29,15 +30,28 @@ class Node(object):
         Args:
             node: The node to apply debugging to.
         """
+        # TODO: have internal frame removal be an option (on recorder?)
 
-        from csdl_alpha.src.graph.node import Node
-        node_stack = [inspect.currentframe().f_back.f_back.f_back]
+        from csdl_alpha.src.graph.variable import Variable
+        from csdl_alpha.src.graph.operation import Operation
+        node_stack = [inspect.currentframe()]
+        set_origin = True
         info = inspect.getframeinfo(node_stack[0])
-        trace = [f"{info.filename}:{info.lineno}"]
+        trace = []
+        if 'csdl_alpha/src' not in info.filename and 'csdl_alpha/utils' not in info.filename:
+            trace = [f"{info.filename}:{info.lineno} in {info.function}"]
+            self.origin_info = {"filename": info.filename, "lineno": info.lineno, "function": info.function}
+            set_origin = False
+
         while node_stack[0].f_back is not None:
             node_stack.insert(0, node_stack[0].f_back)
             info = inspect.getframeinfo(node_stack[0])
-            trace.insert(0, f"{info.filename}:{info.lineno}")
+            if 'csdl_alpha/src' in info.filename or 'csdl_alpha/utils' in info.filename:
+                continue
+            if set_origin:
+                self.origin_info = {"filename": info.filename, "lineno": info.lineno, "function": info.function}
+                set_origin = False
+            trace.insert(0, f"{info.filename}:{info.lineno} in {info.function}")
         self.trace = trace
 
     def print_trace(self):

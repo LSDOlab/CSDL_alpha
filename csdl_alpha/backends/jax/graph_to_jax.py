@@ -67,6 +67,9 @@ def create_jax_function(
     current_graph = graph
     import jax.numpy as jnp
     
+    inputs = list(inputs)
+    outputs = list(outputs)
+
     # Get the graph
 
     # Figure out the order to execute the graph
@@ -77,10 +80,20 @@ def create_jax_function(
     for input in inputs:
         if input not in current_graph.node_table:
             raise ValueError(f"Input {input} not in the graph")
+    
     all_sorted_node_indices = rx.topological_sort(current_graph.rxgraph)
     all_sorted_nodes = [current_graph.rxgraph[i] for i in all_sorted_node_indices]
+
+    # all_sorted_node_indices = rx.topological_sort(current_graph.rxgraph)
+    # all_intersection_node_indices = current_graph._get_intersection(inputs, outputs, check_sources=False, check_targets=False)
+    # all_sorted_nodes = [current_graph.rxgraph[i] for i in all_sorted_node_indices if i in all_intersection_node_indices]
+
+    # intersecting_graph, _, _ = current_graph.create_subgraph(inputs, outputs, check_sources=False, check_targets=False)
+    # all_sorted_node_indices = rx.topological_sort(intersecting_graph.rxgraph)
+    # all_sorted_nodes = [intersecting_graph.rxgraph[i] for i in all_sorted_node_indices]
+
     sorted_nodes:list = [node for node in all_sorted_nodes if not isinstance(node, Variable)]
-    
+
     # Build the JAX function itself
     def jax_function(*args)->list:
         # Set the input values
@@ -130,9 +143,7 @@ def create_jax_interface(
     # import os
     # os.environ['XLA_FLAGS'] = (
     #     '--xla_gpu_triton_gemm_any=True '
-    #     '--xla_gpu_enable_async_collectives=true '
     #     '--xla_gpu_enable_latency_hiding_scheduler=true '
-    #     '--xla_gpu_enable_highest_priority_async_stream=true '
     # )
 
 

@@ -11,7 +11,9 @@ class Sub(ComposedOperation):
 
     def evaluate_composed(self,x,y):
         return evaluate_sub(x,y)
-
+    
+    def compute_jax(self, x, y):
+        return x - y
 
 def evaluate_sub(x:Variable,y:Variable)->Variable:
     return x+(-y)
