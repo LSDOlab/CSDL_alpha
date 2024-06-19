@@ -160,7 +160,10 @@ def create_jax_interface(
 
     # Option in the future?
     if device == 'gpu':
-        device = jax.devices('gpu')[0]
+        try:
+            device = jax.devices('gpu')[0]
+        except:
+            device = jax.devices('cpu')[0]
     elif device == 'cpu':
         device = jax.devices('cpu')[0]
     else:
