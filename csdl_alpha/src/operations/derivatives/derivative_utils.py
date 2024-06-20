@@ -12,6 +12,7 @@ def verify_derivatives(
         print_results:bool = True,
         raise_on_error:bool = True,
         verification_options:dict[tuple[Variable,Variable],dict] = None,
+        derivative_kwargs:dict = None,
         backend = 'inline',
         )->None:
     # Check arguments:
@@ -23,6 +24,11 @@ def verify_derivatives(
     else:
         from csdl_alpha.backends.jax.graph_to_jax import create_jax_interface
         forward_evaluation = create_jax_interface(wrts, ofs)
+
+    if derivative_kwargs is None:
+        derivative_kwargs = {}
+    elif not isinstance(derivative_kwargs, dict):
+        raise TypeError(f"Derivative kwargs must be a dictionary. Type {type(derivative_kwargs)} given")
 
     # finite difference values to check against
     import csdl_alpha as csdl
@@ -37,7 +43,7 @@ def verify_derivatives(
     # analytical derivatives to validate
     analytical_derivative_values = {}
     start = time.time()
-    deriv = csdl.derivative(ofs = ofs, wrts=wrts)
+    deriv = csdl.derivative(ofs = ofs, wrts=wrts,**derivative_kwargs)
     for of_ind, of in enumerate(ofs):
         for wrt_ind, wrt in enumerate(wrts):
             analytical_derivative_values[(of, wrt)] = {}
