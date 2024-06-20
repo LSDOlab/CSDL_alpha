@@ -71,7 +71,7 @@ print('z2:  ',  z2.value)
 recorder.stop()
 
 # Create a Simulator object from the Recorder object
-sim = csdl.experimental.PySimulator(recorder)
+sim = csdl.experimental.JaxSimulator(recorder)
 
 # Instantiate your problem using the csdl Simulator object and name your problem
 prob = CSDLAlphaProblem(problem_name='sellar',simulator=sim)
@@ -83,6 +83,7 @@ optimizer = SLSQP(prob, ftol=1e-9, maxiter=20)
 
 # Solve your optimization problem
 optimizer.solve()
+recorder.execute()
 
 # Print results of optimization
 optimizer.print_results()

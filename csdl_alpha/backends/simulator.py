@@ -87,22 +87,7 @@ class SimulatorBase():
         else:
             self.objective_gradient = None
 
-class PySimulator(SimulatorBase):
-    def __init__(
-            self, 
-            recorder:Recorder,
-            ):
-        super().__init__(recorder)
-        self.recorder:Recorder = recorder
-        self.initialize_totals = False
-
-    def run(self):
-        self.recorder.execute()
-
-    def run_forward(self)->tuple[np.ndarray,np.ndarray]:
-        self.check_if_optimization()
-        self.recorder.execute()
-
+    def _process_optimization_values(self):
         nc = sum([var.size for var in self.recorder.constraints])
         if nc > 0:
             constraints = np.zeros((sum([var.size for var in self.recorder.constraints]),))
@@ -120,6 +105,24 @@ class PySimulator(SimulatorBase):
             objectives = None
 
         return objectives, constraints
+    
+
+class PySimulator(SimulatorBase):
+    def __init__(
+            self, 
+            recorder:Recorder,
+            ):
+        super().__init__(recorder)
+        self.recorder:Recorder = recorder
+        self.initialize_totals = False
+
+    def run(self):
+        self.recorder.execute()
+
+    def run_forward(self)->tuple[np.ndarray,np.ndarray]:
+        self.check_if_optimization()
+        self.recorder.execute()
+        return self._process_optimization_values()
 
     def compute_optimization_derivatives(self):
         

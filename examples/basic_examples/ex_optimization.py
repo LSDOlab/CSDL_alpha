@@ -31,6 +31,7 @@ rec.stop()
 
 # Create a Simulator object from the Recorder object
 sim = csdl.experimental.PySimulator(rec)
+# sim = csdl.experimental.JaxSimulator(rec)
 
 # Import CSDLAlphaProblem from modopt
 from modopt import CSDLAlphaProblem

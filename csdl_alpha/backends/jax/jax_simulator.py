@@ -30,25 +30,10 @@ class JaxSimulator(SimulatorBase):
             )
 
         outputs = self.fwd_func({dv:dv.value for dv in self.recorder.design_variables})
+        for output in outputs:
+            output.set_value(outputs[output])
         
-        nc = sum([var.size for var in self.recorder.constraints])
-        if nc > 0:
-            constraints = np.zeros((sum([var.size for var in self.recorder.constraints]),))
-            for var in self.c_meta:
-                constraints[self.c_meta[var]['l_ind']:self.c_meta[var]['u_ind']] = outputs[var].flatten()
-        else:
-            constraints = None
-        
-        no = sum([var.size for var in self.recorder.objectives])
-        if no > 0:
-            objectives = np.zeros((sum([var.size for var in self.recorder.objectives]),))
-            for var in self.o_meta:
-                objectives[self.o_meta[var]['l_ind']:self.o_meta[var]['u_ind']] = outputs[var].flatten()
-        else:
-            objectives = None
-
-        return objectives, constraints
-    
+        return self._process_optimization_values()
 
     def compute_optimization_derivatives(self, *jax_interface_kwargs):
         self.check_if_optimization()
