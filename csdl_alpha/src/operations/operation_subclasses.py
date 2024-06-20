@@ -112,25 +112,28 @@ class ComposedOperation(SubgraphOperation):
     def set_inline_values(self, debug = False):
         self.get_subgraph().execute_inline(debug=debug)
 
-        keep_set = set(self.outputs).union(set(self.inputs))
-        subgraph = self.get_subgraph()
-        for node in subgraph.node_table:
-            if isinstance(node, Variable):
+        # This messes up a lot of stuff.....
+        # TODO: Need a way to turn on and off
+        
+        # keep_set = set(self.outputs).union(set(self.inputs))
+        # subgraph = self.get_subgraph()
+        # for node in subgraph.node_table:
+        #     if isinstance(node, Variable):
 
-                do_not_delete = False
-                if subgraph.in_degree(node) == 0:
-                    do_not_delete = True
-                if isinstance(node, Constant):
-                    do_not_delete = True
+        #         do_not_delete = False
+        #         if subgraph.in_degree(node) == 0:
+        #             do_not_delete = True
+        #         if isinstance(node, Constant):
+        #             do_not_delete = True
                 
-                for pred in subgraph.predecessors(node):
-                    if isinstance(pred, SubgraphOperation):
-                        do_not_delete = True
+        #         for pred in subgraph.predecessors(node):
+        #             if isinstance(pred, SubgraphOperation):
+        #                 do_not_delete = True
 
-                if not do_not_delete:
-                   if node not in keep_set:
-                        # print([node2 for node2 in keep_set])
-                        node.value = None
+        #         if not do_not_delete:
+        #            if node not in keep_set:
+        #                 # print([node2 for node2 in keep_set])
+        #                 node.value = None
 
     def evaluate_vjp(self, cotangents, *inputs_outputs):
         # TODO: extremely messy and crappy. FIX!

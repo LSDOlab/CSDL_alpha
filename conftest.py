@@ -1,6 +1,7 @@
 def pytest_addoption(parser):
     parser.addoption("--backend", action="store", default="inline", help="Decides which backend to use for testing. Default is 'inline', other options are 'jax_sim' and 'py_sim'")
-    parser.addoption("--inline_false", action="store_true", help="If on, sets inline=True in Recorder argument'")
+    parser.addoption("--build_inline", action="store_false", help="If on, sets inline=True in Recorder argument'")
+    parser.addoption("--batched_derivs", action="store_true", help="If on, computes derivatives in batched mode'")
 
 collect_ignore_glob = ["*__init__.py"]
 

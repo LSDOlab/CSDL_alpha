@@ -2,6 +2,9 @@ from ...src.graph.graph import Graph
 from ...src.graph.variable import Variable
 from ...utils.inputs import listify_variables
 
+from csdl_alpha.src.operations.loops.loop import Loop
+from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation
+
 import numpy as np
 from typing import Union
 
@@ -68,6 +71,8 @@ def create_jax_function(
     import jax.numpy as jnp
     
     # Get the graph
+    inputs = listify_variables(inputs)
+    outputs = listify_variables(outputs)
 
     # Figure out the order to execute the graph
     import rustworkx as rx
@@ -79,20 +84,46 @@ def create_jax_function(
             raise ValueError(f"Input {input} not in the graph")
     all_sorted_node_indices = rx.topological_sort(current_graph.rxgraph)
     all_sorted_nodes = [current_graph.rxgraph[i] for i in all_sorted_node_indices]
-    sorted_nodes:list = [node for node in all_sorted_nodes if not isinstance(node, Variable)]
+    sorted_nodes:list = [node for node in all_sorted_nodes]
+    # print('FUNCTION:', len(inputs), len(outputs), len(sorted_nodes), current_graph.name)
+    
+    # Experiment?
+    # from csdl_alpha.src.operations.derivatives.bookkeeping import build_derivative_node_order
+    # all_sorted_nodes = build_derivative_node_order(current_graph, outputs, inputs, reverse=False)
     
     # Build the JAX function itself
     def jax_function(*args)->list:
         # Set the input values
         all_jax_variables = {}
+        relevant_nodes = set()
         for node, arg in zip(inputs, args):
             all_jax_variables[node] = arg
 
         # Loop through each node in the graph in order and compute the JAX values
         for node in sorted_nodes:
+            if isinstance(node, Variable):
+                if node not in all_jax_variables:
+                    relevant_nodes.add(node)
+            
+        for node in sorted_nodes:
+            if isinstance(node, Variable):
+                continue
+
             jax_inputs = get_jax_inputs(node, all_jax_variables)
+
+            # TODO: Finish proper implicit operation/loop output handling
+            # if isinstance(node, (ImplicitOperation, Loop)):
+            #     fill_outputs = {output: None for output in node.outputs if output in relevant_nodes}
+            #     # fill_outputs = {output: None for output in node.outputs if current_graph.out_degree(output) > 0}
+            #     node.evaluate_jax(*jax_inputs, fill_outputs = fill_outputs)
+
+            #     for output_node in fill_outputs:
+            #         if fill_outputs[output_node] is None:
+            #             raise ValueError(f"Jax function error with node {node}: Output {output_node} was not filled")
+            #         all_jax_variables[output_node] = fill_outputs[output_node]
+            # else:
             jax_outputs = node.compute_jax(*jax_inputs) # EVERY CSDL OPERATIONS NEEDS THIS FUNCTION
-            if not type(jax_outputs) is tuple:
+            if isinstance(jax_outputs, jnp.ndarray):
                 jax_outputs = (jax_outputs,)
             update_jax_variables(node, jax_outputs, all_jax_variables)
 
@@ -156,6 +187,7 @@ def create_jax_interface(
         raise ValueError(f"Invalid device {device}")
 
     jax_function = create_jax_function(graph, outputs, inputs)
+    # jax_grad = jax.jit(jax.jacrev(jax_function, argnums=[i for i in range(len(inputs))])) # TODO: add option for jax derivatives?
     jax_function = jax.jit(jax_function, device=device)
 
     # Create the JAX interface
@@ -165,6 +197,8 @@ def create_jax_interface(
         for input_var in inputs:
             jax_interface_inputs.append(jax.numpy.array(inputs_dict[input_var]))
         jax_outputs = jax_function(*jax_interface_inputs)
+
+        # jax_grad_outputs = jax_grad(*jax_interface_inputs)
 
         outputs_dict = {}
         # print('OUTPUTS:')

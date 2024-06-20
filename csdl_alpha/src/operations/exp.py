@@ -81,5 +81,6 @@ class TestExp(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = TestExp()
+    test.overwrite_backend = 'jax'
     test.test_functionality()
     test.test_example()

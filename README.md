@@ -46,6 +46,8 @@ This project is licensed under the terms of the **GNU Lesser General Public Lice
 ```sh
 pytest
 pytest --backend jax
-pytest --inline_false
-pytest --backend jax --inline_false
+pytest --build_inline
+pytest --batched_derivs
+
+pytest --backend jax --build_inline --batched_derivs
 ```

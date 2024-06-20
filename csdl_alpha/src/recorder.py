@@ -450,6 +450,10 @@ class Recorder:
 
             if isinstance(node, Variable):
                 attr_dict['shape'] = 'ellipse'
+                if node.value is not None:
+                    attr_dict['tooltip'] = f'{np.min(node.value):.3e}, {np.max(node.value):.3e}, {np.mean(node.value):.3e}, {node.shape}'
+                else:
+                    attr_dict['tooltip'] = f'{node.value}'
             else:
                 attr_dict['shape'] = 'rectangle'
             return attr_dict
