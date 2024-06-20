@@ -59,7 +59,33 @@ class SimulatorBase():
         raise NotImplementedError('run_forward method not implemented')
 
     def compute_optimization_derivatives(self):
-        raise NotImplementedError('get_total_derivatives method not implemented')
+        raise NotImplementedError('compute_optimization_derivatives method not implemented')
+
+    def update_design_variables(self, dv_vector:np.ndarray)->None:
+        self.check_if_optimization()
+
+        for var in self.dv_meta:
+            var.value = dv_vector[self.dv_meta[var]['l_ind']:self.dv_meta[var]['u_ind']].reshape(var.shape)
+
+    def build_objective_constraint_derivatives(self):
+        import csdl_alpha as csdl
+        if len(self.recorder.constraints) > 0:
+            self.constraint_jacobian = csdl.derivative(
+                list(self.recorder.constraints.keys()),
+                list(self.recorder.design_variables.keys()),
+                as_block=True,
+            )
+        else:
+            self.constraint_jacobian = None
+
+        if len(self.recorder.objectives) > 0:
+            self.objective_gradient = csdl.derivative(
+                list(self.recorder.objectives.keys()),
+                list(self.recorder.design_variables.keys()),
+                as_block=True,
+            )
+        else:
+            self.objective_gradient = None
 
 class PySimulator(SimulatorBase):
     def __init__(
@@ -99,28 +125,9 @@ class PySimulator(SimulatorBase):
         
         self.check_if_optimization()
 
-        import csdl_alpha as csdl
         if self.initialize_totals is False:
             self.recorder.start()
-
-            if len(self.recorder.constraints) > 0:
-                self.constraint_jacobian = csdl.derivative(
-                    list(self.recorder.constraints.keys()),
-                    list(self.recorder.design_variables.keys()),
-                    as_block=True,
-                )
-            else:
-                self.constraint_jacobian = None
-
-            if len(self.recorder.objectives) > 0:
-                self.objective_gradient = csdl.derivative(
-                    list(self.recorder.objectives.keys()),
-                    list(self.recorder.design_variables.keys()),
-                    as_block=True,
-                )
-            else:
-                self.objective_gradient = None
-            
+            self.build_objective_constraint_derivatives()
             self.recorder.stop()
 
             if not self.recorder.inline:
@@ -136,13 +143,6 @@ class PySimulator(SimulatorBase):
             return self.objective_gradient.value, None
         else:
             return self.objective_gradient.value, self.constraint_jacobian.value
-
-    def update_design_variables(self, dv_vector:np.ndarray)->None:
-        self.check_if_optimization()
-
-        for var in self.dv_meta:
-            var.value = dv_vector[self.dv_meta[var]['l_ind']:self.dv_meta[var]['u_ind']].reshape(var.shape)
-
 
 def determine_if_optimization(recorder:Recorder)->bool:
     """
