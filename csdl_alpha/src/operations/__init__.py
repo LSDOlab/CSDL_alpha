@@ -54,3 +54,6 @@ from .derivatives.derivative import derivative
 
 # Special operations
 from .special.bessel import bessel
+
+# other
+from .subop import subop

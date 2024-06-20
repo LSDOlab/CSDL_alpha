@@ -70,6 +70,9 @@ def create_jax_function(
     current_graph = graph
     import jax.numpy as jnp
     
+    inputs = list(inputs)
+    outputs = list(outputs)
+
     # Get the graph
     inputs = listify_variables(inputs)
     outputs = listify_variables(outputs)
@@ -82,6 +85,7 @@ def create_jax_function(
     for input in inputs:
         if input not in current_graph.node_table:
             raise ValueError(f"Input {input} not in the graph")
+    
     all_sorted_node_indices = rx.topological_sort(current_graph.rxgraph)
     all_sorted_nodes = [current_graph.rxgraph[i] for i in all_sorted_node_indices]
     sorted_nodes:list = [node for node in all_sorted_nodes]
@@ -161,9 +165,7 @@ def create_jax_interface(
     # import os
     # os.environ['XLA_FLAGS'] = (
     #     '--xla_gpu_triton_gemm_any=True '
-    #     '--xla_gpu_enable_async_collectives=true '
     #     '--xla_gpu_enable_latency_hiding_scheduler=true '
-    #     '--xla_gpu_enable_highest_priority_async_stream=true '
     # )
 
 
@@ -180,7 +182,10 @@ def create_jax_interface(
 
     # Option in the future?
     if device == 'gpu':
-        device = jax.devices('gpu')[0]
+        try:
+            device = jax.devices('gpu')[0]
+        except:
+            device = jax.devices('cpu')[0]
     elif device == 'cpu':
         device = jax.devices('cpu')[0]
     else:

@@ -48,9 +48,10 @@ class SubgraphOperation(Operation):
         """
         assigns a subgraph to the operation. Must be called once and can only be called once.
         """
+        from csdl_alpha.src.graph.graph import Graph
         if self._subgraph is not None:
             raise ValueError("Subgraph already set")
-        self._subgraph = graph
+        self._subgraph:Graph = graph
     
     def get_subgraph(self):
         """
