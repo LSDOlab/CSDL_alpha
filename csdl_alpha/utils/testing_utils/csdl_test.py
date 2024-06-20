@@ -17,16 +17,18 @@ class CSDLTest():
         hard_reload()
 
         try:
-            self.inline_false = self._config.getoption("--inline_false")
+            # Running with pytest
+            self.build_with_inline = not self._config.getoption("--build_inline")
+            if self.build_with_inline:
+                kwargs['inline'] = True
         except:
-            self.inline_false = False
 
-        if 'inline' not in kwargs:
-            kwargs['inline'] = True
+            if 'inline' not in kwargs:
+                kwargs['inline'] = True
+            # Running without pytest
+            self.build_with_inline = kwargs['inline']
 
-        # Both take precedence over the config option/given kwargs
-        if self.inline_false:
-            kwargs['inline'] = False
+        # always_build_inline takes precedence over the config option/given kwargs
         if always_build_inline:
             kwargs['inline'] = True
 
@@ -55,6 +57,11 @@ class CSDLTest():
         if self.backend_type not in ['inline', 'jax']:
             raise ValueError(f"Backend type {self.backend_type} not supported for testing. Use 'inline', 'jax'")
         
+        try:
+            self.batched_deriv = self._config.getoption("--batched_derivs")
+        except:
+            self.batched_deriv = False
+
         import csdl_alpha as csdl
         import numpy as np
         recorder = csdl.get_current_recorder()
@@ -118,7 +125,7 @@ class CSDLTest():
             
             for ind, testing_pair in enumerate(compare_values):
                 testing_pair.csdl_variable.value = output_values[testing_pair.csdl_variable]
-        elif self.inline_false:
+        elif not self.build_with_inline:
             recorder.execute()
         for ind, testing_pair in enumerate(compare_values):
             testing_pair.compare(ind+1)
@@ -153,9 +160,10 @@ class CSDLTest():
                     'tag': tag,
                     'max_rel_error': rel_error,   
                 }
-            
+        
+        deriv_kwargs = {'loop':(not self.batched_deriv)}
         if self.backend_type == 'inline':
-            if self.inline_false:
+            if not self.build_with_inline:
                 recorder.execute()
             import csdl_alpha as csdl
             csdl.derivative_utils.verify_derivatives(
@@ -163,6 +171,7 @@ class CSDLTest():
                 wrts,
                 step_size,
                 verification_options=of_wrt_meta_data,
+                derivative_kwargs = deriv_kwargs,
             )
 
         else:
@@ -172,6 +181,7 @@ class CSDLTest():
                 wrts,
                 step_size,
                 verification_options=of_wrt_meta_data,
+                derivative_kwargs = deriv_kwargs,
                 backend = 'jax'
             )
         # exit('END 2')
