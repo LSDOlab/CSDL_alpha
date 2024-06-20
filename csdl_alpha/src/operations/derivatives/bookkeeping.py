@@ -41,7 +41,12 @@ def build_derivative_node_order(
 
     # Compute the order of nodes to process
     node_order = []
-    for node in reversed(rx.topological_sort(graph.rxgraph)):
+    if reverse:
+        ordered = reversed(rx.topological_sort(graph.rxgraph))
+    else:
+        ordered = rx.topological_sort(graph.rxgraph)
+
+    for node in ordered:
         node_index = node
         if node_index in intersecting_nodes:
             node_order.append(graph.rxgraph[node])
