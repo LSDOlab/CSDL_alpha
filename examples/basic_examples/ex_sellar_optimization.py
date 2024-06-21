@@ -70,8 +70,9 @@ print('z2:  ',  z2.value)
 # Visualize Graph
 recorder.stop()
 
-# Create a Simulator object from the Recorder object
+# Create a Simulator object from the Recorder object, either JaxSimulator or PySimulator
 sim = csdl.experimental.JaxSimulator(recorder)
+# sim = csdl.experimental.PySimulator(recorder)
 
 # Instantiate your problem using the csdl Simulator object and name your problem
 prob = CSDLAlphaProblem(problem_name='sellar',simulator=sim)
