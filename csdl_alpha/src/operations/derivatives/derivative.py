@@ -119,6 +119,7 @@ def derivative(
     as_block:bool = False,
     graph:Graph = None,
     loop:bool = True,
+    concatenate_ofs:bool = False,
     elementwise = False,
     )->Union[dict[Variable], dict[Variable,Variable], Variable]:
     """Computes the derivatives of the output variables with respect to the input variables in CSDL.
@@ -136,9 +137,13 @@ def derivative(
     graph : Graph, optional
         Which graph to take derivatives of, by default the current active graph
     loop : bool, optional
-        If True, uses a csdl loop to compute the derivatives, by default True
+        If True, uses a csdl loop to compute the derivatives. If false, batches the derivatives. by default True
+    concatenate_ofs: bool, optional
+        If True, concatenates the output variables into one variable before taking the derivative. This reduces the size of the
+        graph and may be less efficient. 
+        by default False
     elementwise : bool, optional
-        If True, assumes diagonal derivatives, by default False
+        If True, assumes diagonal derivatives, by default False. (WARNING: The output will be incorrect if this is not the case.)
 
     Returns
     -------
@@ -168,6 +173,8 @@ def derivative(
     >>> dz2_dx2.value
     array([[0.]])
     """
+    import csdl_alpha as csdl
+
     of_is_list = True
     wrt_is_list = True
     if not isinstance(ofs, (list, tuple)):
@@ -183,12 +190,36 @@ def derivative(
             if var.size != first_var_size:
                 raise ValueError(f"A requirement of the elementwise option is that all derivative variables to have the same size. Got size {var.size}, expected {first_var_size}.")
 
+    # concatenate_ofs = True
     if mode == 'reverse':
         output_dict = {}
-        for of in ofs:
-            deriv_of = reverse(of, wrts, graph, loop = loop, elementwise = elementwise)
+        # TODO: Clean up.
+        if concatenate_ofs:
+            import csdl_alpha as csdl
+            recorder = csdl.get_current_recorder()
+            active_graph = recorder.active_graph
+            if (active_graph != graph) and (graph is not None):
+                recorder._enter_subgraph(graph = graph)
+            elementwise = False
+            block_mat = []
+            for of in ofs:
+                block_mat.append([of.reshape((of.size, 1))])
+            concatenated_of = csdl.blockmat(block_mat)
+            if (active_graph != graph) and (graph is not None):
+                recorder._exit_subgraph()
+
+            deriv_of = reverse(concatenated_of, wrts, graph, loop = loop, elementwise = elementwise)
             for wrt in deriv_of:
-                output_dict[of, wrt] = deriv_of[wrt]
+                lower = 0
+                for of in ofs:
+                    upper = lower + of.size
+                    output_dict[of, wrt] = deriv_of[wrt][lower:upper]
+                    lower = upper
+        else:
+            for of in ofs:
+                deriv_of = reverse(of, wrts, graph, loop = loop, elementwise = elementwise)
+                for wrt in deriv_of:
+                    output_dict[of, wrt] = deriv_of[wrt]
     elif mode == 'forward':
         raise NotImplementedError("Forward mode not implemented yet.")
     else:
@@ -425,17 +456,6 @@ class TestDerivative(csdl_tests.CSDLTest):
         import numpy as np
 
         n = 3
-        # A_shape = (n,n)
-        # b_shape = (n,1)
-        # # Try one: doesnt work... Condition number is too high?
-        # A_val = (np.arange(np.prod(A_shape)).reshape(A_shape)+1)**2.0
-        # b_val = np.arange(np.prod(b_shape)).reshape(b_shape)
-        
-        # Try two: works...
-        # A_val = np.diagflat(np.ones(n)*3.0)
-        # A_val[0,1] = 2.0
-        # A_val[1,0] = 2.0
-        # b_val = np.arange(n).reshape(b_shape)
 
         # Try three: works...
         main_diag = np.arange(n)+1
