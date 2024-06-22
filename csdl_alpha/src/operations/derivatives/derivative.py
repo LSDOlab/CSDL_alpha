@@ -184,6 +184,10 @@ def derivative(
         wrts = [wrts]
         wrt_is_list = False
 
+    for var in ofs + wrts:
+        if not isinstance(var, Variable):
+            raise ValueError(f"Expected given ofs and wrts to be of type Variable, but got {get_type_string(var)}.")
+
     if elementwise:
         first_var_size = ofs[0].size
         for var in ofs + wrts:

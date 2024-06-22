@@ -343,36 +343,21 @@ class NonlinearSolver(object):
         import csdl_alpha as csdl
         if self.full_residual_jacobian is None:
             states_list = list(self.state_to_residual_map.keys())
+            residuals_list = list(self.state_to_residual_map.values())
 
-            block_mat = []
             for residual in self.residual_to_state_map:
                 state = self.residual_to_state_map[residual]
-                # Create block matrix for linear system
-                current_residual_block = []
 
-                # feed in user-defined kwargs for derivative
-                residual_jac_kwargs = self.residual_jac_kwargs
-                residual_jac_kwargs['elementwise'] = self.elementwise_states
-                residual_jac_kwargs['as_block'] = False
-
-                # Compute the derivatives
-                if for_deriv:
-                    residual_jac_kwargs['graph'] = self.residual_graph
-                    deriv = csdl.derivative(residual, states_list, **residual_jac_kwargs)
-                else:
-                    deriv = csdl.derivative(residual, states_list, **residual_jac_kwargs)
-
-                for _state in states_list:
-                    current_residual_block.append(deriv[_state])
-                    # self.add_intersection_target(deriv[state])
-                block_mat.append(current_residual_block)
-            
                 # Keep track of indices for each state
                 self.add_state_metadata(state, 'index_lower', self.total_state_size)
                 self.total_state_size += state.size
                 self.add_state_metadata(state, 'index_upper', self.total_state_size)
 
-            self.full_residual_jacobian = csdl.blockmat(block_mat)
+            self.residual_jac_kwargs['as_block'] = True
+            self.residual_jac_kwargs['elementwise'] = self.elementwise_states
+            if for_deriv:
+                    self.residual_jac_kwargs['graph'] = self.residual_graph
+            self.full_residual_jacobian = csdl.derivative(residuals_list, states_list, **self.residual_jac_kwargs)
             self.full_residual_jacobian.add_name(f'{self.name}_jac')
             return self.full_residual_jacobian
         else:
