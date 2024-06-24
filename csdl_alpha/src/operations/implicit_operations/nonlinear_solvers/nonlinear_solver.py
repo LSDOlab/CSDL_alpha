@@ -20,6 +20,8 @@ class NonlinearSolver(object):
             elementwise_states:bool=False,
             residual_jac_kwargs:dict = None,
         ):
+        if elementwise_states is True:
+            raise ValueError("Elementwise_states argument is deprecated. Use keyword argument: residual_jac_kwargs = {'elementwise':True} instead")
         self.name = name
         self.print_status = print_status
 
@@ -57,7 +59,6 @@ class NonlinearSolver(object):
         # Attributes for derivatives:
         self.full_residual_jacobian = None
         self.total_state_size = 0
-        self.elementwise_states = elementwise_states
         if residual_jac_kwargs is None:
             residual_jac_kwargs = {}
         elif not isinstance(residual_jac_kwargs, dict):
@@ -354,7 +355,6 @@ class NonlinearSolver(object):
                 self.add_state_metadata(state, 'index_upper', self.total_state_size)
 
             self.residual_jac_kwargs['as_block'] = True
-            self.residual_jac_kwargs['elementwise'] = self.elementwise_states
             if for_deriv:
                     self.residual_jac_kwargs['graph'] = self.residual_graph
             self.full_residual_jacobian = csdl.derivative(residuals_list, states_list, **self.residual_jac_kwargs)

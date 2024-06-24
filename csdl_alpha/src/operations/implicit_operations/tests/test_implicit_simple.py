@@ -51,7 +51,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': 0.28}, {}))
         cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': csdl.Variable(value=0.28), 'tolerance': 1e-10}, {}))
         cases.append((csdl.nonlinear_solvers.GaussSeidel, {'initial_value': 0.27, 'tolerance': csdl.Variable(value=1e-8)}, {}))
-        cases.append((csdl.nonlinear_solvers.GaussSeidel, {}, {'elementwise_states': True}))
+        cases.append((csdl.nonlinear_solvers.GaussSeidel, {}, {'residual_jac_kwargs': {'elementwise':True}}))
         cases.append((csdl.nonlinear_solvers.GaussSeidel, {}, {'residual_jac_kwargs': {'loop':False}}))
         
         # Jacobi tests:
@@ -63,7 +63,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': 0.281}, {}))
         cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': csdl.Variable(value=0.281), 'tolerance': 1e-10}, {}))
         cases.append((csdl.nonlinear_solvers.Jacobi, {'initial_value': 0.271, 'tolerance': csdl.Variable(value=1.1e-8)}, {}))
-        cases.append((csdl.nonlinear_solvers.Jacobi, {}, {'elementwise_states': True}))
+        cases.append((csdl.nonlinear_solvers.Jacobi, {}, {'residual_jac_kwargs': {'elementwise':True}}))
         cases.append((csdl.nonlinear_solvers.Jacobi, {}, {'residual_jac_kwargs': {'loop':False}}))
 
         # Newtons method tests:
@@ -75,7 +75,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': 0.281}, {}))
         cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': csdl.Variable(value=0.281), 'tolerance': 1e-10}, {}))
         cases.append((csdl.nonlinear_solvers.Newton, {'initial_value': 0.271, 'tolerance': csdl.Variable(value=1.1e-8)}, {}))
-        cases.append((csdl.nonlinear_solvers.Newton, {}, {'elementwise_states': True}))
+        cases.append((csdl.nonlinear_solvers.Newton, {}, {'residual_jac_kwargs': {'elementwise':True}}))
         cases.append((csdl.nonlinear_solvers.Newton, {}, {'residual_jac_kwargs': {'concatenate_ofs':True}}))
 
         # Bracketed search tests:
@@ -84,8 +84,8 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4*np.ones((2,))))}, {}))
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4*np.ones((2,)))),'tolerance': csdl.Variable(value=1e-8)}, {}))
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (csdl.Variable(value=np.zeros((2,))), csdl.Variable(value=4*np.ones((2,)))),'tolerance': 1e-7}, {}))
-        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0, 4)}, {'elementwise_states': True}))
-        cases.append((csdl.nonlinear_solvers.Jacobi, {}, {'residual_jac_kwargs': {'loop':False}}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0, 4)}, {'residual_jac_kwargs': {'elementwise':True}}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {}, {'residual_jac_kwargs': {'loop':False}}))
 
         compare_values = []
         for i, (solver, kwargs, solver_kwargs) in enumerate(cases):
