@@ -71,3 +71,21 @@ class TestVariable(csdl_tests.CSDLTest):
         with pytest.raises(ValueError):
             b.set_as_objective()
 
+    def test_variable_value_property(self):
+        import csdl_alpha as csdl
+        import numpy as np
+        self.prep()
+
+        a = csdl.Variable((2,), value=1)
+        
+        with pytest.raises(TypeError):
+            a.value = 'string'
+
+        with pytest.raises(ValueError):
+            a.value = np.ones((2,2))
+
+        with pytest.raises(TypeError):
+            a.value = csdl.Variable((2,), value=1)
+
+        a.value = np.ones((2,), dtype=np.float32)
+        assert a.value.dtype == np.float64
