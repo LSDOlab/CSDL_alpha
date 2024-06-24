@@ -1,6 +1,7 @@
 from csdl_alpha.src.graph.graph import Graph
 from csdl_alpha.utils.inputs import get_type_string
 import numpy as np
+from typing import Union
 
 class Recorder:
     """
@@ -114,7 +115,7 @@ class Recorder:
         return matched_names
 
 
-    def gather_insights(self)->dict:
+    def gather_insights(self)->dict[str, Union[dict, set]]:
         """
         UNTESTED!
         """

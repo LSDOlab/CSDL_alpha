@@ -55,7 +55,7 @@ class Variable(Node):
         self.name = None
 
         shape, value = process_shape_and_value(shape, value)
-        self.value = value
+        self._value = value
         self.shape = shape
         
         if len(shape) == 0:
@@ -73,6 +73,32 @@ class Variable(Node):
             self.tags = tags
 
         self.post_init()
+
+    @property
+    def value(self):
+        """I'm the 'x' property."""
+        return self._value
+    
+    @value.setter
+    def value(self, value: Union[np.ndarray, float, int]):
+        """Sets the value of a variable.
+
+        Parameters
+        ----------
+        value : Union[np.ndarray, float, int]
+            Value for the variable
+        """
+        self.set_value(value)
+
+    def set_value(self, value: Union[np.ndarray, float, int]):
+        """Sets the value of a variable.
+
+        Parameters
+        ----------
+        value : Union[np.ndarray, float, int]
+            Value for the variable
+        """
+        _, self._value = process_shape_and_value(self.shape, value)
     
     def post_init(self):
         pass
@@ -97,16 +123,6 @@ class Variable(Node):
         """
 
         self.hierarchy = hierarchy
-
-    def set_value(self, value: Union[np.ndarray, float, int]):
-        """Sets the value of a variable.
-
-        Parameters
-        ----------
-        value : Union[np.ndarray, float, int]
-            Value for the variable
-        """
-        _, self.value = process_shape_and_value(self.shape, value)
 
     # TODO: add checks for parents
     # TODO: allow float and arrays
