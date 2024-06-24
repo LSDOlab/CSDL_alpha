@@ -76,7 +76,7 @@ class Variable(Node):
 
     @property
     def value(self):
-        """I'm the 'x' property."""
+        """The value of the variable used for inline evaluation"""
         return self._value
     
     @value.setter
