@@ -6,7 +6,7 @@ from csdl_alpha.src.operations.loops.loop import Loop
 from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation
 
 import numpy as np
-from typing import Union
+from typing import Union, Callable
 
 
 # Get the graph
@@ -142,7 +142,7 @@ def create_jax_function(
 def create_jax_interface(
         inputs:Union[Variable, list[Variable], tuple[Variable]],
         outputs:Union[Variable, list[Variable], tuple[Variable]],
-        graph:Graph = None, device:str='gpu')->callable:
+        graph:Graph = None, device:str='gpu')->Callable[[dict[Variable, np.ndarray]], dict[Variable, np.ndarray]]:
     """_summary_
 
     Parameters
@@ -156,7 +156,7 @@ def create_jax_interface(
 
     Returns
     -------
-    jax interface: callable
+    jax interface: Callable
         A function with type signature: jax_interface(dict[Variable, np.array])->dict[Variable, np.array], where the input and output variables must match the inputs and outputs respectively.
     """
     import jax
@@ -184,7 +184,8 @@ def create_jax_interface(
     if device == 'gpu':
         try:
             device = jax.devices('gpu')[0]
-        except:
+        except Exception as e:
+            print(f'GPU not found: \'{e}\', falling back to CPU')
             device = jax.devices('cpu')[0]
     elif device == 'cpu':
         device = jax.devices('cpu')[0]
@@ -196,7 +197,7 @@ def create_jax_interface(
     jax_function = jax.jit(jax_function, device=device)
 
     # Create the JAX interface
-    def jax_interface(inputs_dict:dict[Variable, np.array])->dict[Variable, np.array]:
+    def jax_interface(inputs_dict:dict[Variable, np.ndarray])->dict[Variable, np.ndarray]:
         jax_interface_inputs = []
         # print('INPUTS:')
         for input_var in inputs:

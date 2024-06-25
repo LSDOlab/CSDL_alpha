@@ -100,10 +100,14 @@ def get_shape(shape, value):
 
 def listify_variables(variables):
     from csdl_alpha.src.graph.variable import Variable
-    if not isinstance(variables, (list, tuple)):
+    if isinstance(variables, Variable):
         variables = [variables]
-    
+    if isinstance(variables, tuple):
+        variables = list(variables)
+    elif not isinstance(variables, list):
+        raise TypeError(f"Variables must be a Variable or a list/tuple of Variables. {get_type_string(variables)} given")
+
     for variable in variables:
         if not isinstance(variable, Variable):
-            raise ValueError(f"Variables must be instances of Variable. {get_type_string(variable)} given")
+            raise TypeError(f"Variables must be instances of Variable. {get_type_string(variable)} given")
     return variables

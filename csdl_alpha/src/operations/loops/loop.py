@@ -3,8 +3,6 @@ from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as slice
 from typing import Union
-import jax as jnp
-import jax.lax as lax
 import numpy as np
 
 class IterationVariable(Variable):
@@ -151,6 +149,7 @@ class Loop(SubgraphOperation):
     def compute_jax(self, *inputs):
         import jax.numpy as jnp
         from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        import jax.lax as lax
 
         if len(self.loop_vars) > 0:
             true_outputs = self.outputs[:-len(self.loop_vars)] # operation outputs that aren't the stacked ones

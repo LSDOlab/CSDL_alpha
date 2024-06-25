@@ -91,7 +91,7 @@ def verify_derivatives(
     )
 
 def verify_derivative_values(
-        derivative_values: dict[tuple[Variable,Variable], dict[str, np.array]],
+        derivative_values: dict[tuple[Variable,Variable], dict[str, np.ndarray]],
         print_results:bool = True,
         raise_on_error:bool = True,
     )->dict[tuple[Variable,Variable], dict[str, np.array]]:
@@ -105,8 +105,8 @@ def verify_derivative_values(
 
         keys of 'derivative_values[<of variable>, <wrt variable>]':
         required keys:
-            - 'value': np.array of the analytical derivative value
-            - 'fd_value': np.array of the finite difference derivative value
+            - 'value': np.ndarray of the analytical derivative value
+            - 'fd_value': np.ndarray of the finite difference derivative value
         options:
             - 'of_name': str of the output variable to print
             - 'wrt_name': str of the input variable to print

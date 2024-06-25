@@ -85,7 +85,7 @@ class TestSimpleImplicit(csdl_tests.CSDLTest):
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0.0, csdl.Variable(value=4*np.ones((2,)))),'tolerance': csdl.Variable(value=1e-8)}, {}))
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (csdl.Variable(value=np.zeros((2,))), csdl.Variable(value=4*np.ones((2,)))),'tolerance': 1e-7}, {}))
         cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0, 4)}, {'residual_jac_kwargs': {'elementwise':True}}))
-        cases.append((csdl.nonlinear_solvers.BracketedSearch, {}, {'residual_jac_kwargs': {'loop':False}}))
+        cases.append((csdl.nonlinear_solvers.BracketedSearch, {'bracket': (0, 4)}, {'residual_jac_kwargs': {'loop':False}}))
 
         compare_values = []
         for i, (solver, kwargs, solver_kwargs) in enumerate(cases):

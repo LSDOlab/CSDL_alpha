@@ -1,3 +1,6 @@
+from typing import Union
+from csdl_alpha.utils.inputs import listify_variables
+
 def inline_export(filename:str, summary_csv:bool=False, do_print=False):
     """Save variables from the current recorder's node graph to an HDF5 file.
 
@@ -198,3 +201,36 @@ def save_all_variables(ignore_unnamed = False):
                     key.save()
             else:
                 key.save()
+
+
+def save_h5py_variable(inline_grp, variable, savename:str):
+    dset = inline_grp.create_dataset(savename, data=variable.value)
+    # The shape is already stored in the value
+    if variable.tags:
+        dset.attrs['tags'] = variable.tags
+    if variable.hierarchy is not None:
+        dset.attrs['hierarchy'] = variable.hierarchy
+    if variable.names:
+        dset.attrs['names'] = variable.names
+
+def save_h5py_variables(
+        filename:str,
+        groupname:str,
+        variables:Union['Variable',list['Variable']],
+    ):
+    import h5py
+    variables = listify_variables(variables)
+    if not isinstance(groupname, str):
+        groupname = str(groupname)
+
+    if not filename.endswith('.hdf5'):
+        filename = f'{filename}.hdf5'
+    f = h5py.File(filename, 'w')
+    inline_grp = f.create_group(groupname)
+
+    name_counter_dict = {}
+    for variable in variables:
+        savename = _get_savename(variable, name_counter_dict)
+        save_h5py_variable(inline_grp, variable, savename)
+
+    f.close()

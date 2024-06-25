@@ -50,7 +50,7 @@ class SimulatorBase():
 
     def check_if_optimization(self):
         if not self.is_opt:
-            raise ValueError("A valid optimization problem must be specified")
+            raise ValueError(f"A valid optimization problem must be specified to use this method. {len(self.recorder.design_variables)} design variables, {len(self.recorder.objectives)} objectives, and {len(self.recorder.constraints)} constraints found.")
 
     def run(self):
         raise NotImplementedError('run method not implemented')
@@ -61,31 +61,37 @@ class SimulatorBase():
     def compute_optimization_derivatives(self):
         raise NotImplementedError('compute_optimization_derivatives method not implemented')
 
-    def update_design_variables(self, dv_vector:np.ndarray)->None:
+    def update_design_variables(self, dv_vector:np.ndarray, save = False)->None:
         self.check_if_optimization()
 
         for var in self.dv_meta:
             var.value = dv_vector[self.dv_meta[var]['l_ind']:self.dv_meta[var]['u_ind']].reshape(var.shape)
 
+        if save:
+            self.run()
+            self.recorder.inline_save()
     def build_objective_constraint_derivatives(self):
-        import csdl_alpha as csdl
-        if len(self.recorder.constraints) > 0:
-            self.constraint_jacobian = csdl.derivative(
-                list(self.recorder.constraints.keys()),
-                list(self.recorder.design_variables.keys()),
-                as_block=True,
-            )
-        else:
-            self.constraint_jacobian = None
 
-        if len(self.recorder.objectives) > 0:
-            self.objective_gradient = csdl.derivative(
-                list(self.recorder.objectives.keys()),
-                list(self.recorder.design_variables.keys()),
-                as_block=True,
-            )
-        else:
-            self.objective_gradient = None
+        if not self.initialized_totals:
+            self.initialized_totals = True
+            import csdl_alpha as csdl
+            if len(self.recorder.constraints) > 0:
+                self.constraint_jacobian = csdl.derivative(
+                    list(self.recorder.constraints.keys()),
+                    list(self.recorder.design_variables.keys()),
+                    as_block=True,
+                )
+            else:
+                self.constraint_jacobian = None
+
+            if len(self.recorder.objectives) > 0:
+                self.objective_gradient = csdl.derivative(
+                    list(self.recorder.objectives.keys()),
+                    list(self.recorder.design_variables.keys()),
+                    as_block=True,
+                )
+            else:
+                self.objective_gradient = None
 
     def _process_optimization_values(self):
         nc = sum([var.size for var in self.recorder.constraints])
