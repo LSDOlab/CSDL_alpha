@@ -1,8 +1,8 @@
 from csdl_alpha.src.recorder import Recorder
 from csdl_alpha.src.graph.variable import Variable
-from csdl_alpha.utils.inputs import get_type_string
+from csdl_alpha.utils.inputs import get_type_string, listify_variables
 
-from typing import Union
+from typing import Optional, Union, Callable
 import numpy as np
 
 class SimulatorBase():
@@ -112,15 +112,51 @@ class SimulatorBase():
 
         return objectives, constraints
     
+    def _build_check_totals_verification_dict(
+            self,
+            ofs:list[Variable],
+            wrts:list[Variable],
+            analytical:dict[tuple[Variable, Variable], np.ndarray],
+            fd:dict[tuple[Variable, Variable], np.ndarray]
+        )->dict[tuple[Variable, Variable], dict]:
+        
+        verify_dict = {}
+        for i, output in enumerate(ofs):
+            for j, input in enumerate(wrts):
+                
+                tag = ''
+                if output in self.recorder.objectives.keys():
+                    tag += 'obj'
+                elif output in self.recorder.constraints.keys():
+                    tag += 'con'
+                tag += f'{output.shape},'
+                
+                if input in self.recorder.design_variables.keys():
+                    tag += f'dv'
+                tag += f'{input.shape},'
+                verify_dict[output, input] = {
+                    'value': analytical[output, input],
+                    'fd_value': fd[output, input],
+                    'of_name': output.name if not output.name is None else str(f'out_{i}'),
+                    'wrt_name':  input.name if not input.name is None else str(f'in_{j}'),
+                    'tag': tag,
+                }
+        return verify_dict
 
+
+        
 class PySimulator(SimulatorBase):
     def __init__(
             self, 
             recorder:Recorder,
+            derivatives_kwargs:Optional[Union[dict[str],Callable]] = None,
             ):
         super().__init__(recorder)
         self.recorder:Recorder = recorder
         self.initialize_totals = False
+
+        self.derivative_hashes = {}
+        self.derivative_kwargs = derivatives_kwargs if derivatives_kwargs is not None else {}
 
     def run(self):
         self.recorder.execute()
@@ -152,6 +188,114 @@ class PySimulator(SimulatorBase):
             return self.objective_gradient.value, None
         else:
             return self.objective_gradient.value, self.constraint_jacobian.value
+
+    def __getitem__(self, key:Variable):
+        if not isinstance(key, Variable):
+            raise KeyError(f"{key} must be an instance of Variable. {get_type_string(key)} given.")
+        return key.value
+
+    def __setitem__(self, key:Variable, value:np.ndarray):
+        if not isinstance(key, Variable):
+            raise KeyError(f"{key} must be an instance of Variable. {get_type_string(key)} given.")
+        if self.recorder.get_root_graph().in_degree(key) > 0:
+            raise ValueError(f"Variable '{key}' (with name '{key.name}') is not a valid input. Only independent variables can be set as inputs")
+
+        key.value = value
+
+    def compute_totals(
+            self,
+            ofs:list[Variable],
+            wrts:list[Variable],
+            use_finite_difference:bool = False,
+            finite_difference_step_size:float = 1e-6,
+        )->dict[tuple[Variable, Variable], np.ndarray]:
+        """
+        Computes the total derivatives of all outputs with respect to all inputs
+        """
+        ofs = listify_variables(ofs)
+        wrts = listify_variables(wrts)
+        if not use_finite_difference:
+            hash_key = (tuple(ofs), tuple(wrts))
+            
+            if not hash_key in self.derivative_hashes:
+                import csdl_alpha as csdl
+                self.recorder.start()
+                self.derivative_hashes[hash_key] = csdl.derivative(
+                    ofs = ofs,
+                    wrts = wrts,
+                    **self.derivative_kwargs,
+                )
+                self.recorder.stop()
+
+            self.recorder.execute()
+
+            return_derivs = {}
+            for of in ofs:
+                for wrt in wrts:
+                    return_derivs[of, wrt] = self.derivative_hashes[hash_key][of, wrt].value
+            return return_derivs
+        else:
+            from csdl_alpha.src.operations.derivatives.derivative_utils import finite_difference
+            
+            def forward_evaluation(wrts_arg:dict[Variable, np.array])->dict[Variable, np.array]:
+                graph = self.recorder.active_graph
+                for wrt in wrts_arg:
+                    wrt.value = wrts_arg[wrt]
+                graph.execute_inline()
+                return {of:of.value for of in ofs}
+            
+            return finite_difference(
+                ofs = ofs,
+                wrts = wrts,
+                step_size = finite_difference_step_size,
+                forward_evaluation=forward_evaluation)
+        
+    def check_totals(
+            self,
+            ofs:list[Variable] = None,
+            wrts:list[Variable] = None,
+            step_size:float = 1e-6,
+            print_results:bool = True,
+            raise_on_error:bool = False,
+        ):
+        """
+        Checks the total derivatives of ofs with respect to wrts using finite difference
+        """
+        if ofs is None:
+            ofs = list(self.recorder.objectives.keys()) + list(self.recorder.constraints.keys())
+            if len(ofs) == 0:
+                raise ValueError("No objectives or constraints found. Add objectives/constraints or specify 'ofs'.")
+        if wrts is None:
+            wrts = list(self.recorder.design_variables.keys())
+            if len(wrts) == 0:
+                raise ValueError("No design variables found. Add design variables or specify 'wrts'.")
+
+        from csdl_alpha.src.operations.derivatives.derivative_utils import verify_derivative_values
+        ofs = listify_variables(ofs)
+        wrts = listify_variables(wrts)
+        analytical_derivs = self.compute_totals(
+            ofs,
+            wrts,
+        )
+        finite_difference_derivs = self.compute_totals(
+            ofs,
+            wrts,
+            use_finite_difference=True,
+            finite_difference_step_size=step_size,
+        )
+
+        verify_dict = self._build_check_totals_verification_dict(
+            ofs,
+            wrts,
+            analytical_derivs,
+            finite_difference_derivs,
+        )
+
+        return verify_derivative_values(
+            verify_dict,
+            raise_on_error=raise_on_error,
+            print_results=print_results,
+        )
 
 def determine_if_optimization(recorder:Recorder)->bool:
     """

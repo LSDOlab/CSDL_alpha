@@ -87,7 +87,7 @@ class JaxSimulator(SimulatorBase):
         if not isinstance(output_saved, bool):
             raise TypeError(f"output_saved must be a bool. {get_type_string(output_saved)} given.")
         if output_saved:
-            self.saved_outputs:list[Variable] = [node for node in self.recorder.active_graph.node_table if isinstance(node, Variable) and node._save]
+            self.saved_outputs:list[Variable] = [node for node in self.recorder.get_root_graph().node_table if isinstance(node, Variable) and node._save]
         else:
             self.saved_outputs:list[Variable] = []
 
@@ -105,7 +105,7 @@ class JaxSimulator(SimulatorBase):
 
         # Check to make sure inputs are valid:
         for input_var in run_inputs:
-            if recorder.active_graph.in_degree(input_var) > 0:
+            if recorder.get_root_graph().in_degree(input_var) > 0:
                 raise ValueError(f"Variable '{input_var}' (with name '{input_var.name}') is not a valid input. Only independent variables can be set as inputs")
 
         # Check to make sure outputs are valid:
@@ -135,7 +135,7 @@ class JaxSimulator(SimulatorBase):
             self.run_func = create_jax_interface(
                 self.input_manager.list,
                 self.output_manager.list,
-                self.recorder.active_graph,
+                self.recorder.get_root_graph(),
                 device = self._gpu,
             )
 
@@ -189,7 +189,7 @@ class JaxSimulator(SimulatorBase):
                 self.totals_derivs = create_jax_interface(
                     self.input_manager.list,
                     list(self.derivative_variables.values()),
-                    self.recorder.active_graph,
+                    self.recorder.get_root_graph(),
                     device = self._gpu,
                 )
 
@@ -216,7 +216,7 @@ class JaxSimulator(SimulatorBase):
             raise_on_error:bool = False,
         )-> dict[tuple[Variable, Variable], dict[str]]:
         """
-        Checks the total derivatives of all outputs with respect to all inputs
+        Checks the total derivatives of all outputs with respect to all inputs using finite difference
         """
         from csdl_alpha.src.operations.derivatives.derivative_utils import verify_derivative_values
 
@@ -226,27 +226,13 @@ class JaxSimulator(SimulatorBase):
             finite_difference_step_size=step_size,
         )
 
-        verify_dict = {}
-        for i, output in enumerate(self.output_manager.list):
-            for j, input in enumerate(self.input_manager.list):
-                
-                tag = ''
-                if output in self.recorder.objectives.keys():
-                    tag += 'obj'
-                elif output in self.recorder.constraints.keys():
-                    tag += 'con'
-                tag += f'{output.shape},'
-                
-                if input in self.recorder.design_variables.keys():
-                    tag += f'dv'
-                tag += f'{input.shape},'
-                verify_dict[output, input] = {
-                    'value': analytical_derivs[output, input],
-                    'fd_value': finite_difference_derivs[output, input],
-                    'of_name': output.name if not output.name is None else str(f'out_{i}'),
-                    'wrt_name':  input.name if not input.name is None else str(f'in_{j}'),
-                    'tag': tag,
-                }
+        verify_dict = self._build_check_totals_verification_dict(
+            self.output_manager.list,
+            self.input_manager.list,
+            analytical_derivs,
+            finite_difference_derivs,
+        )
+
         return verify_derivative_values(
             verify_dict,
             raise_on_error=raise_on_error,
@@ -284,7 +270,7 @@ class JaxSimulator(SimulatorBase):
             self.run_forward_func = create_jax_interface(
                 list(self.recorder.design_variables.keys()),
                 list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys()),
-                self.recorder.active_graph,
+                self.recorder.get_root_graph(),
                 device = self._gpu,
             )
 
@@ -311,7 +297,7 @@ class JaxSimulator(SimulatorBase):
             self.opt_derivs_func = create_jax_interface(
                 list(self.recorder.design_variables.keys()),
                 opt_derivs,
-                self.recorder.active_graph,
+                self.recorder.get_root_graph(),
                 device = self._gpu,
             )
 

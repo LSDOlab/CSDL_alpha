@@ -112,7 +112,7 @@ def test_jsimulator():
     )
     jax_sim.run()
     jax_sim.compute_totals()
-    jax_sim.check_totals()
+    jax_sim.check_totals(raise_on_error=True)
     output_vals = fwd_func(*[input.value for input in inputs])
     for i, output in enumerate(outputs):
         assert np.allclose(output_vals[i], jax_sim[output])
@@ -125,7 +125,7 @@ def test_jsimulator():
 
     jax_sim.run()
     jax_sim.compute_totals()
-    jax_sim.check_totals()
+    jax_sim.check_totals(raise_on_error=True)
 
     output_vals = fwd_func(*[new_val for new_val in new_vals])
     for i, output in enumerate(outputs):
@@ -165,7 +165,7 @@ def test_jsimulator_constants():
     # Check initial values
     jax_sim.run()
     jax_sim.compute_totals()
-    jax_sim.check_totals()
+    jax_sim.check_totals(raise_on_error=True)
     output_vals = fwd_func(*[input.value for input in all_inputs])
     for i, output in enumerate(outputs):
         assert np.allclose(output_vals[i], jax_sim[output])
@@ -180,7 +180,7 @@ def test_jsimulator_constants():
     # Check new values
     jax_sim.run()
     jax_sim.compute_totals()
-    jax_sim.check_totals()
+    jax_sim.check_totals(raise_on_error=True)
 
     output_vals = fwd_func(*([new_val for new_val in new_vals]+[input.value for input in all_inputs[len(inputs):]]))
     for i, output in enumerate(outputs):
@@ -222,7 +222,6 @@ def test_jsimulator_optimization():
     recorder.start()
     all_inputs, all_outputs, fwd_func = build_model()
     recorder.stop()
-    
     # Set inputs and create simulator
     inputs = all_inputs[0:3]
     additional_inputs = inputs[0:2]
@@ -243,7 +242,7 @@ def test_jsimulator_optimization():
     jax_sim.run_forward()
     old_grad, _ = jax_sim.compute_optimization_derivatives()
     jax_sim.compute_totals()
-    jax_sim.check_totals()
+    jax_sim.check_totals(raise_on_error=True)
     output_vals = fwd_func(*[input.value for input in all_inputs])
     for i, output in enumerate(outputs):
         assert np.allclose(output_vals[i], jax_sim[output])
