@@ -714,7 +714,12 @@ class frange():
 
         for loop_var in loop_vars:
             # stack_output = Variable(name = f'stack_out_{loop_var[1].name}', shape=(len(self.vals[0]),) + loop_var[0].shape, value=0)
-            stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]), self.inline_lazy_stack)
+
+            inline_lazy_stack = self.inline_lazy_stack
+            if not self._recorder.inline:
+                inline_lazy_stack = True
+
+            stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]), inline_lazy_stack)
             self.iter2_outputs.append(stack_output)
             
         # add the loop operation to the graph
