@@ -3,9 +3,6 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
 import numpy as np
 import math
-import jax
-import jax.numpy as jnp
-import jax.lax as lax
 from typing import Union
 
 class BracketedSearch(NonlinearSolver):
@@ -179,6 +176,9 @@ class BracketedSearch(NonlinearSolver):
             print(self._inline_print_nl_status(iter, converged))
         
     def _jax_solve_(self, jax_residual_function, input_dict):
+        import jax
+        import jax.numpy as jnp
+        import jax.lax as lax
         # I'm going to assemble everything into a big vector, solve it, and then unpack it
 
         # First, I need to know the size of the vector, and the indices of each state
