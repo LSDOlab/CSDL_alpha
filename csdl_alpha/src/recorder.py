@@ -60,7 +60,7 @@ class Recorder:
         self.active_namespace = self.namespace_tree
 
         # TODO: unbloat...
-        self.graph_tree = Tree(Graph())
+        self.graph_tree = Tree(Graph(name = 'root'))
         self.active_graph:Graph = self.graph_tree.value
         self.node_graph_map = {}
         self.active_graph_stack = [self.active_graph]

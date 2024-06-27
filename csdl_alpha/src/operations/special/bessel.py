@@ -38,6 +38,35 @@ class Bessel(ElementwiseOperation):
     def compute_inline(self, x):
         return self.bessel_func(self.order,x)
 
+from csdl_alpha.src.operations.custom.custom import CustomExplicitOperation
+class CustomBessel(CustomExplicitOperation):
+    def __init__(self, kind, order):
+        super().__init__()
+        csdl.check_parameter(kind, 'kind', types=(int))
+        csdl.check_parameter(order, 'order', types=(Number, np.ndarray))
+        self.order = order
+
+        if kind == 1:
+            from scipy.special import jv
+            from scipy.special import jvp
+            self.bessel_func = jv
+            self.d_bessel_func = jvp
+        elif kind == 2:
+            from scipy.special import yv
+            from scipy.special import yvp
+            self.bessel_func = yv
+            self.d_bessel_func = yvp
+
+    def evaluate(self, x):
+        self.declare_input('x', x)
+        self.declare_derivative_parameters('y', 'x', rows=np.arange(x.size), cols=np.arange(x.size))
+        return self.create_output('y', x.shape)
+    
+    def compute(self, input_vals, output_vals):
+        output_vals['y'] = self.bessel_func(self.order, input_vals['x'])
+
+    def compute_derivatives(self, input_vals, outputs_vals, derivatives):
+        derivatives['y', 'x'] = self.d_bessel_func(self.order, input_vals['x']).flatten()
 
 def bessel(
         x:VariableLike,
@@ -83,7 +112,11 @@ def bessel(
         if x.shape != order.shape:
             raise ValueError(f"Bessel function order must be the same shape as the input. order shape {order.shape} given, {x.shape} expected.")
 
-    return Bessel(x, kind, order).finalize_and_return_outputs()
+
+    # TODO: Implement proper bessel:
+    # return Bessel(x, kind, order).finalize_and_return_outputs()
+
+    return CustomBessel(kind, order).evaluate(x)
 
 class TestBessel(csdl_tests.CSDLTest):
     
@@ -118,7 +151,7 @@ class TestBessel(csdl_tests.CSDLTest):
         b6 = csdl.bessel(x_val, order = np.arange(6).reshape(2,3)+1, kind = 2)
         compare_values += [csdl_tests.TestingPair(b6, yv(np.arange(6).reshape(2,3)+1,x_val))]
 
-        self.run_tests(compare_values = compare_values,)
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_errors(self):
         self.prep()
@@ -145,6 +178,7 @@ class TestBessel(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = TestBessel()
+    test.overwrite_backend = 'inline'
     test.test_functionality()
     test.test_errors()
     test.test_docstrings()

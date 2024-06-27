@@ -131,7 +131,7 @@ class JaxSimulator(SimulatorBase):
         """
         # Compile the function if it doesn't exist
         if self.run_func is None:
-            print("compiling 'run' function ...")
+            print(f"compiling 'run' function ... ({len(self.recorder.node_graph_map)} nodes)")
             self.run_func = create_jax_interface(
                 self.input_manager.list,
                 self.output_manager.list,
@@ -175,7 +175,6 @@ class JaxSimulator(SimulatorBase):
         """
         if not use_finite_difference:
             if self.totals_derivs is None:
-                print("compiling 'compute_totals' function ...")
 
                 import csdl_alpha as csdl
                 self.recorder.start()
@@ -185,6 +184,7 @@ class JaxSimulator(SimulatorBase):
                     **self.derivatives_kwargs
                 )
                 self.recorder.stop()
+                print(f"compiling 'compute_totals' function ... ({len(self.recorder.node_graph_map)} nodes)")
 
                 self.totals_derivs = create_jax_interface(
                     self.input_manager.list,
@@ -245,28 +245,11 @@ class JaxSimulator(SimulatorBase):
     def get_outputs(self)->dict[Variable, np.ndarray]:
         return {out_var:out_var.value for out_var in self.output_manager.list}
 
-    #     obj+constraints+saved_outputs+additional_outputs = f(dvs+additional_inputs)
-
-    # def compute_totals(of, wrt):
-        # of in  obj+constraints+saved_outputs+additional_outputs else error
-        # wrt in dvs+additional_inputs else error
-        
-    # def check_totals():
-
-
-    # def __getitem__(self, key):
-        # key in  obj+constraints+saved_outputs+additional_outputs else error
-
-    # def __setitem__(self, key):
-        # key in dvs+additional_inputs else error
-        # if key in additional_inputs:
-            # set recompile run_forward True
-
     def run_forward(self):
         self.check_if_optimization()
 
         if self.run_forward_func is None:
-            print("compiling 'run_forward' function ...")
+            print(f"compiling 'run_forward' function ... ({len(self.recorder.node_graph_map)} nodes)")
             self.run_forward_func = create_jax_interface(
                 list(self.recorder.design_variables.keys()),
                 list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys()),
@@ -284,7 +267,7 @@ class JaxSimulator(SimulatorBase):
         self.check_if_optimization()
 
         if self.opt_derivs_func is None:
-            print("compiling 'compute_optimization_derivatives' function ...")
+            print(f"compiling 'compute_optimization_derivatives' function ... ({len(self.recorder.node_graph_map)} nodes)")
 
             self.recorder.start()
             self.build_objective_constraint_derivatives()
