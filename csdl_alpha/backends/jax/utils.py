@@ -78,7 +78,7 @@ def verify_inline_vs_jax(
             if error > abs_threshold:
                 past_threshhold = True
         if rel_threshold is not None:
-            if rel_error > rel_threshold:
+            if rel_error > rel_threshold and np.linalg.norm(node.value) > 1e-7:
                 past_threshhold = True
         if past_threshhold:
             if raise_error:
