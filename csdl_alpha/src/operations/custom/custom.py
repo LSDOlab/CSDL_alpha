@@ -417,7 +417,7 @@ class CustomJacOperation(Operation):
             new_inline_func,
             [jax.ShapeDtypeStruct(in_cot.shape, np.float64) for in_cot in self.input_cotangents],
             *args)
-        if len(output) == 1:
-            output = output[0]
+        # if len(output) == 1:
+        #     output = output[0]
         
         return tuple(output)
