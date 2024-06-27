@@ -187,6 +187,104 @@ class Recorder:
 
         return information_dict
 
+    def count_origins(self, n=10, mode='function', type='operation'):
+        """Count the origins of nodes in the active graph and prints to console.
+        This method counts the origins of nodes in the active graph based on the specified mode and type.
+        The origins can be counted based on the function, file, or line where the node originated from.
+        Parameters
+        ----------
+        n : int, optional
+            The number of origins to display, by default 10.
+        mode : str, optional
+            The mode to count the origins. Valid options are 'function', 'file', or 'line', by default 'function'.
+        type : str | object, optional
+            The type of nodes to count the origins. Valid options are 'operation', 'variable', or 'all', by default 'operation'.
+        Raises
+        ------
+        ValueError
+            If an invalid mode or type is provided.
+        """
+        import csdl_alpha as csdl
+        from csdl_alpha.src.graph.operation import Operation
+
+        # TODO: allow users to specify specific operations to count
+        if type == 'operation':
+            types = (Operation)
+        elif type == 'variable':
+            types = (csdl.Variable)
+        elif type == 'all':
+            types = (Operation, csdl.Variable)
+        else:
+            raise ValueError(f"Invalid type: {type}")
+
+        origin_counts = {}
+
+        for node in self.active_graph.node_table:
+            if isinstance(node, types):
+                if mode == 'function':
+                    origin = f"{node.origin_info['function']} in {node.origin_info['filename']}"
+                elif mode == 'file':
+                    origin = node.origin_info['filename']
+                elif mode == 'line':
+                    origin = f"{node.origin_info['filename']}:{node.origin_info['lineno']}"
+                else:
+                    raise ValueError(f"Invalid mode: {mode}")
+                if origin in origin_counts:
+                    origin_counts[origin] += 1
+                else:
+                    origin_counts[origin] = 1
+
+        sorted_origins = sorted(origin_counts.items(), key=lambda x: x[1], reverse=True)
+
+        for i, (origin, count) in enumerate(sorted_origins):
+            if i >= n:
+                break
+            print(f'{origin} : {count}')
+
+    def count_operations(self, n=10):
+        """
+        Prints the most common operations in the graph.
+        Args:
+            n: The number of operations to print.
+        """
+        from csdl_alpha.src.graph.operation import Operation
+
+        operation_counts = {}
+        for node in self.active_graph.node_table:
+            if isinstance(node, Operation):
+                if node.__class__.__name__ in operation_counts:
+                    operation_counts[node.__class__.__name__] += 1
+                else:
+                    operation_counts[node.__class__.__name__] = 1
+        operation_counts = sorted(operation_counts.items(), key=lambda x: x[1], reverse=True)
+
+        for i, (operation, count) in enumerate(operation_counts):
+            if i >= n:
+                break
+            print(f'{operation} : {count}')
+
+    def print_largest_variables(self, n=10):
+        """
+        Prints the largest variables in the graph.
+        Args:
+            n: The number of variables to print.
+        """
+        from csdl_alpha.src.graph.variable import Variable
+
+        variable_sizes = {}
+        for node in self.active_graph.node_table:
+            if isinstance(node, Variable):
+                variable_sizes[node] = np.prod(node.shape)
+        variable_sizes = sorted(variable_sizes.items(), key=lambda x: x[1], reverse=True)
+
+        for i, (variable, size) in enumerate(variable_sizes):
+            if i >= n:
+                break
+            if variable.origin_info is not None:
+                print(f'{variable} : {variable.shape} at {variable.origin_info["function"]} in {variable.origin_info["filename"]}:{variable.origin_info["lineno"]}')
+            else:
+                print(f'{variable} : {variable.shape}')
+
     def print_graph_structure(self):
         """
         prints graph tree structure like:

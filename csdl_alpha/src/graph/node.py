@@ -36,25 +36,25 @@ class Node(object):
         from csdl_alpha.src.graph.operation import Operation
         node_stack = [inspect.currentframe()]
         set_origin = True
-        info = inspect.getframeinfo(node_stack[0])
+        info = inspect.getframeinfo(node_stack[-1])
         trace = []
         if 'csdl_alpha/src' not in info.filename and 'csdl_alpha/utils' not in info.filename:
             trace = [f"{info.filename}:{info.lineno} in {info.function}"]
             self.origin_info = {"filename": info.filename, "lineno": info.lineno, "function": info.function}
             set_origin = False
 
-        while node_stack[0].f_back is not None:
-            node_stack.insert(0, node_stack[0].f_back)
-            info = inspect.getframeinfo(node_stack[0])
+        while node_stack[-1].f_back is not None:
+            node_stack.append(node_stack[-1].f_back)
+            info = inspect.getframeinfo(node_stack[-1])
             if 'csdl_alpha/src' in info.filename or 'csdl_alpha/utils' in info.filename:
                 continue
             if set_origin:
                 self.origin_info = {"filename": info.filename, "lineno": info.lineno, "function": info.function}
                 set_origin = False
-            trace.insert(0, f"{info.filename}:{info.lineno} in {info.function}")
-        self.trace = trace
+            trace.append(f"{info.filename}:{info.lineno} in {info.function}")
+        self.trace = list(reversed(trace))
 
-    def print_trace(self):
+    def print_trace(self, tab = False):
         """
         Prints the trace of the node.
         """
@@ -62,6 +62,8 @@ class Node(object):
             print("No trace available.")
             return
         for item in self.trace:
+            if tab:
+                print('\t', end = '')
             print(item)
 
     # def __eq__(self, other):
