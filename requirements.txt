@@ -19,3 +19,4 @@ sphinxcontrib-bibtex==2.5.0
 rustworkx==0.14.2
 pydot==2.0.0
 graphviz==0.20.3
+jax==0.4.29
