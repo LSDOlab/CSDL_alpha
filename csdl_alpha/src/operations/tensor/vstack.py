@@ -68,8 +68,8 @@ def vstack(arrays)->Variable:
     array([[3., 3., 3.],
            [1., 1., 1.]])
     """
-    if not isinstance(arrays, tuple):
-        raise ValueError('Input must be a list of arrays to stack')
+    if not isinstance(arrays, (tuple, list)):
+        raise ValueError('Input must be a list or tuple of arrays to stack')
     if len(arrays) < 2:
         raise ValueError('Input list must have at least two arrays to stack')
 
