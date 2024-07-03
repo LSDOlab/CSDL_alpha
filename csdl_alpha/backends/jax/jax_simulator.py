@@ -47,6 +47,8 @@ class JaxSimulator(SimulatorBase):
             gpu:bool = True,
             f64:bool = True,
             derivatives_kwargs:Optional[Union[dict[str],Callable]] = None,
+            save_on_update:bool = False,
+            filename:str = 'jax_simulator.hdf5',
         ):
         """Interface to run a recorder model using JAX. Variables of interest outside
         of optimization problems must be specified as additional inputs or outputs.
@@ -65,6 +67,10 @@ class JaxSimulator(SimulatorBase):
             If True, compiles the jax function for GPU. If False or a GPU is not found, compiles for CPU. by default True
         f64 : bool, optional
             (Not yet implemented) If True, compiles the jax function for float64, otherwise compiles for float32. by default True
+        save_on_update : bool, optional - EXPERIMENTAL
+            If True, saves the values of all saved outputs to an external file after each derivative call, by default False
+        filename : str, optional - EXPERIMENTAL
+            The name of the file to save the values of all saved outputs to, by default 'jax_simulator.hdf5'
         """
 
         super().__init__(recorder)
@@ -73,6 +79,10 @@ class JaxSimulator(SimulatorBase):
         self.totals_derivs:Optional[callable] = None
         self.run_forward_func:Optional[callable] = None
         self.opt_derivs_func:Optional[callable] = None
+
+        self.update_counter = 0
+        self.save_on_update = save_on_update
+        self.filename = filename
 
         # Process inputs and outputs
         if additional_inputs is None:
@@ -102,6 +112,10 @@ class JaxSimulator(SimulatorBase):
         # Store valid inputs and outputs
         run_inputs = list(self.recorder.design_variables.keys())+self.additional_inputs
         run_outputs = list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys())+self.saved_outputs+self.additional_outputs
+
+        # Even if output_saved is False, still want to save any variables in inputs/outputs
+        if len(self.saved_outputs) == 0:
+            self.saved_outputs = [var for var in run_inputs if var._save] + [var for var in run_outputs if var._save]
 
         # Check to make sure inputs are valid:
         for input_var in run_inputs:
@@ -264,6 +278,10 @@ class JaxSimulator(SimulatorBase):
         return self._process_optimization_values()
 
     def compute_optimization_derivatives(self):
+        if self.save_on_update:
+            self.save_external(self.filename, 'iteration_'+str(self.update_counter))
+            self.update_counter += 1
+
         self.check_if_optimization()
 
         if self.opt_derivs_func is None:
