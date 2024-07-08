@@ -289,7 +289,8 @@ class Loop(SubgraphOperation):
         recorder = csdl.get_current_recorder()
         recorder._enter_subgraph(graph = self.get_subgraph())
         
-        for node in self.get_subgraph().node_table.keys():
+        node_table = list(self.get_subgraph().node_table.keys())
+        for node in node_table:
             if isinstance(node, Operation):
                 node.prep_vjp()
         
