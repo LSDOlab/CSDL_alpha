@@ -41,7 +41,12 @@ def _export_h5py(filename:str, do_print=False):
         if isinstance(key, Variable):
             if key._save:
                 savename = _get_savename(key, name_counter_dict)
-                dset = inline_grp.create_dataset(savename, data=key.value)
+                try:
+                    dset = inline_grp.create_dataset(savename, data=key.value)
+                except ValueError:
+                    # probably has the same name as another, so add the index
+                    savename = f'{savename}_{index}'
+                    dset = inline_grp.create_dataset(savename, data=key.value)
                 # The shape is already stored in the value
                 dset.attrs['index'] = index
                 if key.tags:
@@ -204,7 +209,12 @@ def save_all_variables(ignore_unnamed = False):
 
 
 def save_h5py_variable(inline_grp, variable, savename:str):
-    dset = inline_grp.create_dataset(savename, data=variable.value)
+    try:
+        dset = inline_grp.create_dataset(savename, data=variable.value)
+    except ValueError:
+        # probably has the same name as another, so add the index
+        savename = f'{savename}_{variable.index}'
+        dset = inline_grp.create_dataset(savename, data=variable.value)
     # The shape is already stored in the value
     if variable.tags:
         dset.attrs['tags'] = variable.tags
@@ -225,7 +235,7 @@ def save_h5py_variables(
 
     if not filename.endswith('.hdf5'):
         filename = f'{filename}.hdf5'
-    f = h5py.File(filename, 'w')
+    f = h5py.File(filename, 'a')
     inline_grp = f.create_group(groupname)
 
     name_counter_dict = {}
