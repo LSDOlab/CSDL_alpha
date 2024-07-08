@@ -352,6 +352,9 @@ class CustomJacOperation(Operation):
         # derivative order and original operation
         self.order = order
         self.custom_operation = custom_operation
+        self.cache_jac:bool = True
+        self.cached_inputs = None
+        self.cached_jacs = None
 
         # The inputs of the operation are all the orginal inputs, the computed outputs AND the cotangents of the outputs
         vjp_custom_inputs = self.orig_inputs + self.orig_outputs + self.cotangents_outputs
@@ -371,16 +374,21 @@ class CustomJacOperation(Operation):
         input_values:list[np.array] = orig_inputs_and_outputs_and_cots[:self.num_orig_inputs]
         output_values:list[np.array] = orig_inputs_and_outputs_and_cots[self.num_orig_inputs:self.num_orig_inputs + self.num_orig_outputs]
         cot_values:list[np.array] = orig_inputs_and_outputs_and_cots[self.num_orig_inputs + self.num_orig_outputs:]
-        
-        inputs:dict[str,Variable] = {self.reverse_input_dict[key]:input for key, input in zip(self.orig_inputs, input_values)}
-        outputs:dict[str,Variable] = {self.reverse_output_dict[key]:output for key, output in zip(self.orig_outputs, output_values)}
+        if (not self.cache_jac) or (self.cached_inputs is None or not all(np.array_equal(input, cached_input) for input, cached_input in zip(input_values, self.cached_inputs))):
+            inputs:dict[str,Variable] = {self.reverse_input_dict[key]:input for key, input in zip(self.orig_inputs, input_values)}
+            outputs:dict[str,Variable] = {self.reverse_output_dict[key]:output for key, output in zip(self.orig_outputs, output_values)}
 
-        # Call user derivatives
-        derivatives_dict = prepare_compute_derivatives(self.custom_operation.derivative_parameters)
-        inputs = preprocess_custom_inputs(inputs)
-        outputs = preprocess_custom_inputs(outputs)
-        self.custom_operation.compute_derivatives(inputs, outputs, derivatives_dict)
-        postprocess_compute_derivatives(derivatives_dict, self.custom_operation.derivative_parameters)
+            # Call user derivatives
+            derivatives_dict = prepare_compute_derivatives(self.custom_operation.derivative_parameters)
+            inputs = preprocess_custom_inputs(inputs)
+            outputs = preprocess_custom_inputs(outputs)
+            self.custom_operation.compute_derivatives(inputs, outputs, derivatives_dict)
+            postprocess_compute_derivatives(derivatives_dict, self.custom_operation.derivative_parameters)
+
+            self.cached_inputs = input_values
+            self.cached_jacs = derivatives_dict
+        else:
+            derivatives_dict = self.cached_jacs
         
         # Accumulate and return
         input_cots:list[np.array] = []
