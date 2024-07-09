@@ -20,7 +20,7 @@ class CustomOperation(Operation):
         self.input_dict = {}
         self.output_dict = {}
         self.derivative_parameters = {}
-        self.name = 'custom'
+        self.name = self.__class__.__name__
 
 class CustomExplicitOperation(CustomOperation):
 
@@ -40,7 +40,7 @@ class CustomExplicitOperation(CustomOperation):
         raise NotImplementedError('not implemented')
 
     def compute_derivatives(self, inputs, outputs, derivatives):
-        raise NotImplementedError('not implemented')
+        raise NotImplementedError(f'not implemented for operation {self.name}')
 
     def _wrap_evaluate(self, evaluate):
         def new_evaluate(*args, **kwargs):
