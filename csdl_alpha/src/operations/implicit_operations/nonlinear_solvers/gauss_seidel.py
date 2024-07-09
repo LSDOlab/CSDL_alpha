@@ -120,6 +120,10 @@ class GaussSeidel(FixedPoint):
         #    xn_new = xn_state_update(x0_new, x1_new, ... xn_old)
         graph_input_dict = {key: value for key, value in input_var_dict.items() if key in self.residual_graph.node_table}
         states = val[0]
+
+        import jax
+        jax_residual_function = jax.jit(jax_residual_function)
+        
         for i, current_state_var in enumerate(self.state_to_residual_map):
             if self.state_metadata[current_state_var]['state_update'] is None:
                 states[i] = states[i] - jax_residual_function(states)[i]    # TODO: probably can reduce complie time by trimming this fn
