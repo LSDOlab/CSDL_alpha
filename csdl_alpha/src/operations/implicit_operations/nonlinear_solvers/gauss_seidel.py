@@ -4,7 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import scalarize, ingest_value
 import numpy as np
 
-from typing import Union
+from typing import Union, Callable
 
 class GaussSeidel(FixedPoint):
     
@@ -111,7 +111,12 @@ class GaussSeidel(FixedPoint):
             else:
                 current_state.value = self.state_metadata[current_state]['state_update'].value
 
-    def _jax_update_states(self, jax_residual_function, val, input_var_dict):
+    def _jax_update_states(
+            self,
+            jax_residual_function:Callable,
+            jax_intermediate_function:Callable,
+            val,
+            input_var_dict):
         from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
         # while not converged:
         #    x0_new = x0_state_update(x0_old, x1_old, ... xn_old)

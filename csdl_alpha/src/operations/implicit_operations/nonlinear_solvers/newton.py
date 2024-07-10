@@ -4,7 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import scalarize, ingest_value
 import numpy as np
 
-from typing import Union
+from typing import Union, Callable
 
 class Newton(FixedPoint):
     
@@ -106,7 +106,12 @@ class Newton(FixedPoint):
             iu = self.state_metadata[current_state]['index_upper']
             current_state.value = current_state.value - solved_system[il:iu].reshape(current_state.shape)
 
-    def _jax_update_states(self, jax_residual_function, val, input_var_dict):
+    def _jax_update_states(
+            self,
+            jax_residual_function:Callable,
+            jax_intermediate_function:Callable,
+            val,
+            input_var_dict):
         from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
         import jax.numpy as jnp
         # get residuals
@@ -125,11 +130,15 @@ class Newton(FixedPoint):
 
         # get residual jacobian
         residual_jacobian_var = self.full_residual_jacobian
-        jax_jacobian_function = create_jax_function(self.residual_graph, 
-                                                    [residual_jacobian_var], 
-                                                    [input for input in graph_input_dict]+list(self.state_to_residual_map))
-        residual_jacobian = jax_jacobian_function(*([val for val in graph_input_dict.values()]+states))[0]
-        
+        # jax_jacobian_function = create_jax_function(self.residual_graph, 
+        #                                             [residual_jacobian_var], 
+        #                                             [input for input in graph_input_dict]+list(self.state_to_residual_map))
+        # residual_jacobian = jax_jacobian_function(*([val for val in graph_input_dict.values()]+states))[0]
+        if residual_jacobian_var in graph_input_dict:
+            residual_jacobian = graph_input_dict[residual_jacobian_var]
+        else:
+            residual_jacobian = jax_intermediate_function(states)[residual_jacobian_var]
+
         # Solve residual Jacobian system
         solved_system = jnp.linalg.solve(residual_jacobian, residual_vector)
 

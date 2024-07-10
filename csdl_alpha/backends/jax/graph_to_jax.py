@@ -142,7 +142,9 @@ def create_jax_function(
 def create_jax_interface(
         inputs:Union[Variable, list[Variable], tuple[Variable]],
         outputs:Union[Variable, list[Variable], tuple[Variable]],
-        graph:Graph = None, device:str='gpu')->Callable[[dict[Variable, np.ndarray]], dict[Variable, np.ndarray]]:
+        graph:Graph = None,
+        device:str='gpu',
+        name = 'jax_interface')->Callable[[dict[Variable, np.ndarray]], dict[Variable, np.ndarray]]:
     """_summary_
 
     Parameters
@@ -193,6 +195,7 @@ def create_jax_interface(
         raise ValueError(f"Invalid device {device}")
 
     jax_function = create_jax_function(graph, outputs, inputs)
+    # jax_function = print_trace_time(jax_function, name = name) #TODO: uncomment for timing trace
     # jax_grad = jax.jit(jax.jacrev(jax_function, argnums=[i for i in range(len(inputs))])) # TODO: add option for jax derivatives?
     jax_function = jax.jit(jax_function, device=device)
 
@@ -214,3 +217,14 @@ def create_jax_interface(
         return outputs_dict
     
     return jax_interface
+
+def print_trace_time(jax_function, name):
+    import time
+    def wrapped(*args):
+        print(f'Starting JAX trace for function \'{name}\'')
+        start = time.time()
+        outs = jax_function(*args)
+        end = time.time()
+        print(f'Finished JAX trace for function \'{name}\' in {end-start} seconds')
+        return outs
+    return wrapped

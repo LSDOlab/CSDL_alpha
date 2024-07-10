@@ -3,7 +3,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
 import numpy as np
 import math
-from typing import Union
+from typing import Union, Callable
 
 class BracketedSearch(NonlinearSolver):
     
@@ -175,7 +175,12 @@ class BracketedSearch(NonlinearSolver):
         if self.print_status:
             print(self._inline_print_nl_status(iter, converged))
         
-    def _jax_solve_(self, jax_residual_function, input_dict):
+
+    def _jax_solve_(
+            self,
+            jax_residual_function:Callable,
+            jax_intermediate_function:Callable,
+            input_dict:dict):
         import jax
         import jax.numpy as jnp
         import jax.lax as lax

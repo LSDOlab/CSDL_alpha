@@ -8,7 +8,7 @@ import numpy as np
 from csdl_alpha.src.operations.derivatives.bookkeeping import VarTangents
 
 from csdl_alpha.utils.typing import VariableLike
-from typing import Union, Any
+from typing import Union, Any, Callable
 
 class NonlinearSolver(object):
     def __init__(
@@ -24,6 +24,7 @@ class NonlinearSolver(object):
             raise ValueError("Elementwise_states argument is deprecated. Use keyword argument: residual_jac_kwargs = {'elementwise':True} instead")
         self.name = name
         self.print_status = print_status
+        self.implicit_operation:ImplicitOperation = None
 
         self.metadata = {}
         
@@ -230,12 +231,12 @@ class NonlinearSolver(object):
             raise ValueError("State variables do not match metadate state keys")
 
         implicit_operation.finalize_and_return_outputs()
+        self.implicit_operation = implicit_operation
 
         # print(f'UPDATING DOWNSTREAM:  {self.name}')
         recorder = csdl.get_current_recorder()
         if recorder.inline:
             G.update_downstream(implicit_operation)
-        
         
         # For debugging:
         # self.residual_graph.visualize(f'inner_graph_{self.name}')
@@ -356,7 +357,7 @@ class NonlinearSolver(object):
 
             self.residual_jac_kwargs['as_block'] = True
             if for_deriv:
-                    self.residual_jac_kwargs['graph'] = self.residual_graph
+                self.residual_jac_kwargs['graph'] = self.residual_graph
             self.full_residual_jacobian = csdl.derivative(residuals_list, states_list, **self.residual_jac_kwargs)
             self.full_residual_jacobian.add_name(f'{self.name}_jac')
             return self.full_residual_jacobian
@@ -366,7 +367,12 @@ class NonlinearSolver(object):
     def _inline_solve_(self):
         raise NotImplementedError("Solve method must be implemented by subclass")
     
-    def _jax_solve_(self, jax_residual_function, input_dict):
+    def _jax_solve_(
+            self,
+            jax_residual_function:Callable,
+            jax_intermediate_function:Callable,
+            input_dict:dict,
+        ):
         """Solves the nonlinear equation using JAX.
 
         This method is responsible for solving the nonlinear equation using the JAX library.
@@ -466,11 +472,11 @@ class NonlinearSolver(object):
 
         self._inline_solve_()
 
-    def solve_implicit_jax(self, *args):
+    def solve_implicit_jax(self, *args, **kwargs):
         """
         Solves the nonlinear system of equations.
         """
-        return self._jax_solve_(*args)
+        return self._jax_solve_(*args, **kwargs)
 
 def check_variable_shape_compatibility(
         var_to_check:Variable, 

@@ -151,6 +151,7 @@ class JaxSimulator(SimulatorBase):
                 self.output_manager.list,
                 self.recorder.get_root_graph(),
                 device = self._gpu,
+                name = 'run',
             )
 
         # Run the function
@@ -205,6 +206,7 @@ class JaxSimulator(SimulatorBase):
                     list(self.derivative_variables.values()),
                     self.recorder.get_root_graph(),
                     device = self._gpu,
+                    name = 'compute_totals',
                 )
 
             derivs = self.totals_derivs({in_var:in_var.value for in_var in self.input_manager.list})
@@ -269,6 +271,7 @@ class JaxSimulator(SimulatorBase):
                 list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys()),
                 self.recorder.get_root_graph(),
                 device = self._gpu,
+                name = 'run_forward',
             )
 
         outputs = self.run_forward_func({dv:dv.value for dv in self.recorder.design_variables})
@@ -300,6 +303,7 @@ class JaxSimulator(SimulatorBase):
                 opt_derivs,
                 self.recorder.get_root_graph(),
                 device = self._gpu,
+                name = 'compute_optimization_derivatives',
             )
 
         outputs = self.opt_derivs_func({dv:dv.value for dv in self.recorder.design_variables})

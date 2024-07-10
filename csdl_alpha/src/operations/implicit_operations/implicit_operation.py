@@ -90,13 +90,24 @@ class ImplicitOperation(SubgraphOperation):
 
         # (1)
         jax_function = create_jax_function(self._subgraph, jax_fn_outputs, jax_fn_inputs)
+        import jax
+        jax_function = jax.jit(jax_function)
         def jax_residual_function(states):
             """Computes residuals given states, ordered as in state_to_residual_map"""
             return jax_function(*graph_args, *states)[len(non_state_output_vars):]
+        
+        def jax_intermediate_function(states)->dict:
+            """Computes all other outputs given states, ordered as in state_to_residual_map"""
+            outputs = jax_function(*graph_args, *states)[:len(non_state_output_vars)]
+            return {output: outputs[i] for i, output in enumerate(non_state_output_vars)}
 
         # (2)
         input_dict = {input: arg for input, arg in zip(self.inputs, args)}
-        states = self.nonlinear_solver.solve_implicit_jax(jax_residual_function, input_dict)
+        states = self.nonlinear_solver.solve_implicit_jax(
+            jax_residual_function,
+            jax_intermediate_function,
+            input_dict,
+        )
         state_dict = {state: states[i] for i, state in enumerate(state_vars)}
 
         # (3)

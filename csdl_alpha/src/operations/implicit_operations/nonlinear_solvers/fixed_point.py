@@ -3,7 +3,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import scalarize, ingest_value
 import numpy as np
 
-from typing import Union
+from typing import Union, Callable
 
 class FixedPoint(NonlinearSolver):
     
@@ -72,7 +72,11 @@ class FixedPoint(NonlinearSolver):
         if self.print_status:
             print(self._inline_print_nl_status(iter, converged))
 
-    def _jax_solve_(self, jax_residual_function, input_var_dict):
+    def _jax_solve_(
+            self,
+            jax_residual_function:Callable,
+            jax_intermediate_function:Callable,
+            input_var_dict:dict):
         """
         Solves the implicit operation graph using Nonlinear Gauss-Seidel
         """
@@ -81,7 +85,12 @@ class FixedPoint(NonlinearSolver):
 
         def loop_body(val): # (states, residuals, iter)
             # update all states
-            states = self._jax_update_states(jax_residual_function, val, input_var_dict)
+            states = self._jax_update_states(
+                jax_residual_function,
+                jax_intermediate_function,
+                val,
+                input_var_dict,
+            )
             
             # compute residuals
             residuals = jax_residual_function(states)
