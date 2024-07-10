@@ -90,7 +90,8 @@ class BracketedSearch(NonlinearSolver):
                     raise ValueError(f"Bracket shape must match state shape. {element.shape} given")
             elif not isinstance(element, (float, int, np.integer)):
                 raise TypeError(f"Invalid bracket element type, got {type(element)}")
-        self.add_state_metadata(state, 'bracket', bracket)
+        self.add_state_metadata(state, 'bracket_l', bracket[0])
+        self.add_state_metadata(state, 'bracket_r', bracket[1])
 
         # check if tolerance is valid and store it
         self.add_tolerance(state, tolerance)
@@ -132,7 +133,7 @@ class BracketedSearch(NonlinearSolver):
         # Now, I need to populate the x vectors with the initial bracket values
         # and populate the tolerance vector
         for state in self.state_to_residual_map.keys():
-            bracket = self.state_metadata[state]['bracket']
+            bracket = (self.state_metadata[state]['bracket_l'], self.state_metadata[state]['bracket_r'])
             ith_tolerance = self.state_metadata[state]['tolerance']
             # bracket indices could be Variable or ndarray of shape (1,) or state.shape
             # or float or int
@@ -224,7 +225,7 @@ class BracketedSearch(NonlinearSolver):
         # Now, I need to populate the x vectors with the initial bracket values
         # and populate the tolerance vector
         for state in self.state_to_residual_map.keys():
-            bracket = self.state_metadata[state]['bracket']
+            bracket = (self.state_metadata[state]['bracket_l'], self.state_metadata[state]['bracket_r'])
             ith_tolerance = self.state_metadata[state]['tolerance']
             # bracket indices could be Variable or ndarray of shape (1,) or state.shape
             # or float or int
