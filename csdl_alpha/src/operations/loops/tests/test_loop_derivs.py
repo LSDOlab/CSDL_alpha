@@ -449,11 +449,11 @@ if __name__ == '__main__':
     t = TestFrangeDeriv()
     t.overwrite_backend = 'jax'
     # t.overwrite_backend = 'inline'
-    # t.test_simple_loop()
-    # t.test_simple_second_deriv()
-    # t.test_simple_loop2()
+    t.test_simple_loop()
+    t.test_simple_second_deriv()
+    t.test_simple_loop2()
     t.test_simple_loop_feedback()
-    # t.test_simple_loop_feedback_indexing()
-    # t.test_simple_loop_feedback_indexing2()
-    # t.test_nested()
-    # t.test_nested_double_indexing()
+    t.test_simple_loop_feedback_indexing()
+    t.test_simple_loop_feedback_indexing2()
+    t.test_nested()
+    t.test_nested_double_indexing()

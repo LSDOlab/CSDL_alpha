@@ -482,6 +482,10 @@ class Loop(SubgraphOperation):
             vjp_external_ouputs.append(parent_external_output.out_cotangent)
 
         # deriv_loop_graph.visualize('vjp_loop2')
+            
+        # TODO: Investigate further
+        # from csdl_alpha.src.operations.compress_operations import compress_current_operations
+        # compress_current_operations()
         recorder._exit_subgraph()
 
         # ========================================================================================================================================
@@ -711,6 +715,12 @@ class frange():
         # non_feedback_inputs = external_inputs - strike_set # external inputs that are used for things other than feedback (and maybe feedback too)
         # Stop the graph
         # self._graph.visualize(f'graph_loop_final_{self}')
+        
+        # Compute the loop operation
+
+        # TODO: Investigate further
+        # from csdl_alpha.src.operations.compress_operations import compress_current_operations
+        # compress_current_operations()
         self._recorder._exit_subgraph()
 
         for loop_var in loop_vars:
