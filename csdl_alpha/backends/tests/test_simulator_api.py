@@ -82,6 +82,12 @@ def test_simulator1():
         assert g is None
         np.testing.assert_almost_equal(j, np.array([[1.0, 1.0],[5.0, 4.0]]))
 
+        g, j = sim.compute_optimization_derivatives(use_finite_difference = True)
+        assert g is None
+        np.testing.assert_almost_equal(j, np.array([[1.0, 1.0],[5.0, 4.0]]))
+
+        sim.check_optimization_derivatives(raise_on_error = True)
+
 def test_simulator2():
     from csdl_alpha.experimental import JaxSimulator
     from csdl_alpha.experimental import PySimulator
@@ -126,7 +132,13 @@ def test_simulator2():
         np.testing.assert_almost_equal(g, np.hstack((np.diagflat(new_x1), np.diagflat(new_x0)))[0].reshape(1,-1))
         np.testing.assert_almost_equal(j, np.hstack((np.eye(4), np.eye(4))))
 
+        g, j = sim.compute_optimization_derivatives(use_finite_difference = True)
+        np.testing.assert_almost_equal(g, np.hstack((np.diagflat(new_x1), np.diagflat(new_x0)))[0].reshape(1,-1))
+        np.testing.assert_almost_equal(j, np.hstack((np.eye(4), np.eye(4))))
+
+        sim.check_optimization_derivatives(raise_on_error = True)
+
 if __name__ == "__main__":
-    test_simulator_base_errors()
-    test_simulator1()
+    # test_simulator_base_errors()
+    # test_simulator1()
     test_simulator2()

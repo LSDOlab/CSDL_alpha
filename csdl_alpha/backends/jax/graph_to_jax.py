@@ -144,6 +144,7 @@ def create_jax_interface(
         outputs:Union[Variable, list[Variable], tuple[Variable]],
         graph:Graph = None,
         device:str='gpu',
+        enable_f64:bool=True,
         name = 'jax_interface')->Callable[[dict[Variable, np.ndarray]], dict[Variable, np.ndarray]]:
     """_summary_
 
@@ -170,7 +171,6 @@ def create_jax_interface(
     #     '--xla_gpu_enable_latency_hiding_scheduler=true '
     # )
 
-
     # preprocessing:
     inputs = listify_variables(inputs)
     outputs = listify_variables(outputs)
@@ -180,7 +180,7 @@ def create_jax_interface(
     # Create the JAX function
     # Insert JAX preprocessing here:
     # enabling x64 etc
-    jax.config.update("jax_enable_x64", True)
+    jax.config.update("jax_enable_x64", enable_f64)
 
     # Option in the future?
     if device == 'gpu':

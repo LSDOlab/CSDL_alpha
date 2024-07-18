@@ -143,8 +143,108 @@ class SimulatorBase():
                 }
         return verify_dict
 
+    def _assemble_jacs(self, derivs:dict[tuple[Variable, Variable], np.ndarray])->tuple[np.ndarray]:
+        """returns a tuple of the objective gradient and constraint gradient
 
-        
+        Parameters
+        ----------
+        derivs : dict[tuple[Variable, Variable], np.ndarray]
+
+        Returns
+        -------
+        tuple[np.ndarray]
+        """
+        num_dvs = self.opt_metadata['d'][0].size
+
+        if len(self.recorder.objectives) == 0:
+            objective_grad = None
+        else:
+            objective = list(self.recorder.objectives.keys())[0]
+            objective_grad = np.zeros((objective.size, num_dvs))
+            for dv in self.dv_meta:
+                lower_index = self.dv_meta[dv]['l_ind']
+                upper_index = self.dv_meta[dv]['u_ind']
+                objective_grad[0, lower_index:upper_index] = derivs[objective, dv].flatten()
+
+        if len(self.recorder.constraints) == 0:
+            constraint_jac = None
+        else:
+            num_cvs = self.opt_metadata['c'][0].size
+            constraint_jac = np.zeros((num_cvs, num_dvs))
+            for constraint in self.recorder.constraints:
+                cl_index = self.c_meta[constraint]['l_ind']
+                cu_index = self.c_meta[constraint]['u_ind']
+                for dv in self.recorder.design_variables:
+                    dl_index = self.dv_meta[dv]['l_ind']
+                    du_index = self.dv_meta[dv]['u_ind']
+                    constraint_jac[cl_index:cu_index, dl_index:du_index] = derivs[constraint, dv]
+
+        return objective_grad, constraint_jac
+
+    def _unassemble_jacs(self, objective_grad:np.ndarray, constraint_jac:np.ndarray)->dict[tuple[Variable, Variable], np.ndarray]:
+        """returns a dictionary of the derivatives given constraint and objective gradients
+
+        Parameters
+        ----------
+        objective_grad : np.ndarray
+        constraint_jac : np.ndarray
+
+        Returns
+        -------
+        dict[tuple[Variable, Variable], np.ndarray]
+        """
+        derivs = {}
+        if objective_grad is not None:
+            objective = list(self.recorder.objectives.keys())[0]
+            for dv in self.dv_meta:
+                lower_index = self.dv_meta[dv]['l_ind']
+                upper_index = self.dv_meta[dv]['u_ind']
+                derivs[objective, dv] = objective_grad[0, lower_index:upper_index].reshape(1, dv.size)
+
+        if constraint_jac is not None:
+            for constraint in self.recorder.constraints:
+                cl_index = self.c_meta[constraint]['l_ind']
+                cu_index = self.c_meta[constraint]['u_ind']
+                for dv in self.recorder.design_variables:
+                    dl_index = self.dv_meta[dv]['l_ind']
+                    du_index = self.dv_meta[dv]['u_ind']
+                    derivs[constraint, dv] = constraint_jac[cl_index:cu_index, dl_index:du_index].reshape(constraint.size, dv.size)
+
+        return derivs
+
+    def check_optimization_derivatives(
+            self, 
+            step_size:float = 1e-6,
+            print_results:bool = True,
+            raise_on_error:bool = False,
+        ):
+        """
+        Checks the total derivatives of all optimization outputs with respect to all design variables using finite difference
+        """
+        from csdl_alpha.src.operations.derivatives.derivative_utils import verify_derivative_values
+
+        analytical_derivs = self._unassemble_jacs(*self.compute_optimization_derivatives())
+        finite_difference_derivs = self._unassemble_jacs(
+            *self.compute_optimization_derivatives(
+                use_finite_difference=True,
+                finite_difference_step_size=step_size,
+            ),
+        )
+
+        verify_dict = self._build_check_totals_verification_dict(
+            list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys()),
+            list(self.recorder.design_variables.keys()),
+            analytical_derivs,
+            finite_difference_derivs,
+        )
+
+        return verify_derivative_values(
+            verify_dict,
+            raise_on_error=raise_on_error,
+            print_results=print_results,
+        )
+
+
 class PySimulator(SimulatorBase):
     def __init__(
             self, 
@@ -166,28 +266,51 @@ class PySimulator(SimulatorBase):
         self.recorder.execute()
         return self._process_optimization_values()
 
-    def compute_optimization_derivatives(self):
+    def compute_optimization_derivatives(
+            self,
+            use_finite_difference:bool = False,
+            finite_difference_step_size:float = 1e-6,
+        ):
         
         self.check_if_optimization()
 
-        if self.initialize_totals is False:
-            self.recorder.start()
-            self.build_objective_constraint_derivatives()
-            self.recorder.stop()
+        if not use_finite_difference:
+            if self.initialize_totals is False:
+                self.recorder.start()
+                self.build_objective_constraint_derivatives()
+                self.recorder.stop()
 
-            if not self.recorder.inline:
+                if not self.recorder.inline:
+                    self.recorder.execute()
+
+                self.initialize_totals = True
+            else:
                 self.recorder.execute()
+            
+            if self.objective_gradient is None:
+                return None, self.constraint_jacobian.value
+            elif self.constraint_jacobian is None:
+                return self.objective_gradient.value, None
+            else:
+                return self.objective_gradient.value, self.constraint_jacobian.value
+        else:
+            from csdl_alpha.src.operations.derivatives.derivative_utils import finite_difference
+            
+            def forward_evaluation(wrts_arg:dict[Variable, np.array])->dict[Variable, np.array]:
+                graph = self.recorder.active_graph
+                for wrt in wrts_arg:
+                    wrt.value = wrts_arg[wrt]
+                graph.execute_inline()
+                return {of:of.value for of in list(self.recorder.constraints.keys()) + list(self.recorder.objectives.keys())}
 
-            self.initialize_totals = True
-        else:
-            self.recorder.execute()
-        
-        if self.objective_gradient is None:
-            return None, self.constraint_jacobian.value
-        elif self.constraint_jacobian is None:
-            return self.objective_gradient.value, None
-        else:
-            return self.objective_gradient.value, self.constraint_jacobian.value
+            outputs = finite_difference(
+                ofs = list(self.recorder.constraints.keys()) + list(self.recorder.objectives.keys()),
+                wrts = list(self.recorder.design_variables.keys()),
+                step_size = finite_difference_step_size,
+                forward_evaluation=forward_evaluation,
+            )
+            return self._assemble_jacs(outputs)
+
 
     def __getitem__(self, key:Variable):
         if not isinstance(key, Variable):
@@ -363,3 +486,4 @@ def build_opt_metadata(
         return metadata, scaler_vector, lower_vector, upper_vector, val_vector
     else:
         return metadata, scaler_vector
+    

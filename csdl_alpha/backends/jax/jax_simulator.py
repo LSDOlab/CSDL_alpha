@@ -279,41 +279,57 @@ class JaxSimulator(SimulatorBase):
             output.set_value(outputs[output])
         
         return self._process_optimization_values()
-
-    def compute_optimization_derivatives(self):
+    
+    def compute_optimization_derivatives(
+            self,
+            use_finite_difference:bool = False,
+            finite_difference_step_size:float = 1e-6,
+        ):
         if self.save_on_update:
             self.save_external(self.filename, 'iteration_'+str(self.update_counter))
             self.update_counter += 1
 
         self.check_if_optimization()
 
-        if self.opt_derivs_func is None:
-            print(f"compiling 'compute_optimization_derivatives' function ... ({len(self.recorder.node_graph_map)} nodes)")
+        if not use_finite_difference:
+            if self.opt_derivs_func is None:
 
-            self.recorder.start()
-            self.build_objective_constraint_derivatives()
-            self.recorder.stop()
+                self.recorder.start()
+                self.build_objective_constraint_derivatives()
+                self.recorder.stop()
+                print(f"compiling 'compute_optimization_derivatives' function ... ({len(self.recorder.node_graph_map)} nodes)")
 
-            opt_derivs = []
-            opt_derivs += [self.objective_gradient] if self.objective_gradient is not None else []
-            opt_derivs += [self.constraint_jacobian] if self.constraint_jacobian is not None else []
+                opt_derivs = []
+                opt_derivs += [self.objective_gradient] if self.objective_gradient is not None else []
+                opt_derivs += [self.constraint_jacobian] if self.constraint_jacobian is not None else []
 
-            self.opt_derivs_func = create_jax_interface(
-                list(self.recorder.design_variables.keys()),
-                opt_derivs,
-                self.recorder.get_root_graph(),
-                device = self._gpu,
-                name = 'compute_optimization_derivatives',
-            )
+                self.opt_derivs_func = create_jax_interface(
+                    list(self.recorder.design_variables.keys()),
+                    opt_derivs,
+                    self.recorder.get_root_graph(),
+                    device = self._gpu,
+                    name = 'compute_optimization_derivatives',
+                )
 
-        outputs = self.opt_derivs_func({dv:dv.value for dv in self.recorder.design_variables})
-        
-        if self.objective_gradient is None:
-            return None, outputs[self.constraint_jacobian]
-        elif self.constraint_jacobian is None:
-            return outputs[self.objective_gradient], None
+            outputs = self.opt_derivs_func({dv:dv.value for dv in self.recorder.design_variables})
+            if self.objective_gradient is None:
+                return None, outputs[self.constraint_jacobian]
+            elif self.constraint_jacobian is None:
+                return outputs[self.objective_gradient], None
+            else:
+                return outputs[self.objective_gradient], outputs[self.constraint_jacobian]
+
         else:
-            return outputs[self.objective_gradient], outputs[self.constraint_jacobian]
+            from csdl_alpha.src.operations.derivatives.derivative_utils import finite_difference
+            if self.run_forward_func is None:
+                self.run_forward()
+            outputs = finite_difference(
+                ofs = list(self.recorder.constraints.keys()) + list(self.recorder.objectives.keys()),
+                wrts = list(self.recorder.design_variables.keys()),
+                step_size = finite_difference_step_size,
+                forward_evaluation=self.run_forward_func)
+
+            return self._assemble_jacs(outputs)
         
     def save_external(self, filename:str, groupname:str):
         from csdl_alpha.src.data import save_h5py_variables

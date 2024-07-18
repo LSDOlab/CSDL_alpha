@@ -59,7 +59,7 @@ class SetVarIndex(Operation):
             cotangents.accumulate(x, cotangents[x_updated].set(self.slice, 0.0))
         if cotangents.check(y):
             if y.size == 1:
-                cotangents.accumulate(y, csdl.sum(cotangents[x_updated][self.slice]))
+                cotangents.accumulate(y, csdl.sum(cotangents[x_updated][self.slice]).reshape(y.shape))
             else:
                 cotangents.accumulate(y, cotangents[x_updated][self.slice])
 
