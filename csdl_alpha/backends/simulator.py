@@ -70,28 +70,54 @@ class SimulatorBase():
         if save:
             self.run()
             self.recorder.inline_save()
-    def build_objective_constraint_derivatives(self):
+    def build_objective_constraint_derivatives(self, derivative_kwargs):
 
         if not self.initialized_totals:
             self.initialized_totals = True
             import csdl_alpha as csdl
-            if len(self.recorder.constraints) > 0:
-                self.constraint_jacobian = csdl.derivative(
-                    list(self.recorder.constraints.keys()),
-                    list(self.recorder.design_variables.keys()),
-                    as_block=True,
-                )
-            else:
-                self.constraint_jacobian = None
 
-            if len(self.recorder.objectives) > 0:
-                self.objective_gradient = csdl.derivative(
-                    list(self.recorder.objectives.keys()),
+
+            
+            # if len(self.recorder.constraints) > 0:
+            #     self.constraint_jacobian = csdl.derivative(
+            #         list(self.recorder.constraints.keys()),
+            #         list(self.recorder.design_variables.keys()),
+            #         as_block=True,
+            #     )
+            # else:
+            #     self.constraint_jacobian = None
+
+            # if len(self.recorder.objectives) > 0:
+            #     self.objective_gradient = csdl.derivative(
+            #         list(self.recorder.objectives.keys()),
+            #         list(self.recorder.design_variables.keys()),
+            #         as_block=True,
+            #     )
+            # else:
+            #     self.objective_gradient = None
+
+            derivative_kwargs = derivative_kwargs.copy()
+            derivative_kwargs['as_block'] = True
+            opt_jac = csdl.derivative(
+                    list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys()),
                     list(self.recorder.design_variables.keys()),
-                    as_block=True,
+                    **derivative_kwargs,
                 )
+            
+            num_dvs = sum([var.size for var in self.recorder.design_variables])
+            if len(self.recorder.objectives) > 0:
+                self.objective_gradient = opt_jac[0,:].reshape((1, num_dvs))
+                if len(self.recorder.constraints) > 0:
+                    num_cvs = sum([var.size for var in self.recorder.constraints])
+                    self.constraint_jacobian = opt_jac[1:,:].reshape((num_cvs, num_dvs))
+                else:
+                    self.constraint_jacobian = None
             else:
                 self.objective_gradient = None
+                if len(self.recorder.constraints) > 0:
+                    self.constraint_jacobian = opt_jac
+                else:
+                    self.constraint_jacobian = None
 
     def _process_optimization_values(self):
         nc = sum([var.size for var in self.recorder.constraints])
@@ -277,7 +303,7 @@ class PySimulator(SimulatorBase):
         if not use_finite_difference:
             if self.initialize_totals is False:
                 self.recorder.start()
-                self.build_objective_constraint_derivatives()
+                self.build_objective_constraint_derivatives(self.derivative_kwargs)
                 self.recorder.stop()
 
                 if not self.recorder.inline:

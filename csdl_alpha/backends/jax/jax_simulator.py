@@ -107,7 +107,7 @@ class JaxSimulator(SimulatorBase):
         if not isinstance(f64, bool):
             raise TypeError(f"f64 must be a bool. {get_type_string(f64)} given.")
         self._gpu = 'gpu' if gpu else 'cpu'
-        self._f64 = f64
+        self.use_f64 = f64
 
         # Store valid inputs and outputs
         run_inputs = list(self.recorder.design_variables.keys())+self.additional_inputs
@@ -151,6 +151,7 @@ class JaxSimulator(SimulatorBase):
                 self.output_manager.list,
                 self.recorder.get_root_graph(),
                 device = self._gpu,
+                enable_f64=self.use_f64,
                 name = 'run',
             )
 
@@ -206,6 +207,7 @@ class JaxSimulator(SimulatorBase):
                     list(self.derivative_variables.values()),
                     self.recorder.get_root_graph(),
                     device = self._gpu,
+                    enable_f64=self.use_f64,
                     name = 'compute_totals',
                 )
 
@@ -271,6 +273,7 @@ class JaxSimulator(SimulatorBase):
                 list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys()),
                 self.recorder.get_root_graph(),
                 device = self._gpu,
+                enable_f64=self.use_f64,
                 name = 'run_forward',
             )
 
@@ -295,7 +298,7 @@ class JaxSimulator(SimulatorBase):
             if self.opt_derivs_func is None:
 
                 self.recorder.start()
-                self.build_objective_constraint_derivatives()
+                self.build_objective_constraint_derivatives(self.derivatives_kwargs)
                 self.recorder.stop()
                 print(f"compiling 'compute_optimization_derivatives' function ... ({len(self.recorder.node_graph_map)} nodes)")
 
@@ -308,6 +311,7 @@ class JaxSimulator(SimulatorBase):
                     opt_derivs,
                     self.recorder.get_root_graph(),
                     device = self._gpu,
+                    enable_f64=self.use_f64,
                     name = 'compute_optimization_derivatives',
                 )
 

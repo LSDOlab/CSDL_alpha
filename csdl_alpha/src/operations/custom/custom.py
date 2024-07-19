@@ -83,9 +83,15 @@ class CustomExplicitOperation(CustomOperation):
             processed_inputs = [np.array(input) for input in args]
             return self.compute_inline(*processed_inputs)
 
+        use_64 = jax.config.read('jax_enable_x64')
+        if use_64:
+            dtype = np.float64
+        else:
+            dtype = np.float32
+
         output = jax.pure_callback(
             new_inline_func,
-            [jax.ShapeDtypeStruct(self.output_dict[output_var].shape, np.float64) for output_var in self.output_dict],
+            [jax.ShapeDtypeStruct(self.output_dict[output_var].shape, dtype) for output_var in self.output_dict],
             *args)
         # if len(output) == 1:
         #     output = output[0]
@@ -423,9 +429,15 @@ class CustomJacOperation(Operation):
             processed_inputs = [np.array(input) for input in args]
             return self.compute_inline(*processed_inputs)
 
+        use_64 = jax.config.read('jax_enable_x64')
+        if use_64:
+            dtype = np.float64
+        else:
+            dtype = np.float32
+
         output = jax.pure_callback(
             new_inline_func,
-            [jax.ShapeDtypeStruct(in_cot.shape, np.float64) for in_cot in self.input_cotangents],
+            [jax.ShapeDtypeStruct(in_cot.shape, dtype) for in_cot in self.input_cotangents],
             *args)
         # if len(output) == 1:
         #     output = output[0]
