@@ -10,6 +10,7 @@ class TestVariable(csdl_tests.CSDLTest):
         self.docstest(Variable.T)
         self.docstest(Variable.__getitem__)
         self.docstest(Variable.set)
+        self.docstest(Variable.expand)
 
     def test_int_float(self):
         self.prep()
