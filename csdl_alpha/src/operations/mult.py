@@ -76,7 +76,7 @@ def mult(x,y):
     elif y.size == 1:
         op = BroadcastMult(y.flatten(),x)
     else:
-        raise ValueError('Shapes not compatible for add operation.')
+        raise ValueError(f'Shapes {x.shape} and {y.shape} not compatible for mult operation.')
     return op.finalize_and_return_outputs()
 
 class TestMult(csdl_tests.CSDLTest):

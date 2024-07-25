@@ -127,7 +127,7 @@ class NonlinearSolver(object):
             raise TypeError(f"State must not be computed from another operation.")
         else:
             if state._check_nlsolver_conflict():
-                raise ValueError(f"Implicit variable with name = {state.name} has already been previously added to a solver.")
+                raise ValueError(f"State with name {state.name} has already been previously added to a solver.")
 
         if not isinstance(residual, Variable):
             residual = validate_and_variablize(residual)
@@ -135,6 +135,9 @@ class NonlinearSolver(object):
         
         if state.shape != residual.shape:
             raise ValueError(error_utils.get_check_shape_mismatch_string(state, residual, 'state', 'residual'))
+
+        if residual._check_nlsolver_conflict():
+            raise ValueError(f"Residual with name {residual.name} has already been previously added to a solver.")
 
         self.state_to_residual_map[state] = residual
         self.residual_to_state_map[residual] = state
@@ -438,7 +441,7 @@ class NonlinearSolver(object):
                 tol = tol.value
 
             if np.any(np.isnan(current_residual_value)):
-                raise ValueError(f'Residual is NaN for {current_residual.name}')
+                raise ValueError(f'Residual is NaN for state {current_state.name} with residual {current_residual.name}')
             
             # if current_residual_value > tol:
             # if any of the residuals do not meet tolerance, no need to compute errors for other residuals
