@@ -38,6 +38,8 @@ class VStack(Operation):
                 else:
                     cotangents.accumulate(input, stack_out[i:i+input.shape[0]])
                     i += input.shape[0]
+            else:
+                i += input.shape[0]
 
 
 
