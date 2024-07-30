@@ -3,8 +3,6 @@ from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
 from csdl_alpha.src.graph.variable import Variable, Constant
 from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as slice
 from typing import Union
-import jax as jnp
-import jax.lax as lax
 import numpy as np
 
 class IterationVariable(Variable):
@@ -151,33 +149,42 @@ class Loop(SubgraphOperation):
     def compute_jax(self, *inputs):
         import jax.numpy as jnp
         from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        import jax.lax as lax
 
-        true_outputs = self.outputs[:-len(self.loop_vars)] # operation outputs that aren't the stacked ones
-        feedback_input_indices = [self.inputs.index(loop_var[1]) for loop_var in self.loop_vars] # index of inputs that correspond to feedback vars
+        if len(self.loop_vars) > 0:
+            true_outputs = self.outputs[:-len(self.loop_vars)] # operation outputs that aren't the stacked ones
+        else:
+            true_outputs = self.outputs # operation outputs that aren't the stacked ones
+
+        feedback_input_indices = [self.inputs.index(loop_var[1]) for loop_var in self.loop_vars] # (TODO: SLOW)index of inputs that correspond to feedback vars
         feedback_graph_inputs = [loop_var[0] for loop_var in self.loop_vars] # input node in graph that corresponds to feedback vars
-        feedback_output_indices = [true_outputs.index(loop_var[2]) for loop_var in self.loop_vars] # index of outputs that correspond to feedback vars
+        feedback_output_indices = [true_outputs.index(loop_var[2]) for loop_var in self.loop_vars] # (TODO: SLOW) index of outputs that correspond to feedback vars
 
         # graph_inputs is every input node on the loop's graph
-        graph_inputs = [input for i, input in enumerate(self.inputs) if i not in feedback_input_indices]
+        # graph_inputs = [input for i, input in enumerate(self.inputs) if i not in feedback_input_indices] # (TODO: SLOW)
+        graph_inputs = [input for input in self.inputs if input in self.graph.node_table.keys()] # (TODO: SLOW)
         graph_inputs += feedback_graph_inputs
         
         # input to function is [non-feedback inputs] + [feedback_graph_inputs] + [iteration variables]
         graph_function = create_jax_function(self.graph, true_outputs, graph_inputs+self.iter_vars)
-
+        # import jax
+        # graph_function = jax.jit(graph_function)
+        
         def loop_function(carry, x):
             # carry: it's just all the true outputs of the loop
             # x: [loop_var1, loop_var2, ...]
 
             # fn_inputs is [non-feedback inputs] + [feedback_graph_inputs] + [iteration variables]
-            fn_inputs = [input for i, input in enumerate(inputs) if i not in feedback_input_indices]
+            # fn_inputs = [input for i, input in enumerate(inputs) if i not in feedback_input_indices]
+            fn_inputs = [input for input,input_var in zip(inputs, self.inputs) if input_var in self.graph.node_table.keys()]
             fn_inputs += [carry[i] for i in feedback_output_indices]
             fn_inputs += [x[i] for i in range(len(self.iter_vars))]
 
+            # now want to pick out the feedback outputs so they'll be stacked
+            feedback_outputs = [carry[i] for i in feedback_output_indices]
+
             graph_outputs = graph_function(*fn_inputs)
             # graph outputs is carry
-
-            # now want to pick out the feedback outputs so they'll be stacked
-            feedback_outputs = [graph_outputs[i] for i in feedback_output_indices]
 
             return graph_outputs, feedback_outputs
         
@@ -185,7 +192,11 @@ class Loop(SubgraphOperation):
         iter_var_list = []
         for i in range(self.length):
             iter_var_list.append([iter_var.vals[i] for iter_var in self.iter_vars])
-        iter_var_array = np.array(iter_var_list, dtype=np.float32)
+        iter_var_array = jnp.array(iter_var_list, dtype=jnp.float64)
+
+        # Would this feature be necessary?
+        # import jax
+        # enabl_64 = jax.config.read('jax_enable_x64')
 
         # build carry input
         carry = [jnp.zeros(output.shape) for output in true_outputs]
@@ -193,8 +204,82 @@ class Loop(SubgraphOperation):
             carry[ind] = inputs[feedback_input_indices[i]]
 
         carry, stack = lax.scan(loop_function, carry, iter_var_array) 
-
         return tuple(carry + stack)
+    
+    # TODO: Consider this method instead of compute_jax
+    # def evaluate_jax(self, *inputs, fill_outputs:dict['Variable',None]):
+    #     import jax.numpy as jnp
+    #     from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+
+    #     # Add state values to fill_outputs
+    #     for loop_var in self.loop_vars:
+    #         fill_outputs[loop_var[2]] = None
+
+    #     if len(self.loop_vars) > 0:
+    #         true_outputs = self.outputs[:-len(self.loop_vars)] # operation outputs that aren't the stacked ones
+    #     else:
+    #         true_outputs = self.outputs # operation outputs that aren't the stacked ones
+    #     true_outputs = [output for output in true_outputs if output in fill_outputs]
+        
+    #     feedback_input_indices = [self.inputs.index(loop_var[1]) for loop_var in self.loop_vars] # (TODO: SLOW)index of inputs that correspond to feedback vars
+    #     feedback_graph_inputs = [loop_var[0] for loop_var in self.loop_vars] # input node in graph that corresponds to feedback vars
+    #     feedback_output_indices = [true_outputs.index(loop_var[2]) for loop_var in self.loop_vars] # (TODO: SLOW) index of outputs that correspond to feedback vars
+    #     needed_stack_indices = [i for i in feedback_output_indices if self.loop_var_lookup[true_outputs[i]] in fill_outputs] 
+
+    #     # graph_inputs is every input node on the loop's graph
+    #     # graph_inputs = [input for i, input in enumerate(self.inputs) if i not in feedback_input_indices] # (TODO: SLOW)
+    #     graph_inputs = [input for input in self.inputs if input in self.graph.node_table.keys()] # (TODO: SLOW)
+    #     graph_inputs += feedback_graph_inputs
+        
+    #     # input to function is [non-feedback inputs] + [feedback_graph_inputs] + [iteration variables]
+    #     graph_function = create_jax_function(self.graph, true_outputs, graph_inputs+self.iter_vars)
+    #     # import jax
+    #     # graph_function = jax.jit(graph_function)
+        
+    #     def loop_function(carry, x):
+    #         # carry: it's just all the true outputs of the loop
+    #         # x: [loop_var1, loop_var2, ...]
+
+    #         # fn_inputs is [non-feedback inputs] + [feedback_graph_inputs] + [iteration variables]
+    #         # fn_inputs = [input for i, input in enumerate(inputs) if i not in feedback_input_indices]
+    #         fn_inputs = [input for input,input_var in zip(inputs, self.inputs) if input_var in self.graph.node_table.keys()]
+    #         fn_inputs += [carry[i] for i in feedback_output_indices]
+    #         fn_inputs += [x[i] for i in range(len(self.iter_vars))]
+
+    #         # now want to pick out the feedback outputs so they'll be stacked
+    #         # feedback_outputs = [carry[i] for i in feedback_output_indices]
+    #         feedback_outputs = [carry[i] for i in needed_stack_indices]
+
+    #         graph_outputs = graph_function(*fn_inputs)
+    #         # graph outputs is carry
+
+    #         return graph_outputs, feedback_outputs
+        
+    #     # put iter vars into list of lists format
+    #     iter_var_list = []
+    #     for i in range(self.length):
+    #         iter_var_list.append([iter_var.vals[i] for iter_var in self.iter_vars])
+    #     iter_var_array = jnp.array(iter_var_list, dtype=jnp.float64)
+
+    #     # Would this feature be necessary?
+    #     # import jax
+    #     # enabl_64 = jax.config.read('jax_enable_x64')
+
+    #     # build carry input
+    #     carry = [jnp.zeros(output.shape) for output in true_outputs]
+    #     for i, ind in enumerate(feedback_output_indices):
+    #         carry[ind] = inputs[feedback_input_indices[i]]
+
+    #     carry, stack = lax.scan(loop_function, carry, iter_var_array)
+
+    #     for fill_var, fill_var_jnp in zip(true_outputs, carry):
+    #         fill_outputs[fill_var] = fill_var_jnp
+
+    #     # for loop_var, stacked_jnp in zip(self.loop_vars, stack):
+    #     #     fill_outputs[self.loop_var_lookup[loop_var[2]]] = stacked_jnp
+        
+    #     for i, stacked_jnp in zip(needed_stack_indices, stack): 
+    #         fill_outputs[self.loop_var_lookup[true_outputs[i]]] = stacked_jnp
 
     def prep_vjp(self):
         """
@@ -204,7 +289,8 @@ class Loop(SubgraphOperation):
         recorder = csdl.get_current_recorder()
         recorder._enter_subgraph(graph = self.get_subgraph())
         
-        for node in self.get_subgraph().node_table.keys():
+        node_table = list(self.get_subgraph().node_table.keys())
+        for node in node_table:
             if isinstance(node, Operation):
                 node.prep_vjp()
         
@@ -221,7 +307,7 @@ class Loop(SubgraphOperation):
         from csdl_alpha.src.operations.loops.utils import build_feedback_data, FeedBackData, build_reversed_iteration_variables, build_external_inputs_data, build_external_outputs_data
 
         import csdl_alpha as csdl
-        from csdl_alpha.src.operations.derivative.reverse import vjp
+        from csdl_alpha.src.operations.derivatives.reverse import vjp
         from csdl_alpha.src.graph.graph import _copy_to_current_graph
         outer_graph = csdl.get_current_recorder().active_graph
 
@@ -295,8 +381,8 @@ class Loop(SubgraphOperation):
         recorder = csdl.get_current_recorder()
         recorder._enter_subgraph(
             name = parent_loop_graph.name+'_vjp',
-            add_missing_variables=True
-            )        
+            add_missing_variables=True,
+        )
         deriv_loop_graph = recorder.active_graph
 
         # Create new iteration variables
@@ -396,6 +482,10 @@ class Loop(SubgraphOperation):
             vjp_external_ouputs.append(parent_external_output.out_cotangent)
 
         # deriv_loop_graph.visualize('vjp_loop2')
+            
+        # TODO: Investigate further
+        # from csdl_alpha.src.operations.compress_operations import compress_current_operations
+        # compress_current_operations()
         recorder._exit_subgraph()
 
         # ========================================================================================================================================
@@ -625,6 +715,12 @@ class frange():
         # non_feedback_inputs = external_inputs - strike_set # external inputs that are used for things other than feedback (and maybe feedback too)
         # Stop the graph
         # self._graph.visualize(f'graph_loop_final_{self}')
+        
+        # Compute the loop operation
+
+        # TODO: Investigate further
+        # from csdl_alpha.src.operations.compress_operations import compress_current_operations
+        # compress_current_operations()
         self._recorder._exit_subgraph()
 
         # need to add any loop vars who's iter 1 variables are constants to the external inputs
@@ -637,7 +733,12 @@ class frange():
 
         for loop_var in loop_vars:
             # stack_output = Variable(name = f'stack_out_{loop_var[1].name}', shape=(len(self.vals[0]),) + loop_var[0].shape, value=0)
-            stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]), self.inline_lazy_stack)
+
+            inline_lazy_stack = self.inline_lazy_stack
+            if not self._recorder.inline:
+                inline_lazy_stack = True
+
+            stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]), inline_lazy_stack)
             self.iter2_outputs.append(stack_output)
             
         # add the loop operation to the graph

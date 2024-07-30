@@ -4,7 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
 import csdl_alpha as csdl
-from csdl_alpha.src.operations.derivative.utils import get_uncontract_action
+from csdl_alpha.src.operations.derivatives.utils import get_uncontract_action
 
 import numpy as np
 
@@ -24,6 +24,13 @@ class Average(Operation):
             return np.average(x)
         else:
             return np.average(x, axis=self.axes)
+
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        if self.axes is None:
+            return jnp.average(x)
+        else:
+            return jnp.average(x, axis=self.axes)
 
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):

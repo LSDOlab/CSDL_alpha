@@ -60,6 +60,30 @@ class Maximum(Operation):
             smooth_axeswise_max = axeswise_max + 1.0 / rho * np.log(summation)
             return smooth_axeswise_max
 
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        rho = jnp.array(self.rho)
+        axes = self.axes
+
+        if axes is None:
+            x_max = jnp.max(x)
+            smooth_max = x_max + 1/rho * jnp.log(jnp.sum(jnp.exp(rho * (x - x_max))))
+            return smooth_max
+        else:
+            ones_shape = self.ones_shape
+            axeswise_max = jnp.max(x, axis=self.axes)
+            # print(self.einsum_str, axeswise_max.shape, ones_shape)
+            difference = x - jnp.einsum(
+                self.einsum_str,
+                axeswise_max,
+                jnp.ones(ones_shape),
+                )
+            exp = jnp.exp(rho * difference)
+            summation = jnp.sum(exp, axis=axes)
+            smooth_axeswise_max = axeswise_max + 1.0 / rho * jnp.log(summation)
+            return smooth_axeswise_max
+
+
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             if self.axes is None:
@@ -102,6 +126,20 @@ class ElementwiseMaximum(Operation):
             summation += np.exp(rho * (arg - ew_max))
 
         smooth_ew_max = (ew_max + 1. / rho * np.log(summation))
+        return smooth_ew_max
+
+    def compute_jax(self, *args):
+        import jax.numpy as jnp
+        rho = jnp.array(self.rho)
+        ew_max = args[0]
+        for arg in args[1:]:
+            ew_max = jnp.maximum(ew_max, arg)
+
+        summation = 0.
+        for arg in args:
+            summation += jnp.exp(rho * (arg - ew_max))
+
+        smooth_ew_max = (ew_max + 1. / rho * jnp.log(summation))
         return smooth_ew_max
 
     def evaluate_vjp(self, cotangents, *inputs_and_outputs):

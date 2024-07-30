@@ -3,10 +3,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
 import numpy as np
 import math
-import jax
-import jax.numpy as jnp
-import jax.lax as lax
-from typing import Union
+from typing import Union, Callable
 
 class BracketedSearch(NonlinearSolver):
     
@@ -93,7 +90,8 @@ class BracketedSearch(NonlinearSolver):
                     raise ValueError(f"Bracket shape must match state shape. {element.shape} given")
             elif not isinstance(element, (float, int, np.integer)):
                 raise TypeError(f"Invalid bracket element type, got {type(element)}")
-        self.add_state_metadata(state, 'bracket', bracket)
+        self.add_state_metadata(state, 'bracket_l', bracket[0])
+        self.add_state_metadata(state, 'bracket_r', bracket[1])
 
         # check if tolerance is valid and store it
         self.add_tolerance(state, tolerance)
@@ -135,7 +133,7 @@ class BracketedSearch(NonlinearSolver):
         # Now, I need to populate the x vectors with the initial bracket values
         # and populate the tolerance vector
         for state in self.state_to_residual_map.keys():
-            bracket = self.state_metadata[state]['bracket']
+            bracket = (self.state_metadata[state]['bracket_l'], self.state_metadata[state]['bracket_r'])
             ith_tolerance = self.state_metadata[state]['tolerance']
             # bracket indices could be Variable or ndarray of shape (1,) or state.shape
             # or float or int
@@ -178,14 +176,22 @@ class BracketedSearch(NonlinearSolver):
         if self.print_status:
             print(self._inline_print_nl_status(iter, converged))
         
-    def _jax_solve_(self, jax_residual_function, input_vars, *inputs):
+
+    def _jax_solve_(
+            self,
+            jax_residual_function:Callable,
+            jax_intermediate_function:Callable,
+            input_dict:dict):
+        import jax
+        import jax.numpy as jnp
+        import jax.lax as lax
         # I'm going to assemble everything into a big vector, solve it, and then unpack it
 
         # First, I need to know the size of the vector, and the indices of each state
         indices_dict = {}
         size = 0
         for state in self.state_to_residual_map.keys():
-            state_size = math.prod(state.shape)
+            state_size = state.size
             indices_dict[state] = slice(size, size+state_size)
             size += state_size
 
@@ -206,7 +212,11 @@ class BracketedSearch(NonlinearSolver):
 
         def to_array(x):
             if isinstance(x, Variable):
-                return inputs[input_vars.index(x)]
+                try:
+                    return input_dict[x]
+                except KeyError:
+                    # NOTE: If it's not in the input_vars, it must have a constant value (I think at least)
+                    return x.value
             elif isinstance(x, (np.ndarray, jnp.ndarray)):
                 return x
             elif isinstance(x, (float, int)):
@@ -215,7 +225,7 @@ class BracketedSearch(NonlinearSolver):
         # Now, I need to populate the x vectors with the initial bracket values
         # and populate the tolerance vector
         for state in self.state_to_residual_map.keys():
-            bracket = self.state_metadata[state]['bracket']
+            bracket = (self.state_metadata[state]['bracket_l'], self.state_metadata[state]['bracket_r'])
             ith_tolerance = self.state_metadata[state]['tolerance']
             # bracket indices could be Variable or ndarray of shape (1,) or state.shape
             # or float or int

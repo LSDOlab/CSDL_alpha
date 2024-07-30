@@ -5,10 +5,10 @@ import csdl_alpha.utils.error_utils as error_utils
 from csdl_alpha.utils.error_utils import GraphError
 import numpy as np
 
-from csdl_alpha.src.operations.derivative.bookkeeping import VarTangents
+from csdl_alpha.src.operations.derivatives.bookkeeping import VarTangents
 
 from csdl_alpha.utils.typing import VariableLike
-from typing import Union, Any
+from typing import Union, Any, Callable
 
 class NonlinearSolver(object):
     def __init__(
@@ -20,8 +20,11 @@ class NonlinearSolver(object):
             elementwise_states:bool=False,
             residual_jac_kwargs:dict = None,
         ):
+        if elementwise_states is True:
+            raise ValueError("Elementwise_states argument is deprecated. Use keyword argument: residual_jac_kwargs = {'elementwise':True} instead")
         self.name = name
         self.print_status = print_status
+        self.implicit_operation:ImplicitOperation = None
 
         self.metadata = {}
         
@@ -57,13 +60,12 @@ class NonlinearSolver(object):
         # Attributes for derivatives:
         self.full_residual_jacobian = None
         self.total_state_size = 0
-        self.elementwise_states = elementwise_states
         if residual_jac_kwargs is None:
             residual_jac_kwargs = {}
         elif not isinstance(residual_jac_kwargs, dict):
             raise TypeError(f"residual_jac_kwargs must be a dictionary. {get_type_string(residual_jac_kwargs)} given.")
         self.residual_jac_kwargs = residual_jac_kwargs
-        
+
     def add_metadata(self, key, datum, is_input=True):
         if isinstance(datum, Variable) and is_input:
             self.meta_input_variables.add(datum)
@@ -125,7 +127,7 @@ class NonlinearSolver(object):
             raise TypeError(f"State must not be computed from another operation.")
         else:
             if state._check_nlsolver_conflict():
-                raise ValueError(f"Implicit variable with name = {state.name} has already been previously added to a solver.")
+                raise ValueError(f"State with name {state.name} has already been previously added to a solver.")
 
         if not isinstance(residual, Variable):
             residual = validate_and_variablize(residual)
@@ -133,6 +135,9 @@ class NonlinearSolver(object):
         
         if state.shape != residual.shape:
             raise ValueError(error_utils.get_check_shape_mismatch_string(state, residual, 'state', 'residual'))
+
+        if residual._check_nlsolver_conflict():
+            raise ValueError(f"Residual with name {residual.name} has already been previously added to a solver.")
 
         self.state_to_residual_map[state] = residual
         self.residual_to_state_map[residual] = state
@@ -229,12 +234,12 @@ class NonlinearSolver(object):
             raise ValueError("State variables do not match metadate state keys")
 
         implicit_operation.finalize_and_return_outputs()
+        self.implicit_operation = implicit_operation
 
         # print(f'UPDATING DOWNSTREAM:  {self.name}')
         recorder = csdl.get_current_recorder()
         if recorder.inline:
             G.update_downstream(implicit_operation)
-        
         
         # For debugging:
         # self.residual_graph.visualize(f'inner_graph_{self.name}')
@@ -282,7 +287,7 @@ class NonlinearSolver(object):
             if state not in wrts_set:
                 wrts.append(state)
 
-        from csdl_alpha.src.operations.derivative.reverse import vjp
+        from csdl_alpha.src.operations.derivatives.reverse import vjp
         
         # TODO: Should VJP function should be INSIDE or OUTSIDE the nonlinear solver?
         # Compute vector-Jacobian product of the residuals in the residual graph
@@ -343,36 +348,20 @@ class NonlinearSolver(object):
         import csdl_alpha as csdl
         if self.full_residual_jacobian is None:
             states_list = list(self.state_to_residual_map.keys())
+            residuals_list = list(self.state_to_residual_map.values())
 
-            block_mat = []
             for residual in self.residual_to_state_map:
                 state = self.residual_to_state_map[residual]
-                # Create block matrix for linear system
-                current_residual_block = []
 
-                # feed in user-defined kwargs for derivative
-                residual_jac_kwargs = self.residual_jac_kwargs
-                residual_jac_kwargs['elementwise'] = self.elementwise_states
-                residual_jac_kwargs['as_block'] = False
-
-                # Compute the derivatives
-                if for_deriv:
-                    residual_jac_kwargs['graph'] = self.residual_graph
-                    deriv = csdl.derivative(residual, states_list, **residual_jac_kwargs)
-                else:
-                    deriv = csdl.derivative(residual, states_list, **residual_jac_kwargs)
-
-                for _state in states_list:
-                    current_residual_block.append(deriv[_state])
-                    # self.add_intersection_target(deriv[state])
-                block_mat.append(current_residual_block)
-            
                 # Keep track of indices for each state
                 self.add_state_metadata(state, 'index_lower', self.total_state_size)
                 self.total_state_size += state.size
                 self.add_state_metadata(state, 'index_upper', self.total_state_size)
 
-            self.full_residual_jacobian = csdl.blockmat(block_mat)
+            self.residual_jac_kwargs['as_block'] = True
+            if for_deriv:
+                self.residual_jac_kwargs['graph'] = self.residual_graph
+            self.full_residual_jacobian = csdl.derivative(residuals_list, states_list, **self.residual_jac_kwargs)
             self.full_residual_jacobian.add_name(f'{self.name}_jac')
             return self.full_residual_jacobian
         else:
@@ -381,7 +370,12 @@ class NonlinearSolver(object):
     def _inline_solve_(self):
         raise NotImplementedError("Solve method must be implemented by subclass")
     
-    def _jax_solve_(self, jax_residual_function, input_vars, *inputs):
+    def _jax_solve_(
+            self,
+            jax_residual_function:Callable,
+            jax_intermediate_function:Callable,
+            input_dict:dict,
+        ):
         """Solves the nonlinear equation using JAX.
 
         This method is responsible for solving the nonlinear equation using the JAX library.
@@ -392,10 +386,8 @@ class NonlinearSolver(object):
         jax_residual_function : function
             The JAX residual function that represents the nonlinear equation. 
             Takes in a list of states and outputs a list of residuals, in order of state_to_residual_map.
-        input_vars : tuple
-            The input csdl variables to the ImplicitOperation.
-        *inputs : tuple
-            The jax variables corresponding to input_vars.
+        input_dict : dict
+            A dictionary mapping CSDL variable inputs to their jax values.
 
         Raises
         ------
@@ -449,13 +441,28 @@ class NonlinearSolver(object):
                 tol = tol.value
 
             if np.any(np.isnan(current_residual_value)):
-                raise ValueError(f'Residual is NaN for {current_residual.name}')
+                raise ValueError(f'Residual is NaN for state {current_state.name} with residual {current_residual.name}')
             
             # if current_residual_value > tol:
             # if any of the residuals do not meet tolerance, no need to compute errors for other residuals
             if not check_run_time_tolerance(current_residual_value, tol):
                 converged = False
                 break
+        return converged
+    
+    def _jax_check_converged(self, residuals, iter, input_dict):
+        import jax.numpy as jnp
+        converged = jnp.less_equal(0, 1)
+        for i, state in enumerate(self.state_to_residual_map.keys()):
+            residual = residuals[i]
+            tol = self.state_metadata[state]['tolerance']
+            if isinstance(tol, Variable):
+                tol = input_dict[tol]
+            
+            converged = converged & jnp.all(jnp.less_equal(jnp.abs(residual), tol))
+
+        converged = converged | jnp.greater_equal(iter, self.metadata['max_iter'])
+        
         return converged
 
     def solve_implicit_inline(self, *args):
@@ -468,11 +475,11 @@ class NonlinearSolver(object):
 
         self._inline_solve_()
 
-    def solve_implicit_jax(self, *args):
+    def solve_implicit_jax(self, *args, **kwargs):
         """
         Solves the nonlinear system of equations.
         """
-        return self._jax_solve_(*args)
+        return self._jax_solve_(*args, **kwargs)
 
 def check_variable_shape_compatibility(
         var_to_check:Variable, 

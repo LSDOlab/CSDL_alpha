@@ -27,6 +27,13 @@ class GetVarIndex(Operation):
     def compute_inline(self, x, *slice_args):
         return x[self.slice.evaluate(*slice_args)].reshape(self.out_shape)
 
+    def compute_jax(self, x, *slice_args):
+        if self.slice.var_slice is True:
+            from csdl_alpha.backends.jax.utils import fallback_to_inline_jax
+            return fallback_to_inline_jax(self, x, *slice_args)[0]
+        else:
+            return x[self.slice.jnpevaluate(*slice_args)].reshape(self.out_shape)
+
     def evaluate_vjp(self, cotangents, x, *slice_args_and_outputs):
         import csdl_alpha as csdl
         x_indexed = slice_args_and_outputs[-1]
@@ -211,7 +218,7 @@ class TestGet(csdl_tests.CSDLTest):
         # compare_values += [csdl_tests.TestingPair(x6, x_val[0:2,[2,1,1], 3])]
 
         x6 = x[0,0,0]
-        compare_values += [csdl_tests.TestingPair(x6, x_val[0,0,0].flatten())]
+        compare_values += [csdl_tests.TestingPair(x6, x_val[0,0,0].flatten(), tag = 'x6')]
 
         x6 = x[[0,1],[0,1],[1,2]]
         compare_values += [csdl_tests.TestingPair(x6, x_val[[0,1],[0,1],[1,2]].flatten())]
@@ -233,5 +240,7 @@ class TestGet(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = TestGet()
+    test.overwrite_backend = 'jax'
+    # test.overwrite_backend = 'inline'
     test.test_functionality()
     test.test_deriv()

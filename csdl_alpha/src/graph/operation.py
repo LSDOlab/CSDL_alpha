@@ -90,10 +90,15 @@ class Operation(Node):
 
         # just in case:
         if self.num_inputs == 1:
+            check_inline_input(self.recorder, self.inputs[0])
             output_values = self.compute_inline(self.inputs[0].value)
         elif self.num_inputs == 2:
+            check_inline_input(self.recorder, self.inputs[0])
+            check_inline_input(self.recorder, self.inputs[1])
             output_values = self.compute_inline(self.inputs[0].value, self.inputs[1].value)
         else:
+            for input in self.inputs:
+                check_inline_input(self.recorder, input)
             output_values = self.compute_inline(*[x.value for x in self.inputs])
 
         if self.num_outputs == 1:
@@ -142,22 +147,22 @@ class Operation(Node):
         pass
 
     def compute_inline(self, *args):
-        raise NotImplementedError('not implemented') 
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def compute_jax(self, *args):
         raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def evaluate_jacobian(self, *args):
-        raise NotImplementedError('not implemented') 
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def evaluate_sparse_jacobian(self, *args):
-        raise NotImplementedError('not implemented') 
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def evaluate_jvp(self, *args):
-        raise NotImplementedError('not implemented')
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}')
 
     def evaluate_vjp(self, *args):
-        raise NotImplementedError(f'not implemented (operation: {self})')
+        raise NotImplementedError(f'not implemented for {self.__class__.__name__}')
     
 
 def set_properties(**kwargs):
@@ -177,3 +182,8 @@ def set_properties(**kwargs):
         cls.properties = properties
         return cls
     return decorator
+
+def check_inline_input(recorder, var:Variable):
+    if recorder.inline:
+        if var.value is None:
+            raise ValueError(f"Variable \'{var.name}\' must have a value set when running in inline mode.")

@@ -41,3 +41,13 @@ For details on testing/pull requests, refer to the README in `tests` directory.
 
 # License
 This project is licensed under the terms of the **GNU Lesser General Public License v3.0**.
+
+# Tests
+```sh
+pytest
+pytest --backend jax
+pytest --build_inline
+pytest --batched_derivs
+
+pytest --backend jax --build_inline --batched_derivs
+```

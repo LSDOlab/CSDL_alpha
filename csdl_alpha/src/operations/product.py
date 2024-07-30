@@ -3,7 +3,7 @@ from csdl_alpha.src.operations.operation_subclasses import ComposedOperation
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
-from csdl_alpha.src.operations.derivative.utils import get_uncontract_action
+from csdl_alpha.src.operations.derivatives.utils import get_uncontract_action
 
 import numpy as np
 
@@ -23,6 +23,13 @@ class Product(Operation):
             return np.prod(x)
         else:
             return np.prod(x, axis=self.axes)
+
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        if self.axes is None:
+            return jnp.prod(x)
+        else:
+            return jnp.prod(x, axis=self.axes)
 
     def evaluate_vjp(self, cotangents, x, y):
         import csdl_alpha as csdl
@@ -203,16 +210,17 @@ class TestProduct(csdl_tests.CSDLTest):
         t1 = np.array([0.0, 6.0])
         compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1', decimal=2)]
 
-        s3w = csdl.product(w, axes=(0,2))
-        t3w = np.prod(w_val, axis=(0,2))
+        s3w = csdl.product(w/15.0, axes=(0,2))
+        t3w = np.prod(w_val/15.0, axis=(0,2))
+        print(s3w.value, t3w)
+        compare_values += [csdl_tests.TestingPair(s3w, t3w, tag = 's3w', decimal=10)]
+
+        s3w = csdl.product(w/15.0, axes=(2,1))
+        t3w = np.prod(w_val/15.0, axis=(2,1))
         compare_values += [csdl_tests.TestingPair(s3w, t3w, tag = 's3w')]
 
-        s3w = csdl.product(w, axes=(2,1))
-        t3w = np.prod(w_val, axis=(2,1))
-        compare_values += [csdl_tests.TestingPair(s3w, t3w, tag = 's3w')]
-
-        s3w = csdl.product(w, axes=(1,))
-        t3w = np.prod(w_val, axis=(1,))
+        s3w = csdl.product(w/12.0, axes=(1,))
+        t3w = np.prod(w_val/12.0, axis=(1,))
         compare_values += [csdl_tests.TestingPair(s3w, t3w, tag = 's3w')]
 
         # elementwise product of multiple tensor variables
@@ -231,5 +239,6 @@ class TestProduct(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = TestProduct()
+    test.overwrite_backend = 'jax'
     test.test_functionality()
     test.test_example()

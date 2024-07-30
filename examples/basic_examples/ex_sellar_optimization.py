@@ -6,8 +6,7 @@ import csdl_alpha as csdl
 import numpy as np
 
 # Import CSDLAlphaProblem from modopt
-from modopt import CSDLAlphaProblem
-from modopt import SLSQP
+import modopt as mo
 
 recorder = csdl.Recorder(inline=True)
 recorder.start()
@@ -70,19 +69,21 @@ print('z2:  ',  z2.value)
 # Visualize Graph
 recorder.stop()
 
-# Create a Simulator object from the Recorder object
+# Create a Simulator object from the Recorder object, either JaxSimulator or PySimulator
+# sim = csdl.experimental.JaxSimulator(recorder)
 sim = csdl.experimental.PySimulator(recorder)
 
 # Instantiate your problem using the csdl Simulator object and name your problem
-prob = CSDLAlphaProblem(problem_name='sellar',simulator=sim)
+prob = mo.CSDLAlphaProblem(problem_name='sellar',simulator=sim)
 
-optimizer = SLSQP(prob, ftol=1e-9, maxiter=20)
+optimizer = mo.SLSQP(prob, solver_options={'ftol':1e-9, 'maxiter':20})
 
 # Check first derivatives at the initial guess, if needed
 # optimizer.check_first_derivatives(prob.x0)
 
 # Solve your optimization problem
 optimizer.solve()
+recorder.execute()
 
 # Print results of optimization
 optimizer.print_results()

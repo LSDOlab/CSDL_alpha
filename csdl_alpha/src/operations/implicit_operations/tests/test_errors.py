@@ -44,6 +44,21 @@ class TestErrors(csdl_tests.CSDLTest):
             y = x*1.0
             solver.add_state(x, y, initial_value=np.ones((2,)))
             solver.run()
+        with pytest.raises(ValueError):
+            solver = csdl.nonlinear_solvers.Newton()
+            x = csdl.ImplicitVariable((3,), value=0.34)
+            y = x*1.0
+            solver.add_state(x, y, initial_value=np.ones((2,)))
+            solver.run()
+
+        with pytest.raises(ValueError):
+            solver = csdl.nonlinear_solvers.Newton()
+            x = csdl.ImplicitVariable((3,), value=0.34)
+            x2 = csdl.ImplicitVariable((3,), value=0.34)
+            y = x*1.0*x2
+            solver.add_state(x, y)
+            solver.add_state(x2, y)
+            solver.run()
 
     def test_bracket(self):
         self.prep()
@@ -60,24 +75,52 @@ class TestErrors(csdl_tests.CSDLTest):
 
         with pytest.raises(TypeError):
             solver.add_state(x, y)
+
+        ax2 = a*x**2
+        y = x - (-ax2 - c)/b
+        solver = csdl.nonlinear_solvers.BracketedSearch()
         with pytest.raises(TypeError):
             x = csdl.ImplicitVariable((1,), value=0.34)
             solver.add_state(x, y, bracket=4)
+
+        ax2 = a*x**2
+        y = x - (-ax2 - c)/b
+        solver = csdl.nonlinear_solvers.BracketedSearch()
         with pytest.raises(TypeError):
             x = csdl.ImplicitVariable((1,), value=0.34)
             solver.add_state(x, y, bracket=(4, 's'))
+
+        ax2 = a*x**2
+        y = x - (-ax2 - c)/b
+        solver = csdl.nonlinear_solvers.BracketedSearch()
         with pytest.raises(ValueError):
             x = csdl.ImplicitVariable((1,), value=0.34)
             solver.add_state(x, y, bracket=(4, 5, 6))
+
+        ax2 = a*x**2
+        y = x - (-ax2 - c)/b
+        solver = csdl.nonlinear_solvers.BracketedSearch()
         with pytest.raises(ValueError):
             x = csdl.ImplicitVariable((1,), value=0.34)
             solver.add_state(x, y, bracket=(np.array([4,1]), 5))
+
+        ax2 = a*x**2
+        y = x - (-ax2 - c)/b
+        solver = csdl.nonlinear_solvers.BracketedSearch()
         with pytest.raises(ValueError):
             x = csdl.ImplicitVariable((1,), value=0.34)
             solver.add_state(x, y, bracket=(csdl.Variable(value = np.array([4,1])), 5))
+
+        ax2 = a*x**2
+        y = x - (-ax2 - c)/b
+        solver = csdl.nonlinear_solvers.BracketedSearch()
         with pytest.raises(TypeError):
             x = csdl.ImplicitVariable((1,), value=0.34)
             solver.add_state(x, y, bracket=(4, 5), tolerance='s')
+
+        ax2 = a*x**2
+        y = x - (-ax2 - c)/b
+        solver = csdl.nonlinear_solvers.BracketedSearch()
         with pytest.raises(ValueError):
             x = csdl.ImplicitVariable((1,), value=0.34)
             solver.add_state(x, y, bracket=(4, 5), tolerance=np.array([4,1]))
@@ -134,3 +177,7 @@ class TestErrors(csdl_tests.CSDLTest):
         with pytest.raises(TypeError):
             solver = csdl.nonlinear_solvers.GaussSeidel(residual_jac_kwargs='s')
 
+if __name__ == '__main__':
+    t = TestErrors()
+    t.test_gauss_seidel()
+    t.test_bracket()

@@ -20,6 +20,15 @@ class SparseMatVec(Operation):
     def compute_inline(self, x):
         return self.A @ x
     
+    def compute_jax(self, x):
+        from jax.experimental import sparse
+        import jax.numpy as jnp
+        Acoo = self.A.tocoo()
+        data = np.array(Acoo.data)
+        indices = np.array([Acoo.row, Acoo.col]).T
+        A = sparse.BCOO((data, indices), shape = self.A.shape)
+        return A @ x
+
     def evaluate_vjp(self, cotangents, x, b):
         import csdl_alpha as csdl
         if cotangents.check(x):

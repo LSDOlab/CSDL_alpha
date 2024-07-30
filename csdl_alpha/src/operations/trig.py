@@ -15,6 +15,10 @@ class Sin(ElementwiseOperation):
     def compute_inline(self, x):
         return np.sin(x)
 
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.sin(x)
+
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]*cos(x))
@@ -27,7 +31,11 @@ class ArcSin(ElementwiseOperation):
 
     def compute_inline(self, x):
         return np.arcsin(x)
-
+    
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.arcsin(x)
+    
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]/(1.0 - x**2)**0.5)
@@ -40,6 +48,10 @@ class Cos(ElementwiseOperation):
 
     def compute_inline(self, x):
         return np.cos(x)
+    
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.cos(x)
     
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
@@ -54,6 +66,10 @@ class ArcCos(ElementwiseOperation):
     def compute_inline(self, x):
         return np.arccos(x)
     
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.arccos(x)
+
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             cotangents.accumulate(x, -cotangents[y]/(1.0 - x**2)**0.5)
@@ -66,6 +82,10 @@ class Tan(ElementwiseOperation):
 
     def compute_inline(self, x):
         return np.tan(x)
+
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.tan(x)
 
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
@@ -80,6 +100,10 @@ class ArcTan(ElementwiseOperation):
     def compute_inline(self, x):
         return np.arctan(x)
 
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.arctan(x)
+
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]/(1.0 + x**2))
@@ -92,6 +116,10 @@ class Tanh(ElementwiseOperation):
 
     def compute_inline(self, x):
         return np.tanh(x)
+
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.tanh(x)
 
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
@@ -106,6 +134,10 @@ class Sinh(ElementwiseOperation):
     def compute_inline(self, x):
         return np.sinh(x)
 
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.sinh(x)
+
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]*cosh(x))
@@ -118,6 +150,10 @@ class Cosh(ElementwiseOperation):
 
     def compute_inline(self, x):
         return np.cosh(x)
+
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.cosh(x)
 
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):

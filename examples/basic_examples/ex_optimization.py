@@ -31,18 +31,18 @@ rec.stop()
 
 # Create a Simulator object from the Recorder object
 sim = csdl.experimental.PySimulator(rec)
+# sim = csdl.experimental.JaxSimulator(rec)
 
-# Import CSDLAlphaProblem from modopt
-from modopt import CSDLAlphaProblem
-from modopt import SLSQP
+# Import modopt
+import modopt as mo
 
 # Instantiate your problem using the csdl Simulator object and name your problem
-prob = CSDLAlphaProblem(problem_name='quartic',simulator=sim)
+prob = mo.CSDLAlphaProblem(problem_name='quartic',simulator=sim)
 
 
 # Setup your preferred optimizer (here, SLSQP) with the Problem object 
 # Pass in the options for your chosen optimizer
-optimizer = SLSQP(prob, ftol=1e-6, maxiter=20, outputs=['x'])
+optimizer = mo.SLSQP(prob, solver_options={'ftol':1e-6, 'maxiter':20})
 
 # Check first derivatives at the initial guess, if needed
 # optimizer.check_first_derivatives(prob.x0)

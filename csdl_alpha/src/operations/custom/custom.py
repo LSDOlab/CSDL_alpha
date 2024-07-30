@@ -20,7 +20,7 @@ class CustomOperation(Operation):
         self.input_dict = {}
         self.output_dict = {}
         self.derivative_parameters = {}
-        self.name = 'custom'
+        self.name = self.__class__.__name__
 
 class CustomExplicitOperation(CustomOperation):
 
@@ -40,7 +40,7 @@ class CustomExplicitOperation(CustomOperation):
         raise NotImplementedError('not implemented')
 
     def compute_derivatives(self, inputs, outputs, derivatives):
-        raise NotImplementedError('not implemented')
+        raise NotImplementedError(f'not implemented for operation {self.name}')
 
     def _wrap_evaluate(self, evaluate):
         def new_evaluate(*args, **kwargs):
@@ -75,6 +75,27 @@ class CustomExplicitOperation(CustomOperation):
         if len(output) == 1:
             output = output[0]
         return output
+    
+    def compute_jax(self, *args):
+        import jax
+
+        def new_inline_func(*args):
+            processed_inputs = [np.array(input) for input in args]
+            return self.compute_inline(*processed_inputs)
+
+        use_64 = jax.config.read('jax_enable_x64')
+        if use_64:
+            dtype = np.float64
+        else:
+            dtype = np.float32
+
+        output = jax.pure_callback(
+            new_inline_func,
+            [jax.ShapeDtypeStruct(self.output_dict[output_var].shape, dtype) for output_var in self.output_dict],
+            *args)
+        # if len(output) == 1:
+        #     output = output[0]
+        return tuple(output)
 
     # def set_inline_values(self):
     #     inputs = {key: input.value for key, input in self.input_dict.items()}
@@ -337,6 +358,9 @@ class CustomJacOperation(Operation):
         # derivative order and original operation
         self.order = order
         self.custom_operation = custom_operation
+        self.cache_jac:bool = True
+        self.cached_inputs = None
+        self.cached_jacs = None
 
         # The inputs of the operation are all the orginal inputs, the computed outputs AND the cotangents of the outputs
         vjp_custom_inputs = self.orig_inputs + self.orig_outputs + self.cotangents_outputs
@@ -356,16 +380,23 @@ class CustomJacOperation(Operation):
         input_values:list[np.array] = orig_inputs_and_outputs_and_cots[:self.num_orig_inputs]
         output_values:list[np.array] = orig_inputs_and_outputs_and_cots[self.num_orig_inputs:self.num_orig_inputs + self.num_orig_outputs]
         cot_values:list[np.array] = orig_inputs_and_outputs_and_cots[self.num_orig_inputs + self.num_orig_outputs:]
-        
-        inputs:dict[str,Variable] = {self.reverse_input_dict[key]:input for key, input in zip(self.orig_inputs, input_values)}
-        outputs:dict[str,Variable] = {self.reverse_output_dict[key]:output for key, output in zip(self.orig_outputs, output_values)}
+        if (not self.cache_jac) or (self.cached_inputs is None or not all(np.array_equal(input, cached_input) for input, cached_input in zip(input_values, self.cached_inputs))):
+            # print('not cached')
+            inputs:dict[str,Variable] = {self.reverse_input_dict[key]:input for key, input in zip(self.orig_inputs, input_values)}
+            outputs:dict[str,Variable] = {self.reverse_output_dict[key]:output for key, output in zip(self.orig_outputs, output_values)}
 
-        # Call user derivatives
-        derivatives_dict = prepare_compute_derivatives(self.custom_operation.derivative_parameters)
-        inputs = preprocess_custom_inputs(inputs)
-        outputs = preprocess_custom_inputs(outputs)
-        self.custom_operation.compute_derivatives(inputs, outputs, derivatives_dict)
-        postprocess_compute_derivatives(derivatives_dict, self.custom_operation.derivative_parameters)
+            # Call user derivatives
+            derivatives_dict = prepare_compute_derivatives(self.custom_operation.derivative_parameters)
+            inputs = preprocess_custom_inputs(inputs)
+            outputs = preprocess_custom_inputs(outputs)
+            self.custom_operation.compute_derivatives(inputs, outputs, derivatives_dict)
+            postprocess_compute_derivatives(derivatives_dict, self.custom_operation.derivative_parameters)
+
+            self.cached_inputs = input_values
+            self.cached_jacs = derivatives_dict
+        else:
+            # print('cached')
+            derivatives_dict = self.cached_jacs
         
         # Accumulate and return
         input_cots:list[np.array] = []
@@ -390,3 +421,25 @@ class CustomJacOperation(Operation):
             return input_cots[0]
         else:
             return tuple(input_cots)
+    
+    def compute_jax(self, *args):
+        import jax
+
+        def new_inline_func(*args):
+            processed_inputs = [np.array(input) for input in args]
+            return self.compute_inline(*processed_inputs)
+
+        use_64 = jax.config.read('jax_enable_x64')
+        if use_64:
+            dtype = np.float64
+        else:
+            dtype = np.float32
+
+        output = jax.pure_callback(
+            new_inline_func,
+            [jax.ShapeDtypeStruct(in_cot.shape, dtype) for in_cot in self.input_cotangents],
+            *args)
+        # if len(output) == 1:
+        #     output = output[0]
+        
+        return tuple(output)

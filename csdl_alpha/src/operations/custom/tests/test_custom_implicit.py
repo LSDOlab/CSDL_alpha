@@ -148,7 +148,7 @@ class CustomImpVec(csdl.experimental.CustomImplicitOperation):
 
 class TestCustomImplicit(csdl_tests.CSDLTest):
     def test_custom_implicit(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         a = csdl.Variable(value=np.ones((2,2)), name='a')
         b = csdl.Variable(value=10., name='b')
         c = csdl.Variable(value=3, name='c')
@@ -188,8 +188,16 @@ class TestCustomImplicit(csdl_tests.CSDLTest):
         np.testing.assert_almost_equal(real_derivs[y2, b].value, cust_derivs[y, b].value)
         np.testing.assert_almost_equal(real_derivs[y2, c].value, cust_derivs[y, c].value)
 
+        self.run_tests(
+            compare_values = [
+                csdl_tests.TestingPair(x, x.value),
+                csdl_tests.TestingPair(y, y.value),
+            ],
+            verify_derivatives=False,
+        )
+
     def test_custom_implicit_vec(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         a = csdl.Variable(value=np.ones((2,2)), name='a')
         b = csdl.Variable(value=np.array([[10],[11]]), name='b')
         c = csdl.Variable(value=np.array([[3],[2]]), name='c')
@@ -228,6 +236,14 @@ class TestCustomImplicit(csdl_tests.CSDLTest):
         np.testing.assert_almost_equal(real_derivs[y2, a].value, cust_derivs[y, a].value)
         np.testing.assert_almost_equal(real_derivs[y2, b].value, cust_derivs[y, b].value)
         np.testing.assert_almost_equal(real_derivs[y2, c].value, cust_derivs[y, c].value)
+
+        self.run_tests(
+            compare_values = [
+                csdl_tests.TestingPair(x, x.value),
+                csdl_tests.TestingPair(y, y.value),
+            ],
+            verify_derivatives=False,
+        )
 
 if __name__ == '__main__':
     t = TestCustomImplicit()

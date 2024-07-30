@@ -1,8 +1,13 @@
 import numpy as np
+import pytest
 
 class CSDLTest():
 
-    def prep(self, inline = True, **kwargs):
+    @pytest.fixture(autouse=True)
+    def inject_config(self, request):
+        self._config = request.config
+
+    def prep(self, always_build_inline = False, **kwargs):
         """
         preprocessing for running tests to check csdl computations.
 
@@ -11,7 +16,22 @@ class CSDLTest():
         from csdl_alpha.utils.hard_reload import hard_reload
         hard_reload()
 
-        kwargs['inline'] = inline
+        try:
+            # Running with pytest
+            self.build_with_inline = not self._config.getoption("--build_inline")
+            if self.build_with_inline:
+                kwargs['inline'] = True
+        except:
+
+            if 'inline' not in kwargs:
+                kwargs['inline'] = True
+            # Running without pytest
+            self.build_with_inline = kwargs['inline']
+
+        # always_build_inline takes precedence over the config option/given kwargs
+        if always_build_inline:
+            kwargs['inline'] = True
+
         import csdl_alpha as csdl
         recorder = csdl.build_new_recorder(**kwargs)
         recorder.start()
@@ -26,80 +46,154 @@ class CSDLTest():
             ignore_constants = False,
             turn_off_recorder = True,
         ):
+        try:
+            self.backend_type = self._config.getoption("--backend")
+        except:
+            try:
+                self.backend_type = self.overwrite_backend
+            except:
+                raise ValueError("To run tests without pytest, set CSDLTest.overwrite_backend to 'inline' or 'jax' before tests.")
+            
+        if self.backend_type not in ['inline', 'jax']:
+            raise ValueError(f"Backend type {self.backend_type} not supported for testing. Use 'inline', 'jax'")
+        
+        try:
+            self.batched_deriv = self._config.getoption("--batched_derivs")
+        except:
+            self.batched_deriv = False
+
         import csdl_alpha as csdl
         import numpy as np
         recorder = csdl.get_current_recorder()
         if turn_off_recorder:
             recorder.stop()
 
-        if compare_values is None:
-            compare_values = []
-        if compare_derivatives is None:
-            compare_derivatives = []
+        # TEST THREE THINGS:
+        # 1. Compare forward evaluation values according to using testing_pairs
+        # 2. Compare derivatives with finite difference if needed
+        # 3. Rerun the graph to make sure we can rerun
 
-        from numpy.testing import assert_array_equal
+        # Find all inputs and outputs
+        graph_insights = recorder.gather_insights()
+        wrts_all = list(graph_insights['input_nodes'])
+        all_inputs = []
+        for i, wrt in enumerate(wrts_all):
+            from csdl_alpha.src.graph.variable import Constant
+            if ignore_constants and isinstance(wrt, Constant):
+                continue
+            all_inputs.append(wrt)
+        all_outputs = [testing_pair.csdl_variable for testing_pair in compare_values]
+        
+        # 1: 
+        self.check_values(
+            compare_values,
+            recorder,
+            all_inputs,
+            all_outputs,
+        )
 
-        # TODO: make compatible with sparse variables
+        # 2:
+        if verify_derivatives:
+            self.compare_derivatives(
+                recorder,
+                all_inputs,
+                compare_values,
+                ignore_derivative_fd_error,
+                step_size,
+                ignore_constants,
+            )
+
+        # 3.
+        self.rerun(recorder, all_inputs)
+
+    def check_values(
+            self,
+            compare_values,
+            recorder,
+            all_inputs,
+            all_outputs,
+            ):
+        if self.backend_type == 'jax':
+            from csdl_alpha.backends.jax.graph_to_jax import create_jax_interface
+            self.jax_forward_interface = create_jax_interface(
+                inputs = all_inputs,
+                outputs = all_outputs,
+                graph = recorder.active_graph,
+            )
+            import jax.numpy as jnp
+            output_values = self.jax_forward_interface({input_var:input_var.value for input_var in all_inputs})
+            
+            for ind, testing_pair in enumerate(compare_values):
+                testing_pair.csdl_variable.value = output_values[testing_pair.csdl_variable]
+        elif not self.build_with_inline:
+            recorder.execute()
         for ind, testing_pair in enumerate(compare_values):
             testing_pair.compare(ind+1)
+
+    def compare_derivatives(
+            self,
+            recorder,
+            all_inputs,
+            compare_values,
+            ignore_derivative_fd_error,
+            step_size,
+            ignore_constants,
+        ):
+        if ignore_derivative_fd_error is None:
+            ignore_derivative_fd_error = set()
+
+        recorder.start()
+        # from csdl_alpha.src.operations.derivatives.utils import verify_derivatives_inline
         
-        # Add derivatives to the graph and verify with finite difference if needed. Recorder needs to be re-started
-        if verify_derivatives:
-            if ignore_derivative_fd_error is None:
-                ignore_derivative_fd_error = set()
+        wrts = all_inputs
+        ofs = [testing_pair.csdl_variable for testing_pair in compare_values]
+        of_wrt_meta_data = {}
+        for testing_pair in compare_values:
+            tag = testing_pair.tag
+            if tag is None:
+                tag = ''
+            rel_error = 10**(-testing_pair.decimal)
+            for wrt in wrts:
+                if (wrt in ignore_derivative_fd_error) or (testing_pair.csdl_variable in ignore_derivative_fd_error):
+                    rel_error = 2.0
+                of_wrt_meta_data[(testing_pair.csdl_variable, wrt)] = {
+                    'tag': tag,
+                    'max_rel_error': rel_error,   
+                }
+        
+        deriv_kwargs = {'loop':(not self.batched_deriv)}
+        if self.backend_type == 'inline':
+            if not self.build_with_inline:
+                recorder.execute()
+            import csdl_alpha as csdl
+            csdl.derivative_utils.verify_derivatives(
+                ofs,
+                wrts,
+                step_size,
+                verification_options=of_wrt_meta_data,
+                derivative_kwargs = deriv_kwargs,
+            )
 
-            recorder.start()
-            from csdl_alpha.src.operations.derivative.utils import verify_derivatives_inline
-            
-            graph_insights = recorder.gather_insights()
-            wrts_all = list(graph_insights['input_nodes'])
-            wrts = []
-            j = 0
-            for i, wrt in enumerate(wrts_all):
-                from csdl_alpha.src.graph.variable import Constant
-                # TODO: Find a deterministic way to skip certain constants
-                # if isinstance(wrt, Constant):
-                #     # check if i is even:
-                #     j+=1
-                #     if (j) % 3 == 0:
-                #         continue
-                if ignore_constants and isinstance(wrt, Constant):
-                    continue
-                wrts.append(wrt)
-            ofs = [testing_pair.csdl_variable for testing_pair in compare_values]
-            of_wrt_meta_data = {}
-            for testing_pair in compare_values:
-                tag = testing_pair.tag
-                if tag is None:
-                    tag = ''
-                rel_error = 10**(-testing_pair.decimal)
-                for wrt in wrts:
-                    if (wrt in ignore_derivative_fd_error) or (testing_pair.csdl_variable in ignore_derivative_fd_error):
-                        rel_error = 2.0
-                    of_wrt_meta_data[(testing_pair.csdl_variable, wrt)] = {
-                        'tag': tag,
-                        'max_rel_error': rel_error,   
-                    }
-            
-            verify_derivatives_inline(ofs, wrts, step_size, of_wrt_meta_data = of_wrt_meta_data)
+        else:
+            import csdl_alpha as csdl
+            csdl.derivative_utils.verify_derivatives(
+                ofs,
+                wrts,
+                step_size,
+                verification_options=of_wrt_meta_data,
+                derivative_kwargs = deriv_kwargs,
+                backend = 'jax'
+            )
+        # exit('END 2')
+        recorder.stop()
 
-            recorder.stop()
-
-        # run the graph again to make sure it actually runs twice.
-        recorder.execute()
-        # recorder.print_graph_structure()
-        # recorder.visualize_graph()
+    def rerun(self, recorder, all_inputs):
+        if self.backend_type == 'inline':
+            recorder.execute()
+        else:
+            self.jax_forward_interface({input_var:input_var.value for input_var in all_inputs})
 
     def docstest(self, obj):
-        # self.prep()
-        # import doctest
-        # import csdl_alpha as csdl
-        # import numpy as np
-        # doctest.run_docstring_examples(
-        #     obj,
-        #     globs = {'csdl': csdl, 'np': np},
-        #     optionflags=doctest.FAIL_FAST,
-        # )
         self.prep()
         import doctest
         import csdl_alpha as csdl
@@ -189,15 +283,3 @@ class TestingPair():
             error_str += f"\nVariable shape:   {self.csdl_variable.shape}\n"
             error_str += f"Real shape:       {self.real_value.shape}\n"
         return error_str
-
-# class TestingPairs():
-
-#     def __init__(self):
-#         self.pairs = []
-
-#     def add_pair(self, checking_pair:CheckPair):
-#         self.pairs.append(checking_pair)
-
-#     def compare(self):
-#         for i, pair in enumerate(self.pairs):
-#             pair.compare(index = i)

@@ -4,7 +4,7 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import scalarize, ingest_value
 import numpy as np
 
-from typing import Union
+from typing import Union, Callable
 
 class Newton(FixedPoint):
     
@@ -65,6 +65,10 @@ class Newton(FixedPoint):
             else:
                 try:
                     initial_value = ingest_value(initial_value)
+                    if initial_value.size == 1:
+                        initial_value = initial_value.flatten()*np.ones(state.shape)
+                    elif initial_value.shape != state.shape:
+                        raise ValueError(f"Initial value shape {initial_value.shape} does not match state shape {state.shape}")
                 except Exception as e:
                     raise ValueError(f"Error with initial value. {e}")
             self.add_state_metadata(state, 'initial_value', initial_value)
@@ -101,3 +105,48 @@ class Newton(FixedPoint):
             il = self.state_metadata[current_state]['index_lower']
             iu = self.state_metadata[current_state]['index_upper']
             current_state.value = current_state.value - solved_system[il:iu].reshape(current_state.shape)
+
+    def _jax_update_states(
+            self,
+            jax_residual_function:Callable,
+            jax_intermediate_function:Callable,
+            val,
+            input_var_dict):
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        import jax.numpy as jnp
+        # get residuals
+        residual_vector = jnp.zeros((self.total_state_size,))
+        states = val[0]
+        residuals = val[1]
+        graph_input_dict = {key: value for key, value in input_var_dict.items() if key in self.residual_graph.node_table}
+        for i, current_state_var in enumerate(self.state_to_residual_map):
+            # get current state value and residual value
+            current_state = states[i]
+            current_residual = residuals[i]
+
+            il = self.state_metadata[current_state_var]['index_lower']
+            iu = self.state_metadata[current_state_var]['index_upper']
+            residual_vector = residual_vector.at[il:iu].set(current_residual.flatten())
+
+        # get residual jacobian
+        residual_jacobian_var = self.full_residual_jacobian
+        # jax_jacobian_function = create_jax_function(self.residual_graph, 
+        #                                             [residual_jacobian_var], 
+        #                                             [input for input in graph_input_dict]+list(self.state_to_residual_map))
+        # residual_jacobian = jax_jacobian_function(*([val for val in graph_input_dict.values()]+states))[0]
+        if residual_jacobian_var in graph_input_dict:
+            residual_jacobian = graph_input_dict[residual_jacobian_var]
+        else:
+            residual_jacobian = jax_intermediate_function(states)[residual_jacobian_var]
+
+        # Solve residual Jacobian system
+        solved_system = jnp.linalg.solve(residual_jacobian, residual_vector)
+
+        # update states
+        output_states = []
+        for i, current_state_var in enumerate(self.state_to_residual_map.keys()):
+            il = self.state_metadata[current_state_var]['index_lower']
+            iu = self.state_metadata[current_state_var]['index_upper']
+            current_state = states[i]
+            output_states.append(current_state - solved_system[il:iu].reshape(current_state.shape))
+        return output_states

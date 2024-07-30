@@ -1,6 +1,6 @@
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation, ComposedOperation
-from csdl_alpha.src.operations.derivative.reverse import _vjp, preprocess_reverse
-from csdl_alpha.src.operations.derivative.bookkeeping import listify_and_verify_variables
+from csdl_alpha.src.operations.derivatives.reverse import _vjp, preprocess_reverse
+from csdl_alpha.src.operations.derivatives.bookkeeping import listify_and_verify_variables
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.graph import Graph
@@ -10,8 +10,6 @@ from csdl_alpha.utils.typing import VariableLike
 
 
 from typing import Union
-
-
 
 def reverse(
         of: Variable,
@@ -34,20 +32,66 @@ def reverse(
     # node_order = build_derivative_node_order(graph, [of_var], wrt_vars)
     node_order = preprocess_reverse([of_var], wrt_vars, graph)
 
-    # perform the reverse mode differentiation:
+
     import numpy as np
     jacobians:dict[Variable:Variable] = {}
     for wrt_var in wrt_vars:
-        jacobians[wrt_var] = csdl.Variable(name = f'jac_{of.name}_wrt_{wrt_var.name}', value = np.zeros((of_var.size, wrt_var.size)))
+        jacobians[wrt_var] = csdl.Variable(name = f'jac_{of.name}_wrt_{wrt_var.name}_init', value = np.zeros((of_var.size, wrt_var.size)))
 
-    initial_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
+    if elementwise is True:
+        current_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.ones(of_var.shape))
+        # vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)
+        vjp_cotangents = _vjp([(of_var,current_output_seed)], wrt_vars, node_order)
+
+        for wrt_var in wrt_vars:
+            wrt_cotangent = vjp_cotangents[wrt_var]
+            if wrt_cotangent is None:
+                continue
+            diag_indices = list(np.arange(wrt_var.size))
+            jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[diag_indices, diag_indices], wrt_cotangent.flatten())
+            jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}_diag')
+        return jacobians
     
-    if not elementwise:
-        if loop:
-            # Assume derivatives do not stack by default. Possible make this an option in the future.
-            loop_d = csdl.frange(of_var.size, inline_lazy_stack=True)
-        else:
-            loop_d = range(of_var.size)
+    if loop is False:
+        # ===TESTING VRANGE===:
+        batched_wrt_vjps = {}
+        unbatched_output_seed = csdl.Variable(name = f'seeds_{of.name}', value = np.eye(of_var.size))
+        import csdl_alpha as csdl
+        recorder = csdl.get_current_recorder()
+        recorder._enter_subgraph(add_missing_variables=True)
+
+        # Main derivative calculation
+        current_output_seed_flat = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
+        current_output_seed = current_output_seed_flat.reshape(of_var.shape)
+        vjp_cotangents = _vjp([(of_var,current_output_seed)], wrt_vars, node_order)
+
+        for wrt_var in wrt_vars:
+            wrt_cotangent = vjp_cotangents[wrt_var]
+            if wrt_cotangent is None:
+                continue
+            batched_wrt_vjps[wrt_var] = wrt_cotangent.flatten()
+
+        body_graph = recorder.active_graph
+        recorder._exit_subgraph()
+        
+        if len(batched_wrt_vjps) > 0:
+            from csdl_alpha.src.operations.loops.vloop import BLoop, get_bloop_inputs
+            # unbatched_inputs = get_bloop_inputs(body_graph, recorder.active_graph)
+            unbatched_inputs = body_graph.inputs
+            bloop = BLoop(
+                name = f'rbloop_{of.name}',
+                body=body_graph,
+                batched_inputs=[(unbatched_output_seed, current_output_seed_flat)],
+                unbatched_inputs=unbatched_inputs,
+                batched_outputs=[(jacobians[wrt_var], wrt_vjp) for wrt_var, wrt_vjp in batched_wrt_vjps.items()],
+            )
+            bloop.finalize_and_return_outputs()
+
+    else:
+        # Assume derivatives do not stack by default. Possible make this an option in the future.
+        loop_d = csdl.frange(of_var.size, inline_lazy_stack=True)
+        initial_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
+
         for row_index in loop_d:
             current_output_seed = initial_output_seed.set(csdl.slice[row_index], 1.0)
             current_output_seed = current_output_seed.reshape(of_var.shape)
@@ -62,23 +106,11 @@ def reverse(
                     continue
                 jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[row_index, :], wrt_cotangent.flatten())
                 jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
-        if loop:
-            loop_d.op.name = 'r_loop'
-    else:
-        current_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.ones(of_var.shape))
-        # vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)
-        vjp_cotangents = _vjp([(of_var,current_output_seed)], wrt_vars, node_order)
-
-        for wrt_var in wrt_vars:
-            wrt_cotangent = vjp_cotangents[wrt_var]
-            if wrt_cotangent is None:
-                continue
-            diag_indices = list(np.arange(wrt_var.size))
-            jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[diag_indices, diag_indices], wrt_cotangent.flatten())
-            jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}_diag')
+            
+        loop_d.op.name = 'rev_loop'
+        loop_d.op.get_subgraph().name = 'rev_loop'
 
     return jacobians
-
 
 def derivative(
     ofs:Union[Variable, list[Variable]],
@@ -87,6 +119,7 @@ def derivative(
     as_block:bool = False,
     graph:Graph = None,
     loop:bool = True,
+    concatenate_ofs:bool = False,
     elementwise = False,
     )->Union[dict[Variable], dict[Variable,Variable], Variable]:
     """Computes the derivatives of the output variables with respect to the input variables in CSDL.
@@ -104,9 +137,13 @@ def derivative(
     graph : Graph, optional
         Which graph to take derivatives of, by default the current active graph
     loop : bool, optional
-        If True, uses a csdl loop to compute the derivatives, by default True
+        If True, uses a csdl loop to compute the derivatives. If false, batches the derivatives. by default True
+    concatenate_ofs: bool, optional
+        If True, concatenates the output variables into one variable before taking the derivative. This reduces the size of the
+        graph and may be less efficient. 
+        by default False
     elementwise : bool, optional
-        If True, assumes diagonal derivatives, by default False
+        If True, assumes diagonal derivatives, by default False. (WARNING: The output will be incorrect if this is not the case.)
 
     Returns
     -------
@@ -136,6 +173,8 @@ def derivative(
     >>> dz2_dx2.value
     array([[0.]])
     """
+    import csdl_alpha as csdl
+
     of_is_list = True
     wrt_is_list = True
     if not isinstance(ofs, (list, tuple)):
@@ -145,18 +184,46 @@ def derivative(
         wrts = [wrts]
         wrt_is_list = False
 
+    for var in ofs + wrts:
+        if not isinstance(var, Variable):
+            raise ValueError(f"Expected given ofs and wrts to be of type Variable, but got {get_type_string(var)}.")
+
     if elementwise:
         first_var_size = ofs[0].size
         for var in ofs + wrts:
             if var.size != first_var_size:
-                raise ValueError(f"Elementwise option requires all derivative variables to have the same size. Got size {var.size}, expected {first_var_size}.")
+                raise ValueError(f"A requirement of the elementwise option is that all derivative variables to have the same size. Got size {var.size}, expected {first_var_size}.")
 
+    # concatenate_ofs = True
     if mode == 'reverse':
         output_dict = {}
-        for of in ofs:
-            deriv_of = reverse(of, wrts, graph, loop = loop, elementwise = elementwise)
+        # TODO: Clean up.
+        if concatenate_ofs:
+            import csdl_alpha as csdl
+            recorder = csdl.get_current_recorder()
+            active_graph = recorder.active_graph
+            if (active_graph != graph) and (graph is not None):
+                recorder._enter_subgraph(graph = graph)
+            elementwise = False
+            block_mat = []
+            for of in ofs:
+                block_mat.append([of.reshape((of.size, 1))])
+            concatenated_of = csdl.blockmat(block_mat)
+            if (active_graph != graph) and (graph is not None):
+                recorder._exit_subgraph()
+
+            deriv_of = reverse(concatenated_of, wrts, graph, loop = loop, elementwise = elementwise)
             for wrt in deriv_of:
-                output_dict[of, wrt] = deriv_of[wrt]
+                lower = 0
+                for of in ofs:
+                    upper = lower + of.size
+                    output_dict[of, wrt] = deriv_of[wrt][lower:upper]
+                    lower = upper
+        else:
+            for of in ofs:
+                deriv_of = reverse(of, wrts, graph, loop = loop, elementwise = elementwise)
+                for wrt in deriv_of:
+                    output_dict[of, wrt] = deriv_of[wrt]
     elif mode == 'forward':
         raise NotImplementedError("Forward mode not implemented yet.")
     else:
@@ -393,17 +460,6 @@ class TestDerivative(csdl_tests.CSDLTest):
         import numpy as np
 
         n = 3
-        # A_shape = (n,n)
-        # b_shape = (n,1)
-        # # Try one: doesnt work... Condition number is too high?
-        # A_val = (np.arange(np.prod(A_shape)).reshape(A_shape)+1)**2.0
-        # b_val = np.arange(np.prod(b_shape)).reshape(b_shape)
-        
-        # Try two: works...
-        # A_val = np.diagflat(np.ones(n)*3.0)
-        # A_val[0,1] = 2.0
-        # A_val[1,0] = 2.0
-        # b_val = np.arange(n).reshape(b_shape)
 
         # Try three: works...
         main_diag = np.arange(n)+1

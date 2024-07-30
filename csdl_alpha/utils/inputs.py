@@ -97,3 +97,17 @@ def get_shape(shape, value):
             if shape != value.shape:
                 raise ValueError("Shape and value shape must match")
     return shape
+
+def listify_variables(variables):
+    from csdl_alpha.src.graph.variable import Variable
+    if isinstance(variables, Variable):
+        variables = [variables]
+    if isinstance(variables, tuple):
+        variables = list(variables)
+    elif not isinstance(variables, list):
+        raise TypeError(f"Variables must be a Variable or a list/tuple of Variables. {get_type_string(variables)} given")
+
+    for variable in variables:
+        if not isinstance(variable, Variable):
+            raise TypeError(f"Variables must be instances of Variable. {get_type_string(variable)} given")
+    return variables

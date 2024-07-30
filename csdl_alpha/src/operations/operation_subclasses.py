@@ -48,9 +48,10 @@ class SubgraphOperation(Operation):
         """
         assigns a subgraph to the operation. Must be called once and can only be called once.
         """
+        from csdl_alpha.src.graph.graph import Graph
         if self._subgraph is not None:
             raise ValueError("Subgraph already set")
-        self._subgraph = graph
+        self._subgraph:Graph = graph
     
     def get_subgraph(self):
         """
@@ -112,25 +113,28 @@ class ComposedOperation(SubgraphOperation):
     def set_inline_values(self, debug = False):
         self.get_subgraph().execute_inline(debug=debug)
 
-        keep_set = set(self.outputs).union(set(self.inputs))
-        subgraph = self.get_subgraph()
-        for node in subgraph.node_table:
-            if isinstance(node, Variable):
+        # This messes up a lot of stuff.....
+        # TODO: Need a way to turn on and off
+        
+        # keep_set = set(self.outputs).union(set(self.inputs))
+        # subgraph = self.get_subgraph()
+        # for node in subgraph.node_table:
+        #     if isinstance(node, Variable):
 
-                do_not_delete = False
-                if subgraph.in_degree(node) == 0:
-                    do_not_delete = True
-                if isinstance(node, Constant):
-                    do_not_delete = True
+        #         do_not_delete = False
+        #         if subgraph.in_degree(node) == 0:
+        #             do_not_delete = True
+        #         if isinstance(node, Constant):
+        #             do_not_delete = True
                 
-                for pred in subgraph.predecessors(node):
-                    if isinstance(pred, SubgraphOperation):
-                        do_not_delete = True
+        #         for pred in subgraph.predecessors(node):
+        #             if isinstance(pred, SubgraphOperation):
+        #                 do_not_delete = True
 
-                if not do_not_delete:
-                   if node not in keep_set:
-                        # print([node2 for node2 in keep_set])
-                        node.value = None
+        #         if not do_not_delete:
+        #            if node not in keep_set:
+        #                 # print([node2 for node2 in keep_set])
+        #                 node.value = None
 
     def evaluate_vjp(self, cotangents, *inputs_outputs):
         # TODO: extremely messy and crappy. FIX!
@@ -172,7 +176,7 @@ class ComposedOperation(SubgraphOperation):
         rec = csdl.get_current_recorder()
         # rec.visualize_graph()
 
-        from csdl_alpha.src.operations.derivative.reverse import vjp
+        from csdl_alpha.src.operations.derivatives.reverse import vjp
         # This is the function that gets executed within the composed operation
         # It takes the cotangents and the original inputs
         # We first re-compute the composed operation and then compute the VJP again

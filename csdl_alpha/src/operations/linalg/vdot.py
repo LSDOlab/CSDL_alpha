@@ -16,6 +16,10 @@ class VectorDot(Operation):
         import numpy as np
         return np.vdot(x, y)
 
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return jnp.vdot(x, y)
+
     def evaluate_vjp(self, cotangents, x, y, z):
         import csdl_alpha as csdl
         if cotangents.check(x):

@@ -184,7 +184,7 @@ class Testfrange(csdl_tests.CSDLTest):
     #         assert np.allclose(b, b_recomp)
 
     def test_custom_vals(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -216,7 +216,7 @@ class Testfrange(csdl_tests.CSDLTest):
         self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
     def test_multi_vals_delay_inline(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -243,7 +243,7 @@ class Testfrange(csdl_tests.CSDLTest):
         self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
     def test_multi_vals_delay_inline_nest(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -277,7 +277,7 @@ class Testfrange(csdl_tests.CSDLTest):
         self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
     def test_multi_vals_delay_inline_nest2(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -311,7 +311,7 @@ class Testfrange(csdl_tests.CSDLTest):
         self.run_tests(compare_values=compare_values, verify_derivatives=True)
 
     def test_stack(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -334,8 +334,16 @@ class Testfrange(csdl_tests.CSDLTest):
         assert np.all(b_stack.value == np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
         assert b_stack == loop.op.get_stacked(b)
 
+        self.run_tests(
+            compare_values=[
+                csdl_tests.TestingPair(b, np.array([11])),
+                csdl_tests.TestingPair(b_stack, np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
+            ],
+            verify_derivatives=True
+        )
+
     def test_stack_multi(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -370,7 +378,7 @@ class Testfrange(csdl_tests.CSDLTest):
         assert c_stack == loop.op.get_stacked(c)
 
     def test_stack_multidim(self):
-        self.prep()
+        self.prep(always_build_inline = True)
         import csdl_alpha as csdl
         from csdl_alpha.api import frange
         import numpy as np
@@ -497,6 +505,7 @@ class Testfrange(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = Testfrange()
+    test.overwrite_backend = 'jax'
     # test.test_simple_loop()
     # test.test_simple_double_loop()
     # test.test_range_inputs()

@@ -23,6 +23,10 @@ class ScalarExpand(Operation):
     def compute_inline(self, x):
         return np.broadcast_to(x, self.out_shape)
     
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        return jnp.broadcast_to(x, self.out_shape)  
+    
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             import csdl_alpha as csdl
@@ -51,6 +55,12 @@ class TensorExpand(Operation):
         # exit()
         return np.einsum(self.einsum_str, x, np.ones(self.ones_shape))
     
+    def compute_jax(self, x):
+        import jax.numpy as jnp
+        # NOTE : if csdl.einsum is implemented using csdl.[sum, expand, reorder_axes, mult] later,
+        # then the line below should never call csdl.einsum since it just creates recursive calls.
+        return jnp.einsum(self.einsum_str, x, jnp.ones(self.ones_shape))
+
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             import csdl_alpha as csdl
@@ -172,7 +182,8 @@ def expand(x, out_shape, action=None):
     else:
         if action is not None:
             warnings.warn('"action" will have no effect when expanding a scalar.')
-
+        
+        x = x.flatten()
         op = ScalarExpand(x, out_shape)
     
     return op.finalize_and_return_outputs()

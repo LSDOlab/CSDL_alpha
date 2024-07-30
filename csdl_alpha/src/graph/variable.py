@@ -55,7 +55,7 @@ class Variable(Node):
         self.name = None
 
         shape, value = process_shape_and_value(shape, value)
-        self.value = value
+        self._value = value
         self.shape = shape
         
         if len(shape) == 0:
@@ -73,6 +73,32 @@ class Variable(Node):
             self.tags = tags
 
         self.post_init()
+
+    @property
+    def value(self):
+        """The value of the variable used for inline evaluation"""
+        return self._value
+    
+    @value.setter
+    def value(self, value: Union[np.ndarray, float, int]):
+        """Sets the value of a variable.
+
+        Parameters
+        ----------
+        value : Union[np.ndarray, float, int]
+            Value for the variable
+        """
+        self.set_value(value)
+
+    def set_value(self, value: Union[np.ndarray, float, int]):
+        """Sets the value of a variable.
+
+        Parameters
+        ----------
+        value : Union[np.ndarray, float, int]
+            Value for the variable
+        """
+        _, self._value = process_shape_and_value(self.shape, value)
     
     def post_init(self):
         pass
@@ -97,16 +123,6 @@ class Variable(Node):
         """
 
         self.hierarchy = hierarchy
-
-    def set_value(self, value: Union[np.ndarray, float, int]):
-        """Sets the value of a variable.
-
-        Parameters
-        ----------
-        value : Union[np.ndarray, float, int]
-            Value for the variable
-        """
-        _, self.value = process_shape_and_value(self.shape, value)
 
     # TODO: add checks for parents
     # TODO: allow float and arrays
@@ -369,7 +385,7 @@ class Variable(Node):
         from csdl_alpha.src.operations.linalg.matmat import matmat
         return matmat(other, self)
 
-    def reshape(self, shape:tuple[int]):
+    def reshape(self, shape:tuple[int])->'Variable':
         """Returns a reshaped version of the variable.
 
         Parameters
@@ -478,6 +494,72 @@ class Variable(Node):
         """
         from csdl_alpha.src.operations.tensor.inner import inner
         return inner(self, other)
+
+    def expand(self, out_shape:tuple[int], action=None)->'Variable':
+        '''
+        Expands the input scalar/tensor to the specified `out_shape` by 
+        repeating the tensor along certain axes determined fom the `action` argument.
+        For example, `action='i->ijk'` will expand a 1D tensor to a 3D tensor by repeating
+        the input tensor along two new axes.
+        The `action` argument is optional if the input is a scalar since the
+        scalar will be simply broadcasted to the specified `out_shape`.
+
+        Parameters
+        ----------
+        x : VariableLike
+            Input scalar/tensor that needs to be expanded.
+        out_shape : tuple of int
+            Desired shape of the expanded output tensor.
+        action : str, default=None
+            Specifies the action to be taken when expanding the tensor,
+            e.g.,`'i->ij'` expands a vector to a matrix by repeating the 
+            input vector rowwise.
+
+        Returns
+        -------
+        Variable
+            Expanded output tensor as per the specified `out_shape` and `action`.
+        
+        Examples
+        --------
+        >>> recorder = csdl.Recorder(inline = True)
+        >>> recorder.start()
+        >>> x = csdl.Variable(value = 3.0)
+        >>> y1 = csdl.expand(x, out_shape=(2,3))
+        >>> y1.value
+        array([[3., 3., 3.],
+               [3., 3., 3.]])
+        >>> x = csdl.Variable(value = np.array([1.0, 2.0, 3.0]))
+        >>> y2 = csdl.expand(x, out_shape=(2,3), action='i->ji')
+        >>> y2.value
+        array([[1., 2., 3.],
+               [1., 2., 3.]])
+        >>> y3 = csdl.expand(x, out_shape=(3,2), action='i->ij')
+        >>> y3.value
+        array([[1., 1.],
+               [2., 2.],
+               [3., 3.]])
+        >>> y4 = csdl.expand(x, out_shape=(4,3,2), action='i->lij')
+        >>> y4.value
+        array([[[1., 1.],
+                [2., 2.],
+                [3., 3.]],
+        <BLANKLINE>
+               [[1., 1.],
+                [2., 2.],
+                [3., 3.]],
+        <BLANKLINE>
+               [[1., 1.],
+                [2., 2.],
+                [3., 3.]],
+        <BLANKLINE>
+               [[1., 1.],
+                [2., 2.],
+                [3., 3.]]])
+        '''
+
+        from csdl_alpha.src.operations.tensor.expand import expand
+        return expand(self, out_shape, action)
 
     def _check_nlsolver_conflict(self):
         if hasattr(self, 'in_solver'):

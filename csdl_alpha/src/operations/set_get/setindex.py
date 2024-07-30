@@ -41,6 +41,15 @@ class SetVarIndex(Operation):
         # x_updated[evaluated_slice] = 0.0
         # np.add.at(x_updated, evaluated_slice, y)
         # return x_updated
+    def compute_jax(self, x, y, *slice_args):
+        if self.slice.var_slice is True:
+            from csdl_alpha.backends.jax.utils import fallback_to_inline_jax
+            return fallback_to_inline_jax(self, x, y, *slice_args)[0]
+
+        if y.size == 1:
+            return x.at[self.slice.jnpevaluate(*slice_args)].set(y[0])
+        else:
+            return x.at[self.slice.jnpevaluate(*slice_args)].set(y)
 
     def evaluate_vjp(self, cotangents, x, y, *slice_args_and_outputs):
         import csdl_alpha as csdl
@@ -50,7 +59,7 @@ class SetVarIndex(Operation):
             cotangents.accumulate(x, cotangents[x_updated].set(self.slice, 0.0))
         if cotangents.check(y):
             if y.size == 1:
-                cotangents.accumulate(y, csdl.sum(cotangents[x_updated][self.slice]))
+                cotangents.accumulate(y, csdl.sum(cotangents[x_updated][self.slice]).reshape(y.shape))
             else:
                 cotangents.accumulate(y, cotangents[x_updated][self.slice])
 

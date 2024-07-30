@@ -16,15 +16,10 @@ class Log(ElementwiseOperation):
 
     def compute_inline(self, x, y):
         return np.log(x) / np.log(y)
-
-    # def evaluate_jacobian(self, x, y):
-    #     return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
-
-    # def evaluate_jvp(self, x, y, vx, vy):
-    #     return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
-
-    # def evaluate_vjp(self, x, y, vout):
-    #     return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
+    
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return jnp.log(x) / jnp.log(y)
     
     def evaluate_vjp(self, cotangents, x, y, z):
         import csdl_alpha as csdl
@@ -49,15 +44,10 @@ class LeftBroadcastLog(Operation):
 
     def compute_inline(self, x, y):
         return np.log(x) / np.log(y)
-
-    # def evaluate_jacobian(self, x, y):
-    #     return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
-
-    # def evaluate_jvp(self, x, y, vx, vy):
-    #     return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
-
-    # def evaluate_vjp(self, x, y, vout):
-    #     return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
+    
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return jnp.log(x) / jnp.log(y)
     
     def evaluate_vjp(self, cotangents, x, y, z):
         import csdl_alpha as csdl
@@ -81,15 +71,10 @@ class RightBroadcastLog(Operation):
     def compute_inline(self, x, y):
         return np.log(x) / np.log(y)
 
-    # def evaluate_jacobian(self, x, y):
-    #     return 1 / (x * log(y)),  - log(x) / (y * (log(y))**2)
+    def compute_jax(self, x, y):
+        import jax.numpy as jnp
+        return jnp.log(x) / jnp.log(y)
 
-    # def evaluate_jvp(self, x, y, vx, vy):
-    #     return add(vx.flatten() / (x * log(y)) - vy.flatten() * log(x) / (y * (log(y))**2))
-
-    # def evaluate_vjp(self, x, y, vout):
-    #     return vout.flatten() / (x * log(y)), - vout.flatten() * log(x) / (y * (log(y))**2)
-    
     def evaluate_vjp(self, cotangents, x, y, z):
         import csdl_alpha as csdl
         vout = cotangents[z]

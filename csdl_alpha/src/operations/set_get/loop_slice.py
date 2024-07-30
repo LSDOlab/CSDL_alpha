@@ -117,6 +117,8 @@ class VarSlice(Slice):
         self.vars = []
         self.var2slicemap = []
 
+        self.var_slice = False
+
         from csdl_alpha.src.graph.variable import Variable
         for arg_index, (var, maps) in enumerate(mapping_list):
             # arg_index is the index of the CSDL variable
@@ -130,6 +132,7 @@ class VarSlice(Slice):
                 else:
                     if isinstance(map[1], tuple):
                         current_arg_map.append((self.map2slice, map))
+                        self.var_slice = True
                     elif isinstance(map[1], int):
                         current_arg_map.append((self.map2list, map))
             
@@ -174,3 +177,20 @@ class VarSlice(Slice):
                 map[0](map[1], arg_int)
         return tuple(self.slices)
 
+
+    def jnpevaluate(self, *args:tuple[float])->tuple:
+
+        import jax.numpy as jnp
+
+        for arg_index, arg_value in enumerate(args):
+            # arg_index is the index of the CSDL variable
+            # arg_value is the value of that CSDL variable
+            if isinstance(arg_value, jnp.ndarray):
+                arg_int = jnp.int32(arg_value.reshape((1,))[0]) # value that has been cast to an integer to replace slice variable
+            else:
+                arg_int = jnp.int32(arg_value) # value that has been cast to an integer to replace slice variable
+
+            maps = self.var2slicemap[arg_index]
+            for map in maps:
+                map[0](map[1], arg_int)
+        return tuple(self.slices)

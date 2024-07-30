@@ -16,6 +16,9 @@ class MatMat(Operation):
 
     def compute_inline(self, A, B):
         return A @ B
+    
+    def compute_jax(self, A, x):
+        return A @ x
 
     def evaluate_vjp(self, cotangents, A, B, C):
         import csdl_alpha as csdl

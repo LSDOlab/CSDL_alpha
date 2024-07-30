@@ -1,5 +1,5 @@
 from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
-from csdl_alpha.src.operations.derivative.bookkeeping import listify_and_verify_variables, build_derivative_node_order, VarTangents
+from csdl_alpha.src.operations.derivatives.bookkeeping import listify_and_verify_variables, build_derivative_node_order, VarTangents
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.src.graph.variable import Variable
 from typing import Union
@@ -83,6 +83,7 @@ def _vjp(seeds:list[tuple[Variable, Variable]],
     # initialize seeds and final wrt cotangents
     import numpy as np
     import csdl_alpha as csdl
+    recorder = csdl.get_current_recorder()
 
     cotangents = VarTangents()
     for of_var, seed in seeds:
@@ -98,18 +99,25 @@ def _vjp(seeds:list[tuple[Variable, Variable]],
         # rec = csdl.get_current_recorder()
         # rec.visualize_graph(filename = graph.name)
         if isinstance(node, Operation):
-            # Moved to composed operation class for now
-            # for output in node.outputs:
-            #     if cotangents[output] is None:
-            #         cotangents.accumulate(output, csdl.Variable(value = np.zeros(output.shape)))
-            
-            # for output in node.outputs:
-            #     if cotangents[output] is None:
-            #         print(f"cotangents[{output}] is None")
             try:
+                # Main derivative accumulation functiion.
                 node.evaluate_vjp(cotangents, *node.inputs, *node.outputs)
             except Exception as e:
+                if recorder.debug is True:
+                    node.print_trace()
                 raise ValueError(f"Error with VJP in operation {node.name}: {e}")
+
+            if recorder.debug is True and recorder.inline is True:
+                for input in node.inputs:
+                    if cotangents.check(input):
+                        if cotangents[input] is not None:
+                            if np.isnan(cotangents[input].value).any():
+                                print(f'\n========Nan found during derivative of operation {node}:=======')
+                                print(f'Input variable (with name {input.name} and avg value {np.average(input.value)}) trace:')
+                                input.print_trace(tab = True)
+                                print('Operation trace:')
+                                node.print_trace(tab = True)
+                                print()
 
 
     wrt_cotangents:dict[Variable:Variable] = {}
