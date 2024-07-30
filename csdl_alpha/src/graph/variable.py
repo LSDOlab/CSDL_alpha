@@ -133,8 +133,13 @@ class Variable(Node):
         lower = ingest_value(lower)
         self.recorder._add_design_variable(self, upper, lower, scaler)
 
-    def set_as_constraint(self, upper: float = None, lower: float = None, scaler: float = None):
+    def set_as_constraint(self, upper: float = None, lower: float = None, equals: float = None, scaler: float = None):
         scaler = ingest_value(scaler)
+        if equals is not None:
+            if upper is not None or lower is not None:
+                raise ValueError("Constraint cannot have both equals and upper/lower")
+            upper = ingest_value(equals)
+            lower = ingest_value(equals)
         upper = ingest_value(upper)
         lower = ingest_value(lower)
         self.recorder._add_constraint(self, upper, lower, scaler)
