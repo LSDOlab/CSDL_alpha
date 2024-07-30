@@ -1,6 +1,6 @@
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
-from csdl_alpha.src.graph.variable import Variable
+from csdl_alpha.src.graph.variable import Variable, Constant
 from csdl_alpha.src.operations.set_get.loop_slice import _loop_slice as slice
 from typing import Union
 import jax as jnp
@@ -626,6 +626,14 @@ class frange():
         # Stop the graph
         # self._graph.visualize(f'graph_loop_final_{self}')
         self._recorder._exit_subgraph()
+
+        # need to add any loop vars who's iter 1 variables are constants to the external inputs
+        # This happens when the variable that's overwritten starts as a non-csdl variable
+        # these won't be in the outer graph either, so need to add them there as well
+        for loop_var in loop_vars:
+            if isinstance(loop_var[1], Constant):
+                external_inputs.append(loop_var[1])
+                self._recorder.active_graph.add_node(loop_var[1])
 
         for loop_var in loop_vars:
             # stack_output = Variable(name = f'stack_out_{loop_var[1].name}', shape=(len(self.vals[0]),) + loop_var[0].shape, value=0)

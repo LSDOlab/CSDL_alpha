@@ -117,6 +117,27 @@ class Testfrange(csdl_tests.CSDLTest):
             ]
         )
 
+    def test_loop_constant(self):
+        # added after bug found by Nick
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a = csdl.Variable(value=1)
+        b = 0
+        x = csdl.Variable(value=2)
+
+        for i in csdl.frange(10):
+            b = b+a*x
+
+        self.run_tests(
+            compare_values=[
+                csdl_tests.TestingPair(b, np.array([20]))
+            ]
+        )
+
+
     # def test_loop_var_history(self):
     #     self.prep()
     #     import csdl_alpha as csdl
