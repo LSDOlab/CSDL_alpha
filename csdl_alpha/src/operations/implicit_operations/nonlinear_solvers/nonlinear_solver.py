@@ -218,14 +218,23 @@ class NonlinearSolver(object):
         state_variables = set(self.state_to_residual_map.keys())
         input_variables_set = self.meta_input_variables.union(S_inputs.symmetric_difference(state_variables))
         output_variables_set = state_variables.union(S_outputs)
-        
+
+        input_list = []
+        output_list = []
+        for variable in recorder.active_graph.node_table:
+            if variable in input_variables_set:
+                input_list.append(variable)
+            if variable in output_variables_set:
+                output_list.append(variable)
+
+
         operation_metadata = {'nonlinear_solver': self}
         implicit_operation = ImplicitOperation(
-            *list(input_variables_set),
+            *input_list,
             metadata = operation_metadata,
             name = f'implicit_{self.name}'
         )
-        implicit_operation.outputs = list(output_variables_set)
+        implicit_operation.outputs = output_list
         implicit_operation.assign_subgraph(self.residual_graph)
         
         # TODO: only perform these checks in debug mode?
