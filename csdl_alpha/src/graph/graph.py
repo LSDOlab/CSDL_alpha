@@ -637,7 +637,7 @@ def get_node_info_string(node, graph):
 def _copy_to_current_graph(
         graph_to_replace:'Graph',
         input_map:dict['Variable':'Variable'] ,
-        delete_nodes:set['Variable'] = None,
+        add_to_graph_inputs:bool = False,
     ):
     """_summary_
 
@@ -655,9 +655,20 @@ def _copy_to_current_graph(
     current_graph.rxgraph = rx.digraph_union(current_graph.rxgraph, graph_to_replace.rxgraph)
 
     current_graph.update_node_table()
-
     from csdl_alpha.src.operations.copyvar import copyto
     for leaf_node in input_map:
         copyto(input_map[leaf_node], leaf_node)
 
     current_graph.update_node_table()
+
+    if add_to_graph_inputs:
+
+        if not hasattr(current_graph, 'inputs'):
+            raise ValueError("current_graph does not have inputs attribute")
+        if not hasattr(graph_to_replace, 'inputs'):
+            raise ValueError("graph_to_replace does not have inputs attribute")
+        
+        alreadied_inputs = set(current_graph.inputs)
+        for node in graph_to_replace.inputs:
+            if node not in alreadied_inputs:
+                current_graph.inputs.append(node)

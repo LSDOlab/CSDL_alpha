@@ -10,7 +10,7 @@ from typing import Union, Callable
 
 
 # Get the graph
-def get_jax_inputs(node, all_jax_variables:dict)->list:
+def get_jax_inputs(node, all_jax_variables:dict, return_dict = False)->list:
     import jax.numpy as jnp
     jax_inputs = []
     for input in node.inputs:
@@ -29,7 +29,10 @@ def get_jax_inputs(node, all_jax_variables:dict)->list:
         if not isinstance(input, jnp.ndarray):
             raise ValueError(f"Jax function error with node {node}: Expected input to be a jnp.ndarray, but got {type(input)}")
 
-    return jax_inputs
+    if return_dict:
+        return {input:jax_inputs[i] for i, input in enumerate(node.inputs)}
+    else:
+        return jax_inputs
 
 def update_jax_variables(node, jax_outputs, all_jax_variables:dict):
     import jax.numpy as jnp
@@ -51,7 +54,7 @@ def create_jax_function(
         graph:Graph,
         outputs:list[Variable],
         inputs:list[Variable],
-        )->callable:
+        )->Callable:
     """Builds a JAX callable function from a CSDL graph.
 
     Parameters
@@ -100,6 +103,8 @@ def create_jax_function(
         # Set the input values
         all_jax_variables = {}
         relevant_nodes = set()
+        if len(inputs) != len(args):
+            raise ValueError(f"Expected {len(inputs)} inputs, but got {len(args)}")
         for node, arg in zip(inputs, args):
             all_jax_variables[node] = arg
 
@@ -113,7 +118,6 @@ def create_jax_function(
             if isinstance(node, Variable):
                 continue
 
-            jax_inputs = get_jax_inputs(node, all_jax_variables)
 
             # TODO: Finish proper implicit operation/loop output handling
             # if isinstance(node, (ImplicitOperation, Loop)):
@@ -125,11 +129,23 @@ def create_jax_function(
             #         if fill_outputs[output_node] is None:
             #             raise ValueError(f"Jax function error with node {node}: Output {output_node} was not filled")
             #         all_jax_variables[output_node] = fill_outputs[output_node]
-            # else:
-            jax_outputs = node.compute_jax(*jax_inputs) # EVERY CSDL OPERATIONS NEEDS THIS FUNCTION
-            if isinstance(jax_outputs, jnp.ndarray):
-                jax_outputs = (jax_outputs,)
-            update_jax_variables(node, jax_outputs, all_jax_variables)
+            from csdl_alpha.src.operations.loops.new_loop.new_loop import NewLoop
+            if isinstance(node, (NewLoop)):
+                fill_outputs = {output: None for output in node.outputs}
+                fill_inputs = get_jax_inputs(node, all_jax_variables, return_dict=True)
+                # fill_outputs = {output: None for output in node.outputs if current_graph.out_degree(output) > 0}
+                node.evaluate_jax(fill_inputs, outputs = fill_outputs)
+
+                for output_node in fill_outputs:
+                    if fill_outputs[output_node] is None:
+                        raise ValueError(f"Jax function error with node {node}: Output {output_node} was not filled")
+                    all_jax_variables[output_node] = fill_outputs[output_node]
+            else:
+                jax_inputs = get_jax_inputs(node, all_jax_variables)
+                jax_outputs = node.compute_jax(*jax_inputs) # EVERY CSDL OPERATIONS NEEDS THIS FUNCTION
+                if isinstance(jax_outputs, jnp.ndarray):
+                    jax_outputs = (jax_outputs,)
+                update_jax_variables(node, jax_outputs, all_jax_variables)
 
         # Return the outputs
         for output in outputs:

@@ -159,7 +159,7 @@ def expand(x, out_shape, action=None):
             in_str, out_str = action.split('->')
             in_shape = x.shape
             if len(in_str) != len(in_shape):
-                raise ValueError('Input tensor shape does not match the input string in the action.')
+                raise ValueError(f'Input tensor shape {in_shape} does not match the input string \'{in_str}\' in the action.')
             if len(out_str) != len(out_shape):
                 raise ValueError('Output tensor shape does not match the output string in the action.')
 

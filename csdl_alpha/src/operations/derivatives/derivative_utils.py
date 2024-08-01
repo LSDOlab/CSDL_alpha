@@ -14,7 +14,7 @@ def verify_derivatives(
         verification_options:dict[tuple[Variable,Variable],dict] = None,
         derivative_kwargs:dict = None,
         backend = 'inline',
-        )->None:
+        )->dict[tuple[Variable,Variable], dict[str, np.array]]:
     # Check arguments:
     ofs, wrts = listify_ofs_and_wrts(ofs, wrts)
     if backend not in ['inline', 'jax']:

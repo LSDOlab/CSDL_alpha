@@ -6,6 +6,18 @@ import numpy as np
 
 from typing import Optional, Union, Callable
 
+# For debugging:
+def timer(func):
+    import time
+    def wrapper(*args, **kwargs):
+        print(f"START {func.__name__}")
+        s = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"END {func.__name__} took {end-s} seconds")
+        return result
+    return wrapper
+
 class VarManager():
     def __init__(
             self,
@@ -263,6 +275,7 @@ class JaxSimulator(SimulatorBase):
     def get_outputs(self)->dict[Variable, np.ndarray]:
         return {out_var:out_var.value for out_var in self.output_manager.list}
 
+    # @timer # For debugging
     def run_forward(self):
         self.check_if_optimization()
 
@@ -283,6 +296,7 @@ class JaxSimulator(SimulatorBase):
         
         return self._process_optimization_values()
     
+    # @timer # For debugging
     def compute_optimization_derivatives(
             self,
             use_finite_difference:bool = False,

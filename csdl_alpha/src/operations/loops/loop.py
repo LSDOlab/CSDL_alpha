@@ -54,7 +54,6 @@ class Loop(SubgraphOperation):
         self.vals = vals # list of list of values corresponding to iter_var
         self.iter_vars = iter_vars # list of iteration variables
         self.loop_vars = loop_vars # (input node in graph, input for first iter, input for subsiquent iters)
-        self.has_reset = False
         self.loop_var_history = {loop_var:[] for loop_var in loop_vars}
         self.length = len(self.vals[0])
         self.parent = parent
@@ -108,9 +107,6 @@ class Loop(SubgraphOperation):
                     old_var_values[intermediate_var] = intermediate_var.value
 
         import numpy as np
-        # clear loop var history
-        for hist in self.loop_var_history.values():
-            hist.clear()
 
         # If inline stack is True, we do not allocate memory for the stacked feedback variables
         if not self.inline_lazy_stack:
@@ -124,7 +120,6 @@ class Loop(SubgraphOperation):
             for loop_var in self.loop_vars:
                 if i == 0:
                     loop_var[0].value = loop_var[1].value
-                self.loop_var_history[loop_var].append(loop_var[0].value)
             for iter_var, val in zip(self.iter_vars, self.vals):
                 iter_var.set_value(val[i])
 
@@ -185,6 +180,7 @@ class Loop(SubgraphOperation):
 
             graph_outputs = graph_function(*fn_inputs)
             # graph outputs is carry
+            # print('len carry', len(carry), [v.size for v in carry])
 
             return graph_outputs, feedback_outputs
         

@@ -34,7 +34,7 @@ def reverse(
 
 
     import numpy as np
-    jacobians:dict[Variable:Variable] = {}
+    jacobians:dict[Variable,Variable] = {}
     for wrt_var in wrt_vars:
         jacobians[wrt_var] = csdl.Variable(name = f'jac_{of.name}_wrt_{wrt_var.name}_init', value = np.zeros((of_var.size, wrt_var.size)))
 
@@ -89,27 +89,45 @@ def reverse(
 
     else:
         # Assume derivatives do not stack by default. Possible make this an option in the future.
-        loop_d = csdl.frange(of_var.size, inline_lazy_stack=True)
-        initial_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
+        # =================================================OLD========================================================
+        # loop_d = csdl.frange(of_var.size, inline_lazy_stack=True)
+        # initial_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
 
-        for row_index in loop_d:
+        # for row_index in loop_d:
+        #     current_output_seed = initial_output_seed.set(csdl.slice[row_index], 1.0)
+        #     current_output_seed = current_output_seed.reshape(of_var.shape)
+
+        #     vjp_cotangents = _vjp([(of_var,current_output_seed)], wrt_vars, node_order)
+
+        #     for wrt_var in wrt_vars:
+        #         wrt_cotangent = vjp_cotangents[wrt_var]
+        #         if wrt_cotangent is None:
+        #             continue
+        #         jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[row_index, :], wrt_cotangent.flatten())
+        #         jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
+
+        # loop_d.op.name = 'rev_loop'
+        # loop_d.op.get_subgraph().name = 'rev_loop'
+        # =================================================OLD========================================================
+
+        jac_stack:dict[Variable,Variable] = {}
+        initial_output_seed = csdl.Variable(name = f'seed_{of.name}', value = np.zeros(of_var.size))
+        with csdl.experimental.enter_loop(of_var.size) as loop_builder:
+            row_index = loop_builder.get_loop_indices()
             current_output_seed = initial_output_seed.set(csdl.slice[row_index], 1.0)
             current_output_seed = current_output_seed.reshape(of_var.shape)
 
-            #TODO: pass in node order first somehow. Right now, we are 
-            # vjp_cotangents = vjp([(of_var,current_output_seed)], wrt_vars, graph)
             vjp_cotangents = _vjp([(of_var,current_output_seed)], wrt_vars, node_order)
 
             for wrt_var in wrt_vars:
                 wrt_cotangent = vjp_cotangents[wrt_var]
                 if wrt_cotangent is None:
                     continue
-                jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[row_index, :], wrt_cotangent.flatten())
-                jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
-            
-        loop_d.op.name = 'rev_loop'
-        loop_d.op.get_subgraph().name = 'rev_loop'
-
+                jac_stack[wrt_var] = wrt_cotangent.flatten()
+                jac_stack[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
+        for wrt_var in jac_stack:
+            jacobians[wrt_var] = loop_builder.add_stack(jac_stack[wrt_var])
+        loop_builder.finalize(add_all_outputs=False)
     return jacobians
 
 def derivative(
