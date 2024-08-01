@@ -243,22 +243,25 @@ class NonlinearSolver(object):
         input_variables_set = self.meta_input_variables.union(S_inputs.symmetric_difference(state_variables))
         output_variables_set = state_variables.union(S_outputs)
         
-        # reorder inputs
+        # >reorder inputs<
+
         # put meta variables first
         input_vars = self.meta_input_var_list
         # put state variables first
         output_vars = list(self.state_to_residual_map)
+        # append vars that are inputs/outputs of operations
         for var in G_inputs:
             if var in input_variables_set and var not in input_vars:
                 input_vars.append(var)
         for var in G_outputs:
             if var in output_variables_set and var not in output_vars:
                 output_vars.append(var)
-
-        # print(f'set number of inputs: {len(input_variables_set)}')
-        # print(f'lst number of inputs: {len(input_vars)}')
-        # print(f'set number of outputs: {len(output_variables_set)}')
-        # print(f'lst number of outputs: {len(output_vars)}')
+        # append any additional vars (unordered, should be ok?)
+        # TODO: revisit this
+        # eg, newton_nlsolver_jac
+        for var in input_variables_set:
+            if var not in input_vars:
+                input_vars.append(var)
 
         operation_metadata = {'nonlinear_solver': self}
         implicit_operation = ImplicitOperation(
