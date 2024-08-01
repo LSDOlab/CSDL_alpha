@@ -159,7 +159,7 @@ class NewLoop(SubgraphOperation):
 
             # update stacked variables
             stacked_outputs = [graph_fn_outputs[std_output_indices[stacked_target]] for stacked_target in ordered_stacked_targets]
-            print('len carry', len(carry), [v.size for v in graph_fn_outputs], [v.size for v in accrued_outputs])
+            # print('len carry', len(carry), [v.size for v in graph_fn_outputs], [v.size for v in accrued_outputs])
             return graph_fn_outputs+accrued_outputs, stacked_outputs
 
         # //////////////////// Set loop initial conditions: \\\\\\\\\\\\\\\\\\\\\
