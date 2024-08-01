@@ -1,4 +1,5 @@
 from csdl_alpha.src.graph.variable import ImplicitVariable, Variable
+from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation
 from csdl_alpha.utils.inputs import scalarize, ingest_value, validate_and_variablize, get_type_string
 import csdl_alpha.utils.error_utils as error_utils
@@ -45,6 +46,7 @@ class NonlinearSolver(object):
         # Question: should we allow these to not be "constants"? IE, can we change the tolerance at every iteration?
         # If not, we can throw an error.
         self.meta_input_variables = set()
+        self.meta_input_var_list = []
 
         # variables to build the implicit operation graph 
         self._intersection_sources = set()
@@ -69,11 +71,15 @@ class NonlinearSolver(object):
     def add_metadata(self, key, datum, is_input=True):
         if isinstance(datum, Variable) and is_input:
             self.meta_input_variables.add(datum)
+            if datum not in self.meta_input_var_list:
+                self.meta_input_var_list.append(datum)
         self.metadata[key] = datum
 
     def add_state_metadata(self, state:ImplicitVariable, key, datum, is_input=True):
         if isinstance(datum, Variable) and is_input:
             self.meta_input_variables.add(datum)
+            if datum not in self.meta_input_var_list:
+                self.meta_input_var_list.append(datum)
         self.state_metadata[state][key] = datum
 
     def add_tolerance(
@@ -177,24 +183,39 @@ class NonlinearSolver(object):
         # S(G) is the subgraph of the implicit operation
 
         # 1. Perform the graph transformation:
+        #   alpha) get order of inputs and outputs of G
         #   a) Identify subgraph S(G) between all sources (state) and sinks (residual/new_state) 
         #   b) Delete all operations in S(G) in G
+        #   beta) reset order of operations in G.node table
         #   c) Enter a new subgraph of G and set S(G) as the graph
         #   d) Add the implicit_operation operation to G
         #        a) inputs: parameters, meta variables (fake edges)
         #           - All inputs should already exist in G
+        #           - All inputs should be in the same order as the original graph
         #        b) the operation object
         #           - The operation object should be a subclass of ComposedOperation (??? would be crazy if this just works)
         #        c) outputs: new state variables, EVERY intermediate variable ... 
         #           - All outputs should already exist in G
+        #           - All outputs should be in the same order as the original graph
         #   e) draw the edges: inputs --> implicit_operation --> outputs
 
         import csdl_alpha as csdl
         recorder = csdl.get_current_recorder()
         # recorder.active_graph.visualize(f'top_level_{self.name}_before')
 
-        # 1.a/b
+        # 1.alpha
+        # this order should be the same across loop iterations
         G = recorder.active_graph
+        G_inputs = []
+        G_outputs = []
+        G_ops = []
+        for node in G.node_table:
+            if isinstance(node, Operation):
+                G_ops.append(node)
+                G_inputs.extend(node.inputs)
+                G_outputs.extend(node.outputs)
+
+        # 1.a/b
         try:
             S, S_inputs, S_outputs = G.extract_subgraph(            
                 sources = self._intersection_sources,
@@ -205,7 +226,10 @@ class NonlinearSolver(object):
         except Exception as e:
             raise ValueError(f"Error extracting non-linear solver residual function subgraph: {e.message}")
         
-        # print(S.node_table, S_inputs, S_outputs)
+        # 1.beta
+        for node in G_ops:
+            if node in G.node_table:
+                G.node_table[node] = G.node_table.pop(node)
 
         # 1.c
         recorder._enter_subgraph(name = self.name)
@@ -219,13 +243,33 @@ class NonlinearSolver(object):
         input_variables_set = self.meta_input_variables.union(S_inputs.symmetric_difference(state_variables))
         output_variables_set = state_variables.union(S_outputs)
         
+        # >reorder inputs<
+
+        # put meta variables first
+        input_vars = self.meta_input_var_list
+        # put state variables first
+        output_vars = list(self.state_to_residual_map)
+        # append vars that are inputs/outputs of operations
+        for var in G_inputs:
+            if var in input_variables_set and var not in input_vars:
+                input_vars.append(var)
+        for var in G_outputs:
+            if var in output_variables_set and var not in output_vars:
+                output_vars.append(var)
+        # append any additional vars (unordered, should be ok?)
+        # TODO: revisit this
+        # eg, newton_nlsolver_jac
+        for var in input_variables_set:
+            if var not in input_vars:
+                input_vars.append(var)
+
         operation_metadata = {'nonlinear_solver': self}
         implicit_operation = ImplicitOperation(
-            *list(input_variables_set),
+            *input_vars,
             metadata = operation_metadata,
             name = f'implicit_{self.name}'
         )
-        implicit_operation.outputs = list(output_variables_set)
+        implicit_operation.outputs = output_vars
         implicit_operation.assign_subgraph(self.residual_graph)
         
         # TODO: only perform these checks in debug mode?
