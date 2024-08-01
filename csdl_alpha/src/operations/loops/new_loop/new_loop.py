@@ -120,24 +120,28 @@ class NewLoop(SubgraphOperation):
         
         in2feed = self.loop_builder.feedbacks._int_input_to_feedback
 
-        # process meta outputs first
-        ordered_accrued_targets = [accrued_target for accrued_target in self.loop_builder.accrued.keys()]
-        ordered_stacked_targets = [stacked_target for stacked_target in self.loop_builder.stacked.keys()]
-
         # build graph function:
+
+        # meta outputs first
         # Remember, loop_builder.outputs contains all :
         #  - feedback outputs
         #  - accrued output targets
         #  - stacked output targets
         #  - standard outputs
+        ordered_accrued_targets = [accrued_target for accrued_target in self.loop_builder.accrued.keys()]
+        ordered_stacked_targets = [stacked_target for stacked_target in self.loop_builder.stacked.keys()]
         ordered_std_outputs = [std_output for std_output in self.loop_builder.outputs]
-        std_output_indices = {std_output:i for i,std_output in enumerate(ordered_std_outputs)}
+        std_outputs_indices = {std_output:i for i,std_output in enumerate(ordered_std_outputs)}
+
+        # Now we need to build all possible outputs for the graph function which include the above outputs
+        ordered_all_outputs = ordered_accrued_targets + ordered_stacked_targets + ordered_std_outputs
+        all_output_indices = {std_output:i for i,std_output in enumerate(ordered_all_outputs)}
         ordered_std_inputs = list(self.loop_builder.inputs.keys())
         ordered_feedback_inputs = list(in2feed.keys())
         ordered_iter_vars = list(self.loop_builder.iters.keys())
         graph_fn = create_jax_function(
             self.get_subgraph(),
-            ordered_std_outputs,
+            ordered_all_outputs,
             ordered_std_inputs+ordered_feedback_inputs+ordered_iter_vars,
         )
         def loop_body(carry, x):
@@ -146,7 +150,7 @@ class NewLoop(SubgraphOperation):
 
             # set the iteration variable values for current iteration
             graph_fn_inputs = [inputs[body_input] for body_input in ordered_std_inputs]
-            graph_fn_inputs += [carry[std_output_indices[in2feed[int_in].output]] for int_in in ordered_feedback_inputs]
+            graph_fn_inputs += [carry[std_outputs_indices[in2feed[int_in].output]] for int_in in ordered_feedback_inputs]
             graph_fn_inputs += [x[i] for i,iter_var in enumerate(ordered_iter_vars)]
 
             # call the graph function
@@ -155,12 +159,12 @@ class NewLoop(SubgraphOperation):
             # update accrued variables
             accrued_outputs = []
             for accrue_ind, accrue_target in enumerate(ordered_accrued_targets):
-                accrued_outputs.append(carry[accrue_ind+len(ordered_std_outputs)] + graph_fn_outputs[std_output_indices[accrue_target]])
+                accrued_outputs.append(carry[accrue_ind+len(ordered_std_outputs)] + graph_fn_outputs[all_output_indices[accrue_target]])
 
             # update stacked variables
-            stacked_outputs = [graph_fn_outputs[std_output_indices[stacked_target]] for stacked_target in ordered_stacked_targets]
+            stacked_outputs = [graph_fn_outputs[all_output_indices[stacked_target]] for stacked_target in ordered_stacked_targets]
             # print('len carry', len(carry), [v.size for v in graph_fn_outputs], [v.size for v in accrued_outputs])
-            return graph_fn_outputs+accrued_outputs, stacked_outputs
+            return [graph_fn_outputs[all_output_indices[output]] for output in ordered_std_outputs]+accrued_outputs, stacked_outputs
 
         # //////////////////// Set loop initial conditions: \\\\\\\\\\\\\\\\\\\\\
         iter_var_list = []
@@ -171,7 +175,7 @@ class NewLoop(SubgraphOperation):
         # non-accrued outputs first
         carry = [jnp.zeros(output.shape) for output in ordered_std_outputs]
         for feedback in self.loop_builder.feedbacks._int_input_to_feedback.values():
-            ind = std_output_indices[feedback.output]
+            ind = std_outputs_indices[feedback.output]
             carry[ind] = inputs[feedback.external_input]
         # accrued outputs
         carry += [jnp.zeros(output.shape) for output in ordered_accrued_targets]

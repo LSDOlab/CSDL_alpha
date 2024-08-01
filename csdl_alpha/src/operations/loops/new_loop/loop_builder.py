@@ -132,7 +132,6 @@ class LoopBuilder:
         else:
             accrued_var = Variable(name = f'{accrue_target.name}_stacked', shape = accrue_target.shape)
             self.accrued[accrue_target] = accrued_var
-            self.add_output(accrue_target)
             return accrued_var
     
     def add_stack(self, stack_target:Variable)->Variable:
@@ -161,7 +160,6 @@ class LoopBuilder:
         else:
             stacked_var = Variable(name = f'{stack_target.name}_stacked',shape = (self.length,) + stack_target.shape)
             self.stacked[stack_target] = stacked_var
-            self.add_output(stack_target)
             return stacked_var
     
     def lock(self):
