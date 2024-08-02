@@ -117,6 +117,120 @@ class Testfrange(csdl_tests.CSDLTest):
             ]
         )
 
+    def test_loop_constant(self):
+        # added after bug found by Nick
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a = csdl.Variable(value=1)
+        b = 0
+        x = csdl.Variable(value=2)
+
+        for i in csdl.frange(10):
+            b = b+a*x
+
+        self.run_tests(
+            compare_values=[
+                csdl_tests.TestingPair(b, np.array([20]))
+            ]
+        )
+
+    def test_implicit_in_loop(self):
+        # added after bug in MBD
+
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        out_val = np.array([0.2277299992])
+
+        num = 10
+        a_val = 1.5+np.arange(num)
+        a = csdl.Variable(name = 'a', value = 1.5+np.arange(10))
+        b = csdl.Variable(name = 'b', value = 0.5)
+        c = csdl.Variable(name = 'c', value = -1.0)
+
+        x_initial = csdl.Variable(shape=(1,), name='x_initial', value=0.3)
+        loop = csdl.frange(10)
+        # loop = range(10)
+        i = 0
+        for t in loop:
+            x_initial_1 = x_initial*1
+            x_initial_1.add_name('x_initial_1')
+
+            x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.34)
+
+            ax2 = a[t]*x*x
+            y = (-ax2 - c)*b - x
+            y.name = 'residual_x'
+
+            # apply coupling:
+            # ONE SOLVER COUPLING:
+            solver = csdl.nonlinear_solvers.Newton('gs_x_simpler')
+            x_initial.add_name('x_initial_'+str(i))
+            i += 1
+            solver.add_state(x, y, initial_value=x_initial_1)
+            solver.run()
+
+            # x_1 = x_initial
+            x_initial = x
+
+        self.run_tests(
+            compare_values=[
+                csdl_tests.TestingPair(x, out_val)
+            ]
+        )
+
+
+
+    # def test_loop_var_history(self):
+    #     self.prep()
+    #     import csdl_alpha as csdl
+    #     from csdl_alpha.api import frange
+    #     import numpy as np
+
+    #     a = csdl.Variable(value=2, name='a')
+    #     b = csdl.Variable(value=3, name='b')
+    #     loop_i = frange(0, 10)
+    #     for i in loop_i:
+    #         b = a + b
+    #     b_history = list(loop_i.op.loop_var_history.values())[0]
+
+    #     a_np = np.array([2.])
+    #     b_np = np.array([3.])
+    #     b_history_np = []
+    #     for i in range(0, 10):
+    #         b_history_np.append(b_np)
+    #         b_np = a_np + b_np
+            
+    #     for b, b_np in zip(b_history, b_history_np):
+    #         assert np.allclose(b, b_np)
+
+
+    # def test_compute_iteration(self):
+    #     self.prep()
+    #     import csdl_alpha as csdl
+    #     from csdl_alpha.api import frange
+    #     import numpy as np
+
+    #     a = csdl.Variable(value=2, name='a')
+    #     b = csdl.Variable(value=3, name='b')
+    #     loop_i = frange(0, 10)
+    #     for i in loop_i:
+    #         b = a + b
+    #     b_history = list(loop_i.op.loop_var_history.values())[0]
+
+    #     b_history_recomputed = [np.array([3.])]
+    #     for i in range(9):
+    #         loop_i.op.compute_iteration(i)
+    #         b_history_recomputed.append(b.value)
+            
+    #     for b, b_recomp in zip(b_history, b_history_recomputed):
+    #         assert np.allclose(b, b_recomp)
+
     def test_custom_vals(self):
         self.prep(always_build_inline = True)
         import csdl_alpha as csdl
