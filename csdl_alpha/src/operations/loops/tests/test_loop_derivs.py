@@ -21,6 +21,7 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         b.add_name('b_updated')
         c.add_name('c_updated')
         x = a+b+c
+        x.add_name('x')
 
         with csdl.namespace('deriv1'):
             deriv = csdl.derivative(x, a)
@@ -192,19 +193,23 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         recorder.execute()
 
         a_val = np.arange(6).reshape(3,2)*0.01+0.2
-        b_val = a_val
-        for i in range(2):
-            a_val = a_val + b_val*0.5
+        def run(a_val_in):
+            b_val = a_val_in
+            for i in range(2):
+                a_val_in = a_val_in + b_val*0.5
+            return np.sum(a_val_in).flatten()
 
         # TODO: manual derivative check
-        # x     = a +       b      +  c
-        # x     = a + (5a^3+a^4/2) + (-a)
-        # dx/da = 15a^2 + 2a^3
-        # assert abs(deriv.value[0,0] - (15*a.value**2.0+2*a.value**3)) < 1e-9
+        # step = 1e-7
+        # a_val_new = a_val*1.0
+        # a_val_new[0,0] = a_val_new[0,0]+step
+        # fd = (run(a_val_new) - run(a_val))/step
+        # print(fd)
+        
 
         self.run_tests(
             compare_values=[
-                csdl_tests.TestingPair(x, np.sum(a_val).flatten()),
+                csdl_tests.TestingPair(x, run(a_val)),
                 csdl_tests.TestingPair(b, np.arange(6).reshape(3,2)*0.01+0.2),
                 csdl_tests.TestingPair(da_da0, da_da0.value),
                 csdl_tests.TestingPair(dx_da0, dx_da0.value),
@@ -232,6 +237,7 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
             a = a.set(csdl.slice[i, 0], a[i,0])
             a = a+a
             c = b*a
+            c.add_name(f'c')
         a.add_name('a_updated')
         x = csdl.sum(b+a+c)
         x.add_name('x')
@@ -243,6 +249,23 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
 
         # recorder = csdl.get_current_recorder()
         # recorder.visualize_graph(visualize_style='hierarchical')
+
+        # check real:
+        a_0np = a_val*1.0
+        anp = a_0np*1.0
+        bnp = anp
+        for i in range(2):
+            anp = anp*bnp[i,0] + bnp[i+1,1]
+            bnp = anp+bnp
+            anp[i,0] = anp[i,0]
+            anp= anp+anp
+            cnp = bnp*anp
+        xnp  = np.sum(bnp +anp +cnp)
+        xnp = np.array(xnp).reshape(x.shape)
+
+        # print(xnp,x.value)
+        assert np.isclose(xnp, x.value).all()
+        assert np.isclose(cnp, c.value).all()
 
         self.run_tests(
             compare_values=[
@@ -449,11 +472,11 @@ if __name__ == '__main__':
     t = TestFrangeDeriv()
     t.overwrite_backend = 'jax'
     # t.overwrite_backend = 'inline'
-    t.test_simple_loop()
-    t.test_simple_second_deriv()
-    t.test_simple_loop2()
-    t.test_simple_loop_feedback()
-    t.test_simple_loop_feedback_indexing()
-    t.test_simple_loop_feedback_indexing2()
-    t.test_nested()
-    t.test_nested_double_indexing()
+    # t.test_simple_loop()
+    # t.test_simple_second_deriv()
+    # t.test_simple_loop2()
+    # t.test_simple_loop_feedback()
+    # t.test_simple_loop_feedback_indexing()
+    # t.test_simple_loop_feedback_indexing2()
+    # t.test_nested()
+    # t.test_nested_double_indexing()

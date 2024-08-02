@@ -127,7 +127,7 @@ def reverse(
                 jac_stack[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
         for wrt_var in jac_stack:
             jacobians[wrt_var] = loop_builder.add_stack(jac_stack[wrt_var])
-        loop_builder.finalize(add_all_outputs=False)
+        loop_builder.finalize(add_all_outputs=False, name = f'deriv_loop_{of_var.name}')
     return jacobians
 
 def derivative(

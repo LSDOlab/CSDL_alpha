@@ -105,7 +105,7 @@ def _vjp(seeds:list[tuple[Variable, Variable]],
             except Exception as e:
                 if recorder.debug is True:
                     node.print_trace()
-                raise ValueError(f"Error with VJP in operation {node.name}: {e}")
+                raise ValueError(f"Error with VJP of operation {node.info()}: {e}")
 
             if recorder.debug is True and recorder.inline is True:
                 for input in node.inputs:

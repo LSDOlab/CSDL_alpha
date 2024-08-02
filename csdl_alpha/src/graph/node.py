@@ -66,7 +66,23 @@ class Node(object):
                 print('\t', end = '')
             print(item)
 
-    # def __eq__(self, other):
-    #     return self is other
-    # def __hash__(self):
-    #     return id(self)
+    def info(self,) -> str:
+        """returns a string containing information about the node
+
+        Returns
+        -------
+        str
+            information about the node
+        """
+        if self.name is not None:
+            base_repr = f"{self.get_base_str()} ({self.name})"
+        else:
+            base_repr = f"{self.get_base_str()}"
+
+        if self.trace is None or len(self.trace) == 0:
+            return f"\'{base_repr}\'"
+        else:
+            return f"\'{base_repr} (from {self.trace[-1]})\'"
+            
+    def get_base_str(self) -> str:
+        return f"{self.__class__.__name__} {hex(id(self))}"

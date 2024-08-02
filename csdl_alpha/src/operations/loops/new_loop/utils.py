@@ -100,17 +100,14 @@ def build_loop_deriv_data(loop, cotangents):
     for input in loop.loop_builder.inputs:
         if cotangents.check(input):
             input_data[input] = ParentIODeriv(input)
-            input_data[input].external_input_cotangent = Variable(
-                    name = f'{input.name}_ext_cot_in',
-                    value = np.zeros(input.shape),
-                )
 
     # Process outputs:
     std_output_data = {}
     for output in loop.loop_builder.outputs:
         if cotangents.check(output):
-            std_output_data[output] = ParentIODeriv(output)
-            std_output_data[output].external_input_cotangent = cotangents[output]
+            if cotangents[output] is not None:
+                std_output_data[output] = ParentIODeriv(output)
+                std_output_data[output].external_input_cotangent = cotangents[output]
 
     # Process accrued outputs:
     accrued_output_data = {}

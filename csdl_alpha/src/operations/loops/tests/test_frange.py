@@ -159,16 +159,17 @@ class Testfrange(csdl_tests.CSDLTest):
         b = csdl.Variable(value=0, name='b')
         c = csdl.Variable(value=0, name='c')
 
-        loop = frange(vals=([0,1,2,3], [4,5,6,7]), inline_lazy_stack=True)
+        # loop = frange(vals=([0,1,2,3], [4,5,6,7]), inline_lazy_stack=True)
+        loop = frange(vals=([0,1,2,3], [4,5,6,7]))
         for i, j in loop:
             a = a + i
             b = b + j
             c = c + i*j
 
-        assert loop.op.inline_lazy_stack == True
-        assert loop.op.outputs[-1].value is None
-        loop.op.get_stacked(a)
-        assert loop.op.inline_lazy_stack == False
+        # assert loop.op.inline_lazy_stack == True
+        # assert loop.op.outputs[-1].value is None
+        # loop.op.get_stacked(a)
+        # assert loop.op.inline_lazy_stack == False
 
         compare_values = []
         compare_values += [csdl_tests.TestingPair(a, np.array([6]))]
@@ -187,7 +188,8 @@ class Testfrange(csdl_tests.CSDLTest):
         c = csdl.Variable(value=0, name='c')
         e = csdl.Variable(value=0.2, name='c')
 
-        loop = frange(vals=([0,1,2,3], [4,5,6,7]), inline_lazy_stack=True)
+        # loop = frange(vals=([0,1,2,3], [4,5,6,7]), inline_lazy_stack=True)
+        loop = frange(vals=([0,1,2,3], [4,5,6,7]))
         for i, j in loop:
             a = a + i*e*5.0
             for k in frange(0, 1):
@@ -196,10 +198,10 @@ class Testfrange(csdl_tests.CSDLTest):
             b = b + j
             c = c + i*j
 
-        assert loop.op.inline_lazy_stack == True
-        assert loop.op.outputs[-1].value is None
-        loop.op.get_stacked(a)
-        assert loop.op.inline_lazy_stack == False
+        # assert loop.op.inline_lazy_stack == True
+        # assert loop.op.outputs[-1].value is None
+        # loop.op.get_stacked(a)
+        # assert loop.op.inline_lazy_stack == False
 
         deriv = csdl.derivative(c, [a])
 
@@ -221,19 +223,21 @@ class Testfrange(csdl_tests.CSDLTest):
         c = csdl.Variable(value=0, name='c')
         e = csdl.Variable(value=0.2, name='c')
 
-        loop = frange(vals=([0,1,2,3], [4,5,6,7]), inline_lazy_stack=True)
+        # loop = frange(vals=([0,1,2,3], [4,5,6,7]), inline_lazy_stack=True)
+        loop = frange(vals=([0,1,2,3], [4,5,6,7]))
         for i, j in loop:
             a = a + i*e*5.0
-            for k in frange(0, 1, inline_lazy_stack=True):
+            # for k in frange(0, 1, inline_lazy_stack=True):
+            for k in frange(0, 1):
                 a = a**1.0
                 d = a+1.0
             b = b + j
             c = c + i*j
 
-        assert loop.op.inline_lazy_stack == True
-        assert loop.op.outputs[-1].value is None
-        loop.op.get_stacked(a)
-        assert loop.op.inline_lazy_stack == False
+        # assert loop.op.inline_lazy_stack == True
+        # assert loop.op.outputs[-1].value is None
+        # loop.op.get_stacked(a)
+        # assert loop.op.inline_lazy_stack == False
 
         deriv = csdl.derivative(c, [a])
 
@@ -261,12 +265,9 @@ class Testfrange(csdl_tests.CSDLTest):
 
         # recorder = csdl.get_current_recorder()
         # recorder.visualize_graph('stacked', visualize_style='hierarchical')
-
-        loop_vars = loop.op.loop_vars
-        assert loop.op.outputs[-1].value is not None
-        b_stack = loop.op.get_stacked(b)
+        lb = loop.op.loop_builder
+        b_stack = lb.stacked[lb.feedbacks._output_to_feedback[b].internal_input]
         assert np.all(b_stack.value == np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]))
-        assert b_stack == loop.op.get_stacked(b)
 
         self.run_tests(
             compare_values=[
@@ -295,11 +296,9 @@ class Testfrange(csdl_tests.CSDLTest):
         # recorder = csdl.get_current_recorder()
         # recorder.visualize_graph('stacked', visualize_style='hierarchical')
 
-        loop_vars = loop.op.loop_vars
-        b_stack = loop.op.get_stacked(b)
-        # b_stack = loop.op.outputs[-2]
-        c_stack = loop.op.get_stacked(c)
-        # c_stack = loop.op.outputs[-1]
+        lb = loop.op.loop_builder
+        b_stack = lb.stacked[lb.feedbacks._output_to_feedback[b].internal_input]
+        c_stack = lb.stacked[lb.feedbacks._output_to_feedback[c].internal_input]
 
         real_b = np.array([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]])
         real_c = [4]
@@ -308,8 +307,6 @@ class Testfrange(csdl_tests.CSDLTest):
 
         assert np.all(b_stack.value == real_b)
         assert np.all(c_stack.value == np.array(real_c).reshape(10,1))
-        assert b_stack == loop.op.get_stacked(b)
-        assert c_stack == loop.op.get_stacked(c)
 
     def test_stack_multidim(self):
         self.prep(always_build_inline = True)
@@ -336,9 +333,9 @@ class Testfrange(csdl_tests.CSDLTest):
         # recorder = csdl.get_current_recorder()
         # recorder.visualize_graph('stacked', visualize_style='hierarchical')
 
-        loop_vars = loop.op.loop_vars
-        b_stack = loop.op.get_stacked(b)
-        c_stack = loop.op.get_stacked(c)
+        lb = loop.op.loop_builder
+        b_stack = lb.stacked[lb.feedbacks._output_to_feedback[b].internal_input]
+        c_stack = lb.stacked[lb.feedbacks._output_to_feedback[c].internal_input]
 
         real_b = np.zeros((4,2,3))
         real_c = np.zeros((4,3))
@@ -351,7 +348,6 @@ class Testfrange(csdl_tests.CSDLTest):
 
         assert np.all(b_stack.value == real_b)
         assert np.all(c_stack.value == real_c)
-        assert b_stack == loop.op.get_stacked(b)
 
     def test_feedback(self):
         self.prep()
@@ -385,7 +381,8 @@ class Testfrange(csdl_tests.CSDLTest):
         #     print(f'--{loop_var[1].name}')
         #     print(f'--{loop_var[2].name}')
 
-        assert len(loop.op.loop_vars) == 2
+        lb = loop.op.loop_builder
+        assert len(lb.feedbacks._int_input_to_feedback) == 2
 
 
         for i in range(4):

@@ -93,6 +93,15 @@ class LoopBuilder:
         """
         return self.feedbacks.finalize_feedback(int_input_var, output)
 
+    def build_feedback(
+            self,
+            ext_input_var:Variable,
+            int_input_var:Variable,
+            output:Variable,
+        ):
+        """Build a feedback with the specified variables already built"""
+        self.feedbacks.set_triple(ext_input_var, int_input_var, output)
+
     def add_output(self, output:Variable)->Variable:
         self.outputs[output] = {}
 
@@ -104,7 +113,7 @@ class LoopBuilder:
         self.check_locked()
         self.inputs[input] = {}
         if input not in self.loop_graph.node_table:
-            raise ValueError(f"Input {input} not found in loop graph.")
+            raise ValueError(f"Input {input.info()} not found in loop graph.")
 
     def add_pure_accrue(self, accrue_target:Variable)->Variable:
         """ Specify a variable in the loop body to be accrued as an output.
@@ -171,6 +180,8 @@ class LoopBuilder:
     def finalize(
             self,
             add_all_outputs:bool = True,
+            name:str = None,
+            parent:Graph = None,
         ):
         self.check_locked()
 
@@ -195,8 +206,11 @@ class LoopBuilder:
         from csdl_alpha.src.operations.loops.new_loop.new_loop import NewLoop
         loop = NewLoop(
             loop_builder = self,
+            parent = parent,
+            name = name,
         )
-        return loop.finalize_and_return_outputs()
+        loop.finalize_and_return_outputs()
+        return loop
 
     def __repr__(self) -> str:
         op_id = super().__repr__()

@@ -51,7 +51,8 @@ class Feedback(object):
 class Feedbacks(object):
     def __init__(self):
         self._int_input_to_feedback:dict[Variable, Feedback] = {}
-        self._output_to_feedback:dict[Variable, Variable] = {}
+        self._output_to_feedback:dict[Variable, Feedback] = {}
+        self._external_in_to_feedback:dict[Variable, Feedback] = {}
 
     def initialize_feedback(self, ext_input_var:Variable)->Variable:
         internal_input_var = Variable(
@@ -63,6 +64,8 @@ class Feedbacks(object):
         self._int_input_to_feedback[internal_input_var] = Feedback()
         self._int_input_to_feedback[internal_input_var].set_external_input(ext_input_var)
         self._int_input_to_feedback[internal_input_var].set_internal_input(internal_input_var)
+
+        self._external_in_to_feedback[ext_input_var] = self._int_input_to_feedback[internal_input_var]
         return internal_input_var
 
     def finalize_feedback(
@@ -79,6 +82,22 @@ class Feedbacks(object):
         self._output_to_feedback[output] = feedback
         return output
     
+    def set_triple(
+            self,
+            ext_input_var:Variable,
+            int_input_var:Variable,
+            output:Variable,
+        )->None:
+        if int_input_var in self._int_input_to_feedback:
+            raise ValueError(f"Feedback for internal input {int_input_var} already exists.")
+        if output in self._output_to_feedback:
+            raise ValueError(f"Feedback for output {output} already exists.")
+        feedback = Feedback()
+        feedback.set_triple(ext_input_var, int_input_var, output)
+        self._int_input_to_feedback[int_input_var] = feedback
+        self._output_to_feedback[output] = feedback
+        self._external_in_to_feedback[ext_input_var] = feedback
+
     def check(self):
         for int_input, feedback in self._int_input_to_feedback.items():
             if not feedback.fully_defined:

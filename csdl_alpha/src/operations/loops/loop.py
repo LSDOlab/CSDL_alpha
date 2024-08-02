@@ -719,27 +719,59 @@ class frange():
         # compress_current_operations()
         self._recorder._exit_subgraph()
 
-        for loop_var in loop_vars:
-            # stack_output = Variable(name = f'stack_out_{loop_var[1].name}', shape=(len(self.vals[0]),) + loop_var[0].shape, value=0)
+        # ============================OLD Loop, deprecate later============================:
+        # for loop_var in loop_vars:
+        #     # stack_output = Variable(name = f'stack_out_{loop_var[1].name}', shape=(len(self.vals[0]),) + loop_var[0].shape, value=0)
 
-            inline_lazy_stack = self.inline_lazy_stack
-            if not self._recorder.inline:
-                inline_lazy_stack = True
+        #     inline_lazy_stack = self.inline_lazy_stack
+        #     if not self._recorder.inline:
+        #         inline_lazy_stack = True
 
-            stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]), inline_lazy_stack)
-            self.iter2_outputs.append(stack_output)
+        #     stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]), inline_lazy_stack)
+        #     self.iter2_outputs.append(stack_output)
             
-        # add the loop operation to the graph
-        #NOTE: this only exposes outputs of operations, not variables created within the loop
-        self.op = Loop(
-            external_inputs, 
-            self.iter2_outputs, 
-            self._graph, 
-            self.vals, 
-            self.iteration_variables, 
-            loop_vars,
-            inline_lazy_stack = self.inline_lazy_stack,
+        # # add the loop operation to the graph
+        # # NOTE: this only exposes outputs of operations, not variables created within the loop
+        # self.op = Loop(
+        #     external_inputs, 
+        #     self.iter2_outputs, 
+        #     self._graph, 
+        #     self.vals, 
+        #     self.iteration_variables, 
+        #     loop_vars,
+        #     inline_lazy_stack = self.inline_lazy_stack,
+        # )
+        # return
+        # ============================OLD Loop, deprecate later============================:
+
+        # REMOVE LATER
+        for loop_var in loop_vars:
+            self.iter2_outputs.append('IF YOU SEE THIS ERROR')
+
+        # New Loop
+        graph_inputs = self._graph.inputs
+        new_inputs = []
+        for input in graph_inputs:
+            if input not in self._graph.node_table:
+                continue
+            new_inputs.append(input)
+        self._graph.inputs = new_inputs
+
+        from csdl_alpha.src.operations.loops.new_loop.loop_builder import LoopBuilder
+        lb = LoopBuilder(
+            loop_graph=self._graph,
+            iter_vars= {iv:val for iv,val in zip(self.iteration_variables, self.vals)},
         )
+        for loop_var in loop_vars:
+            lb.build_feedback(
+                int_input_var = loop_var[0],
+                ext_input_var = loop_var[1],
+                output = loop_var[2],
+            )
+        lb.lock()
+        for output in self.iter2_outputs[:-len(loop_vars)]:
+            lb.add_output(output)
+        self.op = lb.finalize(add_all_outputs=False)
 
     def _check_ops_and_shapes(self, ops, shapes):
         if ops != self.ops:

@@ -22,12 +22,16 @@ class NewLoop(SubgraphOperation):
             self,
             loop_builder:LoopBuilder,
             parent:'NewLoop' = None,
+            name:str = None
         ):
 
         self.loop_builder:LoopBuilder = loop_builder
         self.length = self.loop_builder.length
         self.parent = parent
-        self.name = 'new_loop'
+        if name is None:
+            self.name = 'new_loop'
+        else:
+            self.name = name
 
         # Process inputs
         # Two types of inputs
@@ -253,8 +257,12 @@ class NewLoop(SubgraphOperation):
             rev_index = iter_vars[0]
             one_if_first_iter = iter_vars[1]
             rev_orig = iter_vars[2:]
+
+            rev_index.add_name('reversed iter')
+            one_if_first_iter.add_name('one_zero_iter')
             # Process cotangents of outputs:
 
+            # loop_graph = vjp_loop_builder.loop_graph
             if 1:
                 # If rebuild is True, we need to rebuild the body loop
                 vjp_body_inputs_map:dict[Variable:Variable] = {}
@@ -302,8 +310,6 @@ class NewLoop(SubgraphOperation):
             # Finally compute the vector jacobian products
             vjps = vjp([(var,seed) for var,seed in seeds.items()], wrts, vjp_loop_builder.loop_graph)
 
-            # loop_graph = csdl.get_current_recorder().active_graph
-
             # Perform the accumulation procedures
             for feedback_deriv in feedback_data.values():
                 feedback_deriv.out_cotangent = vjps[feedback_deriv.parent_fb.internal_input]
@@ -320,13 +326,17 @@ class NewLoop(SubgraphOperation):
                 external_in_deriv.out_cotangent = csdl.Variable(value = np.zeros(external_in_deriv.external_body_IO.shape))
         for feedback_deriv in feedback_data.values():
             feedback_deriv.out_cotangent = vjp_loop_builder.add_output(feedback_deriv.out_cotangent)
-        vjp_loop_builder.finalize(add_all_outputs=False)
+        loop_op = vjp_loop_builder.finalize(
+            add_all_outputs=False,
+            name = f'vjp_of_loop_{self.name}',
+            parent = self,
+        )
 
         # post-processing of cotangents
         for external_in_deriv in parent_external_inputs.values():
             cotangents.accumulate(external_in_deriv.external_body_IO, external_in_deriv.out_cotangent)
         for feedback_deriv in feedback_data.values():
             fb_external_input = feedback_deriv.parent_fb.external_input
-            if fb_external_input not in parent_external_inputs:
-                if cotangents.check(fb_external_input):
-                    cotangents.accumulate(fb_external_input, feedback_deriv.out_cotangent)
+            # if fb_external_input not in parent_external_inputs:
+            if cotangents.check(fb_external_input):
+                cotangents.accumulate(fb_external_input, feedback_deriv.out_cotangent)

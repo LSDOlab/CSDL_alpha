@@ -271,13 +271,13 @@ def test_newloop3():
         temp = x_new+y_new
         loop_builder.finalize_feedback(x, x_new)
         loop_builder.finalize_feedback(y, y_new)
+        last_x = loop_builder.add_output(x_new)
 
     accrued_x = loop_builder.add_pure_accrue(x)
     accrued_temp = loop_builder.add_pure_accrue(temp)
     stacked_x = loop_builder.add_stack(x)
     stacked_x_new = loop_builder.add_stack(x_new)
     stacked_temp = loop_builder.add_stack(temp)
-    last_x = loop_builder.add_output(x_new)
     loop_builder.finalize(add_all_outputs = False)
 
     last_x_np, accrued_x_np, accrued_temp_np, stacked_x_np, stacked_x_new_np, stacked_temp_np = compute_real3(x0_val, y0_val, a_val, b_val, static_val)
@@ -315,11 +315,12 @@ def test_newloop3():
         wrts = [x0, a, y0, b, static],
         step_size=1e-9,
         raise_on_error=False,
+        backend='jax'
     )
 
 if __name__ == '__main__':
     # test_build_vals()
     # test_loop_indices()
-    test_newloop()
+    # test_newloop()
     # test_newloop2()
-    # test_newloop3()
+    test_newloop3()
