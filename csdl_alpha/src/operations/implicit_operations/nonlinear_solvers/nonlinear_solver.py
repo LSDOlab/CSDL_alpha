@@ -178,6 +178,14 @@ class NonlinearSolver(object):
 
         self._preprocess_run()
 
+        for residual in self.residual_to_state_map:
+            state = self.residual_to_state_map[residual]
+
+            # Keep track of indices for each state
+            self.add_state_metadata(state, 'index_lower', self.total_state_size)
+            self.total_state_size += state.size
+            self.add_state_metadata(state, 'index_upper', self.total_state_size)
+
         # Steps:
         # G is the current graph we are in
         # S(G) is the subgraph of the implicit operation
@@ -352,7 +360,9 @@ class NonlinearSolver(object):
         # recorder.visualize_graph('post_step1')
         
         # step 2
-        full_residual_jacobian_T = self.get_full_residual_jacobian(for_deriv=True).T()
+        # full_residual_jacobian_T = self.get_full_residual_jacobian(for_deriv=True).T()
+        full_residual_jacobian_T = self.get_full_residual_jacobian_for_deriv().T()
+
         residual_vector = csdl.Variable(name = 'residual_vector', value = np.zeros((self.total_state_size,)))
         for current_state in self.state_to_residual_map.keys():
             il = self.state_metadata[current_state]['index_lower']
@@ -387,29 +397,33 @@ class NonlinearSolver(object):
 
     def get_full_residual_jacobian(
             self, 
-            for_deriv = False,    
+            for_deriv:bool = False,    
         )-> Variable:
-        import csdl_alpha as csdl
         if self.full_residual_jacobian is None:
-            states_list = list(self.state_to_residual_map.keys())
-            residuals_list = list(self.state_to_residual_map.values())
-
-            for residual in self.residual_to_state_map:
-                state = self.residual_to_state_map[residual]
-
-                # Keep track of indices for each state
-                self.add_state_metadata(state, 'index_lower', self.total_state_size)
-                self.total_state_size += state.size
-                self.add_state_metadata(state, 'index_upper', self.total_state_size)
-
-            self.residual_jac_kwargs['as_block'] = True
-            if for_deriv:
-                self.residual_jac_kwargs['graph'] = self.residual_graph
-            self.full_residual_jacobian = csdl.derivative(residuals_list, states_list, **self.residual_jac_kwargs)
-            self.full_residual_jacobian.add_name(f'{self.name}_jac')
+            self.full_residual_jacobian = self._build_full_residual_jacobian(for_deriv=for_deriv)
             return self.full_residual_jacobian
         else:
             return self.full_residual_jacobian
+
+    def _build_full_residual_jacobian(
+            self,
+            for_deriv:bool,
+        )-> Variable:
+        import csdl_alpha as csdl
+        states_list = list(self.state_to_residual_map.keys())
+        residuals_list = list(self.state_to_residual_map.values())
+        self.residual_jac_kwargs['as_block'] = True
+        if for_deriv:
+            self.residual_jac_kwargs['graph'] = self.residual_graph
+        jac = csdl.derivative(residuals_list, states_list, **self.residual_jac_kwargs)
+        jac.add_name(f'{self.name}_jac')
+        return jac
+
+    def get_full_residual_jacobian_for_deriv(self)->Variable:
+        if self.implicit_operation.vjp_prep_enabled:
+            return self.get_full_residual_jacobian(for_deriv=True)
+        else:
+            return self._build_full_residual_jacobian(for_deriv=True)
 
     def _inline_solve_(self):
         raise NotImplementedError("Solve method must be implemented by subclass")

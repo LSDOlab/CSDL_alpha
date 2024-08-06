@@ -63,6 +63,11 @@ class SetVarIndex(Operation):
             else:
                 cotangents.accumulate(y, cotangents[x_updated][self.slice])
 
+        # zero out the cotangents for the slice arguments... Ideally, we avoid this
+        for slice_arg in slice_args:
+            if cotangents.check(slice_arg):
+                cotangents.accumulate(slice_arg, csdl.Variable(value = 0.0))
+
 class BroadcastSetIndex(SetVarIndex):
     '''
     Setting all the elements of a slice s of a tensor x with a scalar y.

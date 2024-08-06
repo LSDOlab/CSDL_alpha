@@ -76,7 +76,9 @@ class Newton(FixedPoint):
         # Check if user provided a tolerance
         self.add_tolerance(state, tolerance)
 
-
+    def get_full_residual_jacobian_for_deriv(self)->Variable:
+        return self.get_full_residual_jacobian(for_deriv=True)
+        
     def _preprocess_run(self):
         """
         Preprocess the solver before running
