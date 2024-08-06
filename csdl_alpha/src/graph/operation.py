@@ -46,6 +46,7 @@ class Operation(Node):
         if metadata is None:
             metadata = {}
         self.metadata = metadata
+        self.vjp_prep_enabled:bool = True
 
     def set_outputs(self, outputs:list[Variable]):
         """
@@ -136,6 +137,11 @@ class Operation(Node):
         else:
             return tuple(self.outputs)
 
+    def disable_vjp_prep(self)->None:
+        """If called, the operation cannot use any precomputed variables for reverse mode differentiation. 
+        """
+        self.vjp_prep_enabled:bool = False
+    
     def prep_vjp(self):
         """
         Prepare operation for reverse mode differentiation.
