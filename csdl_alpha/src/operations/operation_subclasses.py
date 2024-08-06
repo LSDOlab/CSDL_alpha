@@ -52,6 +52,10 @@ class SubgraphOperation(Operation):
         if self._subgraph is not None:
             raise ValueError("Subgraph already set")
         self._subgraph:Graph = graph
+
+        if graph.parent_op is not None:
+            raise ValueError("Subgraph already assigned to another operation")
+        graph.parent_op = self
     
     def get_subgraph(self):
         """
