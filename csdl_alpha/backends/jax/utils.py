@@ -102,7 +102,7 @@ def verify_inline_vs_jax(
                 print('==============================ERROR==============================')
 
             if raise_error:
-                raise ValueError(f'Error in variable {node.name} of shape {node.shape} with abs error {error} and rel error {rel_error}. (More information above ^^^)')
+                raise ValueError(f'Error in variable {node.info()} with abs error {error} and rel error {rel_error}. (More information above ^^^)')
 
         else:
             if print_errors:

@@ -14,7 +14,7 @@ class Feedback(object):
             self.shape = var.shape
         else:
             if self.shape != var.shape:
-                raise ValueError(f"Shape mismatch. expected: {self.shape}, got: {var.shape}")
+                raise ValueError(f"Shape mismatch for feedback var {var.info()}. expected: {self.shape}, got: {var.shape}")
 
     def set_external_input(self, external_input:Variable):
         if self.external_input is not None:
@@ -60,7 +60,7 @@ class Feedbacks(object):
             value = ext_input_var.value,
         )
         if internal_input_var in self._int_input_to_feedback:
-            raise ValueError(f"Internal input {internal_input_var} already initialized.")
+            raise ValueError(f"Internal input {internal_input_var.info()} already initialized.")
         self._int_input_to_feedback[internal_input_var] = Feedback()
         self._int_input_to_feedback[internal_input_var].set_external_input(ext_input_var)
         self._int_input_to_feedback[internal_input_var].set_internal_input(internal_input_var)
@@ -74,7 +74,7 @@ class Feedbacks(object):
             output:Variable,
             )->None:
         if int_input_var not in self._int_input_to_feedback:
-            raise ValueError(f"Feedback of variable {int_input_var} not initialized.")
+            raise ValueError(f"Feedback of variable {int_input_var.info()} not initialized.")
         feedback = self._int_input_to_feedback[int_input_var]
         feedback.set_output(output)
 
@@ -89,9 +89,9 @@ class Feedbacks(object):
             output:Variable,
         )->None:
         if int_input_var in self._int_input_to_feedback:
-            raise ValueError(f"Feedback for internal input {int_input_var} already exists.")
+            raise ValueError(f"Feedback for internal input {int_input_var.info()} already exists.")
         if output in self._output_to_feedback:
-            raise ValueError(f"Feedback for output {output} already exists.")
+            raise ValueError(f"Feedback for output {output.info()} already exists.")
         feedback = Feedback()
         feedback.set_triple(ext_input_var, int_input_var, output)
         self._int_input_to_feedback[int_input_var] = feedback

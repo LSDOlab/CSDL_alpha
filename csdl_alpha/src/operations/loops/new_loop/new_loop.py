@@ -55,7 +55,7 @@ class NewLoop(SubgraphOperation):
         for output in self.loop_builder.outputs:
             recorder = csdl.get_current_recorder()
             if output in recorder.active_graph.node_table:
-                raise ValueError(f"Output {output} already exists in graph.")
+                raise ValueError(f"Output {output.info()} already exists in graph.")
             else:
                 recorder._add_node(output)
             operation_outputs.append(output)

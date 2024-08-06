@@ -110,7 +110,7 @@ class LoopBuilder:
         self.outputs[output] = {}
 
         if output not in self.loop_graph.node_table:
-            raise ValueError(f"Output {output} not found in loop graph.")
+            raise ValueError(f"Output {output.info()} not found in loop graph.")
         return output
     
     def add_input(self, input:Variable)->None:
@@ -139,7 +139,7 @@ class LoopBuilder:
         """
         self.check_locked()
         if accrue_target not in self.loop_graph.node_table:
-            raise ValueError(f"Accrue target {accrue_target} not found in loop graph.")
+            raise ValueError(f"Accrue target {accrue_target.info()} not found in loop graph.")
         if accrue_target in self.accrued:
             return self.accrued[accrue_target]
         else:
@@ -167,7 +167,7 @@ class LoopBuilder:
         """
         self.check_locked()
         if stack_target not in self.loop_graph.node_table:
-            raise ValueError(f"Stack target {stack_target} not found in loop graph.")
+            raise ValueError(f"Stack target {stack_target.info()} not found in loop graph.")
         if stack_target in self.stacked:
             return self.stacked[stack_target]
         else:

@@ -86,11 +86,6 @@ class VarTangents():
             variable (Variable): The variable to accumulate the tangent for.
             tangent (Variable): The tangent to accumulate.
         """
-        if tangent is None:
-            print(f"Warning: Tangent for {variable} is None.")
-            for wrt in self.wrts:
-                print(wrt.info())
-
         if variable.shape != tangent.shape:
             raise ValueError(f"Variable shape {variable.shape} and (co)tangent shape {tangent.shape} do not match.")
         if variable in self.tangent_dictionary:
@@ -101,7 +96,7 @@ class VarTangents():
             else:
                 raise TypeError(f"Expected tangent to be a Variable, but got {type(tangent)}.")
         else:
-            raise KeyError(f"Variable {variable} not found in tangent dictionary.")
+            raise KeyError(f"Variable {variable.info()} not found in tangent dictionary.")
 
         self.tangent_dictionary[variable].add_name(f'tangent_{variable.name}')
 

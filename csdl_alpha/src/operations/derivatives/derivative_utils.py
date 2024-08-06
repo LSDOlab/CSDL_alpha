@@ -252,7 +252,7 @@ def finite_difference(
     new_wrts = {wrt:wrt.value.copy() for wrt in wrts}
     for original_wrt, orignal_val in original_wrts.items():
         if not isinstance(orignal_val, np.ndarray):
-            raise ValueError(f"Variable {original_wrt} does not have a value: {orignal_val}")
+            raise ValueError(f"Variable {original_wrt.info()} does not have a value: {orignal_val}")
 
     # Run the forward evaluation once
     outputs = forward_evaluation(original_wrts)
