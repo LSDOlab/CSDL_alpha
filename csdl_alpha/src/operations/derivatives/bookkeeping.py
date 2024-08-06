@@ -66,6 +66,19 @@ class VarTangents():
         """
         self.tangent_dictionary:dict[Variable: Variable] = {}
 
+        self.ofs = []
+        self.wrts = []
+
+    def add_of(self, of:Variable):
+        """Doesn't do anything practical, just for fun.
+        """
+        self.ofs.append(of)
+
+    def add_wrt(self, wrt:Variable):
+        """Doesn't do anything practical, just for fun.
+        """
+        self.wrts.append(wrt)
+
     def accumulate(self, variable:Variable, tangent:Variable)->None:
         """Accumulate a tangent for a variable.
 
@@ -73,6 +86,11 @@ class VarTangents():
             variable (Variable): The variable to accumulate the tangent for.
             tangent (Variable): The tangent to accumulate.
         """
+        if tangent is None:
+            print(f"Warning: Tangent for {variable} is None.")
+            for wrt in self.wrts:
+                print(wrt.info())
+
         if variable.shape != tangent.shape:
             raise ValueError(f"Variable shape {variable.shape} and (co)tangent shape {tangent.shape} do not match.")
         if variable in self.tangent_dictionary:
