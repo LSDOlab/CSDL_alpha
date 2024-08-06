@@ -223,7 +223,8 @@ class Recorder:
 
         origin_counts = {}
 
-        for node in self.active_graph.node_table:
+        # for node in self.active_graph.node_table:
+        for node in self.node_graph_map:
             if isinstance(node, types):
                 if mode == 'function':
                     origin = f"{node.origin_info['function']} in {node.origin_info['filename']}"

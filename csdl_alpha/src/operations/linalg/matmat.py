@@ -54,10 +54,10 @@ def matmat(A:VariableLike, B:VariableLike) -> Variable:
            [23., 34.]])
     """
     from csdl_alpha.src.operations.linalg.matvec import matvec
-    from csdl_alpha.src.operations.sparse.sparse_matvec import matvec as sparse_matvec
+    from csdl_alpha.src.operations.sparse.sparse_matvec import matmat as sparse_matmat
 
     if isinstance(A, sp.spmatrix):
-        return sparse_matvec(A, B)
+        return sparse_matmat(A, B)
 
     A = validate_and_variablize(A, raise_on_sparse = False)
     B = validate_and_variablize(B, raise_on_sparse = False)
