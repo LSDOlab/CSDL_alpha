@@ -16,18 +16,18 @@ def get_jax_inputs(node, all_jax_variables:dict, return_dict = False)->list:
     for input in node.inputs:
         if input not in all_jax_variables:
             if input.value is None:
-                raise ValueError(f"Jax function error with node {node}: Input {input} has no value")
+                raise ValueError(f"Jax function error with node {node.info()}: Input {input.info()} has no value")
             if input.value.dtype != np.float64:
-                raise ValueError(f"Jax function error with node {node}: Expected input to be a float64, but got {input.value.dtype}")
+                raise ValueError(f"Jax function error with node {node.info()}: Expected input to be a float64, but got {input.value.dtype}")
             if isinstance(input.value, np.matrix):
-                raise ValueError(f"Jax function error with node {node}: Expected input to be a float64, but got {input.value.dtype}")
+                raise ValueError(f"Jax function error with node {node.info()}: Expected input to be a float64, but got {input.value.dtype}")
             jax_inputs.append(jnp.array(input.value))
         else:
             jax_inputs.append(all_jax_variables[input])
     
     for i, input in enumerate(jax_inputs):
         if not isinstance(input, jnp.ndarray):
-            raise ValueError(f"Jax function error with node {node}: Expected input to be a jnp.ndarray, but got {type(input)}")
+            raise ValueError(f"Jax function error with node {node.info()}: Expected input to be a jnp.ndarray, but got {type(input)}")
 
     if return_dict:
         return {input:jax_inputs[i] for i, input in enumerate(node.inputs)}
@@ -37,18 +37,18 @@ def get_jax_inputs(node, all_jax_variables:dict, return_dict = False)->list:
 def update_jax_variables(node, jax_outputs, all_jax_variables:dict):
     import jax.numpy as jnp
     if not isinstance(jax_outputs, tuple):
-        raise ValueError(f"Jax function error with node {node}: Expected output to be a tuple, but got {type(jax_outputs)}")
+        raise ValueError(f"Jax function error with node {node.info()}: Expected output to be a tuple, but got {type(jax_outputs)}")
     for i, output in enumerate(jax_outputs):
         if not isinstance(output, jnp.ndarray):
-            raise ValueError(f"Jax function error with node {node}: Expected output to be a jnp.ndarray, but got {type(output)}")
+            raise ValueError(f"Jax function error with node {node.info()}: Expected output to be a jnp.ndarray, but got {type(output)}")
     if len(node.outputs) != len(jax_outputs):
-        raise ValueError(f"Jax function error with node {node}: Expected {len(node.outputs)} outputs, but got {len(jax_outputs)}")
+        raise ValueError(f"Jax function error with node {node.info()}: Expected {len(node.outputs)} outputs, but got {len(jax_outputs)}")
 
     for i, output in enumerate(node.outputs):
         try:
             all_jax_variables[output] = (jax_outputs[i]).reshape(output.shape)
         except:
-            raise ValueError(f"Error updating JAX variables for node {node.name}. Output shape: {output.shape}, JAX output shape: {jax_outputs[i].shape}")
+            raise ValueError(f"Error updating JAX variables for node {node.info()}. Output shape: {output.shape}, JAX output shape: {jax_outputs[i].shape}")
 
 def create_jax_function(
         graph:Graph,
@@ -84,10 +84,10 @@ def create_jax_function(
     import rustworkx as rx
     for output in outputs:
         if output not in current_graph.node_table:
-            raise ValueError(f"Output {output} not in the graph")
+            raise ValueError(f"Output {output.info()} not in the graph")
     for input in inputs:
         if input not in current_graph.node_table:
-            raise ValueError(f"Input {input} not in the graph")
+            raise ValueError(f"Input {input.info()} not in the graph")
     
     all_sorted_node_indices = rx.topological_sort(current_graph.rxgraph)
     all_sorted_nodes = [current_graph.rxgraph[i] for i in all_sorted_node_indices]
@@ -138,7 +138,7 @@ def create_jax_function(
 
                 for output_node in fill_outputs:
                     if fill_outputs[output_node] is None:
-                        raise ValueError(f"Jax function error with node {node}: Output {output_node} was not filled")
+                        raise ValueError(f"Jax function error with node {node.info()}: Output {output_node.info()} was not filled")
                     all_jax_variables[output_node] = fill_outputs[output_node]
             else:
                 jax_inputs = get_jax_inputs(node, all_jax_variables)

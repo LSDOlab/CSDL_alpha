@@ -179,20 +179,20 @@ class Graph():
             subgraph_inputs_and_outputs = subgraph_inputs.union(subgraph_outputs)
             for node in subgraph_inputs_and_outputs:
                 if node not in self.rxgraph.nodes():
-                    raise ValueError(f"Node {node} not in graph {get_node_info_string(node, self)}")
+                    raise ValueError(f"Node {node.info()} not in graph {get_node_info_string(node, self)}")
             print("  - Check 1 passed")
 
             # all inputs and outputs should be in subgraph and no other variables
             for node in subgraph_inputs_and_outputs:
                 if node not in subgraph.rxgraph.nodes():
-                    raise ValueError(f"Node {node} not in subgraph {get_node_info_string(node, self)}")
+                    raise ValueError(f"Node {node.info()} not in subgraph {get_node_info_string(node, self)}")
             # too lazy to check for no other variables part
             print("  - Check 2 passed")
 
             # all inputs in subgraph should have no predecessors
             for node in subgraph_inputs:
                 if len(subgraph.rxgraph.predecessors(subgraph.node_table[node])) != 0:
-                    raise ValueError(f"Input {node} has predecessors {get_node_info_string(node, self)}")
+                    raise ValueError(f"Input {node.info()} has predecessors {get_node_info_string(node, self)}")
             print("  - Check 3 passed")
 
             print("Check complete...\n")
@@ -245,9 +245,9 @@ class Graph():
         nodes = set(self.rxgraph.nodes())
         for node, index in self.node_table.items():
             if node not in nodes:
-                raise ValueError(f"Node {node} not in graph")
+                raise ValueError(f"Node {node.info()} not in graph")
             if self.rxgraph[index] != node:
-                raise ValueError(f"Node {node} not in graph")
+                raise ValueError(f"Node {node.info()} not in graph")
             
         # nodes in graph should be in node_table
         if len(nodes) != len(self.node_table):
@@ -389,7 +389,7 @@ class Graph():
                 if source_index not in A:
                     targets_string = error_utils.get_node_name_string(targets)
                     raise error_utils.GraphError(
-                        f"Source node {self.rxgraph[source_index].name} does not affect any target node(s) {targets_string}",
+                        f"Source node {self.rxgraph[source_index].info()} does not affect any target node(s) {targets_string}",
                         tag = 'no_path',
                         relevant_nodes = self.rxgraph[source_index],
                     )
@@ -398,7 +398,7 @@ class Graph():
                 if target_index not in D:
                     sources_string = error_utils.get_node_name_string(sources)
                     raise error_utils.GraphError(
-                        f"Target node {self.rxgraph[target_index].name} is not affected by any source node(s) {sources_string}",
+                        f"Target node {self.rxgraph[target_index].info()} is not affected by any source node(s) {sources_string}",
                         tag = 'no_path',
                         relevant_nodes = self.rxgraph[target_index],
                     )

@@ -33,7 +33,7 @@ class VarManager():
 
     def verify_valid_var(self, var:Variable):
         if var not in self.vars:
-            raise KeyError(f"Variable {var} ({var.name}) not recognized as an {self.vars_type}. Ensure that the variable is added as an {self.vars_type} to the simulator to get/set its values.")
+            raise KeyError(f"Variable {var.info()} not recognized as an {self.vars_type}. Ensure that the variable is added as an {self.vars_type} to the simulator to get/set its values.")
         
     def check_valid_var(self, var:Variable)->bool:
         return var in self.vars
@@ -132,7 +132,7 @@ class JaxSimulator(SimulatorBase):
         # Check to make sure inputs are valid:
         for input_var in run_inputs:
             if recorder.get_root_graph().in_degree(input_var) > 0:
-                raise ValueError(f"Variable '{input_var}' (with name '{input_var.name}') is not a valid input. Only independent variables can be set as inputs")
+                raise ValueError(f"Variable {input_var.info()} is not a valid input. Only independent variables can be set as inputs")
 
         # Check to make sure outputs are valid:
         if len(run_outputs) == 0:
@@ -184,7 +184,7 @@ class JaxSimulator(SimulatorBase):
             return self.input_manager[key]
         else:
             # raise KeyError(f"Variable {key} ({key.name}) not an input or output. Add the variable as an additional input or output to the simulator in order to access values")
-            raise KeyError(f"The variable '{key}' (with name '{key.name}') is not recognized as an input or output. Ensure that the variable is added as an input or output to the simulator to access its values.")
+            raise KeyError(f"The variable {key.info()} is not recognized as an input or output. Ensure that the variable is added as an input or output to the simulator to access its values.")
     def __setitem__(self, key:Variable, value:np.ndarray):
         self.input_manager[key] = value
 

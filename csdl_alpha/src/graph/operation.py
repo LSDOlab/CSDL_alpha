@@ -192,4 +192,4 @@ def set_properties(**kwargs):
 def check_inline_input(recorder, var:Variable):
     if recorder.inline:
         if var.value is None:
-            raise ValueError(f"Variable \'{var.name}\' must have a value set when running in inline mode.")
+            raise ValueError(f"Variable {var.info()} must have a value set when running in inline mode.")

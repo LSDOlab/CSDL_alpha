@@ -347,7 +347,7 @@ class PySimulator(SimulatorBase):
         if not isinstance(key, Variable):
             raise KeyError(f"{key} must be an instance of Variable. {get_type_string(key)} given.")
         if self.recorder.get_root_graph().in_degree(key) > 0:
-            raise ValueError(f"Variable '{key}' (with name '{key.name}') is not a valid input. Only independent variables can be set as inputs")
+            raise ValueError(f"Variable {key.info()} is not a valid input. Only independent variables can be set as inputs")
 
         key.value = value
 
@@ -502,7 +502,7 @@ def build_opt_metadata(
                 val_vector[l_ind:u_ind] = val.flatten()
             else:
                 if meta_type == 'd':
-                    raise ValueError(f"Design variable {var} must have an initial value specified.")
+                    raise ValueError(f"Design variable {var.info()} must have an initial value specified.")
 
         scaler = recorder_data[var][0]
         if scaler is not None:
