@@ -22,12 +22,14 @@ class NewLoop(SubgraphOperation):
             self,
             loop_builder:LoopBuilder,
             parent:'NewLoop' = None,
-            name:str = None
+            name:str = None,
+            stack_all:bool = False,
         ):
 
         self.loop_builder:LoopBuilder = loop_builder
-        self.length = self.loop_builder.length
+        self.length:int = self.loop_builder.length
         self.parent = parent
+        self.stack_all:bool = stack_all
         if name is None:
             self.name = 'new_loop'
         else:
@@ -168,7 +170,13 @@ class NewLoop(SubgraphOperation):
             # update stacked variables
             stacked_outputs = [graph_fn_outputs[all_output_indices[stacked_target]] for stacked_target in ordered_stacked_targets]
             # print('len carry', len(carry), [v.size for v in graph_fn_outputs], [v.size for v in accrued_outputs])
-            return [graph_fn_outputs[all_output_indices[output]] for output in ordered_std_outputs]+accrued_outputs, stacked_outputs
+            carry_out = []
+            for output in ordered_std_outputs:
+                jax_var = graph_fn_outputs[all_output_indices[output]]
+                if jax_var.shape != output.shape:
+                    jax_var = jax_var.reshape(output.shape)
+                carry_out.append(jax_var)
+            return carry_out+accrued_outputs, stacked_outputs
 
         # //////////////////// Set loop initial conditions: \\\\\\\\\\\\\\\\\\\\\
         iter_var_list = []
@@ -202,20 +210,23 @@ class NewLoop(SubgraphOperation):
             accrued_var = self.loop_builder.accrued[output]
             outputs[accrued_var] = carry[i+len(ordered_std_outputs)]
 
-    def prep_vjp(self):
-        """
-        Prepare the nonlinear solver for reverse mode differentiation.
-        """
-        import csdl_alpha as csdl
-        recorder = csdl.get_current_recorder()
-        recorder._enter_subgraph(graph = self.get_subgraph())
-        
-        node_table = list(self.get_subgraph().node_table.keys())
-        for node in node_table:
-            if isinstance(node, Operation):
-                node.prep_vjp()
-        
-        recorder._exit_subgraph()
+    # def prep_vjp(self):
+    #     """
+    #     Prepare the nonlinear solver for reverse mode differentiation.
+    #     """
+    #     import csdl_alpha as csdl
+    #     if not self.stack_all:
+    #         recorder = csdl.get_current_recorder()
+    #         recorder._enter_subgraph(graph = self.get_subgraph())
+            
+    #         node_table = list(self.get_subgraph().node_table.keys())
+    #         for node in node_table:
+    #             if isinstance(node, Operation):
+    #                 node.prep_vjp()
+            
+    #         recorder._exit_subgraph()
+    #     else:
+    #         pass
 
     def evaluate_vjp(self, cotangents, *inputs_and_outputs):
         inputs = inputs_and_outputs[:self.num_inputs]
@@ -262,8 +273,8 @@ class NewLoop(SubgraphOperation):
             one_if_first_iter.add_name('one_zero_iter')
             # Process cotangents of outputs:
 
-            # loop_graph = vjp_loop_builder.loop_graph
-            if 1:
+            rev_loop_graph = vjp_loop_builder.loop_graph
+            if not self.stack_all:
                 # If rebuild is True, we need to rebuild the body loop
                 vjp_body_inputs_map:dict[Variable:Variable] = {}
         
@@ -281,7 +292,34 @@ class NewLoop(SubgraphOperation):
                     self.get_subgraph(),
                     vjp_body_inputs_map,
                     add_to_graph_inputs = True)
-                
+            else:
+                # raise NotImplementedError('stack_all not implemented yet')
+                stacked_inter_map:dict[Variable:Variable] = {}
+                all_intermediate_vars = []
+                for node in self.loop_builder.loop_graph.node_table.keys():
+                    if not isinstance(node,Operation):
+                        all_intermediate_vars.append(node)
+                        if isinstance(node,IterationVariable):
+                            continue
+                        if node in self.loop_builder.inputs:
+                            continue
+                        if node not in self.loop_builder.stacked:
+                            raise KeyError(f'INTERNAL ERROR: Node {node.info()} not in stacked outputs')
+                        stacked_inter_map[node] = self.loop_builder.stacked[node][rev_index]
+                for parent_iter_var, rev_iter_var in zip(parent_iter_vars.keys(), rev_orig):
+                    stacked_inter_map[parent_iter_var] = rev_iter_var
+
+                # Insert body forward evaluation VARIABLES into derivative graph
+                _copy_to_current_graph(
+                    self.get_subgraph(),
+                    stacked_inter_map,
+                    subgraph_nodes = all_intermediate_vars,
+                    add_to_graph_inputs = True,
+                )
+
+                # loop_graph.visualize()
+                # raise ValueError('stack_all not implemented yet')
+
             # Now compute the VJPs
             # Create seeds:
             seeds:dict[Variable,Variable] = {}
@@ -308,7 +346,7 @@ class NewLoop(SubgraphOperation):
             wrts += [external_in.external_body_IO for external_in in parent_external_inputs.values()]
             
             # Finally compute the vector jacobian products
-            vjps = vjp([(var,seed) for var,seed in seeds.items()], wrts, vjp_loop_builder.loop_graph)
+            vjps = vjp([(var,seed) for var,seed in seeds.items()], wrts, self.loop_builder.loop_graph)
 
             # Perform the accumulation procedures
             for feedback_deriv in feedback_data.values():

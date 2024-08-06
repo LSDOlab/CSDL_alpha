@@ -134,55 +134,10 @@ class Testfrange(csdl_tests.CSDLTest):
         self.run_tests(
             compare_values=[
                 csdl_tests.TestingPair(b, np.array([20]))
-            ]
+            ],
+            verify_derivatives=True
         )
 
-    def test_implicit_in_loop(self):
-        # added after bug in MBD
-
-        self.prep()
-        import csdl_alpha as csdl
-        from csdl_alpha.api import frange
-        import numpy as np
-
-        out_val = np.array([0.2277299992])
-
-        num = 10
-        a_val = 1.5+np.arange(num)
-        a = csdl.Variable(name = 'a', value = 1.5+np.arange(10))
-        b = csdl.Variable(name = 'b', value = 0.5)
-        c = csdl.Variable(name = 'c', value = -1.0)
-
-        x_initial = csdl.Variable(shape=(1,), name='x_initial', value=0.3)
-        loop = csdl.frange(10)
-        # loop = range(10)
-        i = 0
-        for t in loop:
-            x_initial_1 = x_initial*1
-            x_initial_1.add_name('x_initial_1')
-
-            x = csdl.ImplicitVariable(shape=(1,), name='x', value=0.34)
-
-            ax2 = a[t]*x*x
-            y = (-ax2 - c)*b - x
-            y.name = 'residual_x'
-
-            # apply coupling:
-            # ONE SOLVER COUPLING:
-            solver = csdl.nonlinear_solvers.Newton('gs_x_simpler')
-            x_initial.add_name('x_initial_'+str(i))
-            i += 1
-            solver.add_state(x, y, initial_value=x_initial_1)
-            solver.run()
-
-            # x_1 = x_initial
-            x_initial = x
-
-        self.run_tests(
-            compare_values=[
-                csdl_tests.TestingPair(x, out_val)
-            ]
-        )
 
 
 
@@ -563,3 +518,4 @@ if __name__ == '__main__':
     # test.test_stack_multidim()
     # test.test_feedback()
     # test.test_pure_accrue()
+    test.test_implicit_in_loop()

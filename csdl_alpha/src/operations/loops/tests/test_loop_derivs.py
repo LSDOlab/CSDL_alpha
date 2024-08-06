@@ -247,8 +247,7 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         # TODO: manual derivative check
         # assert abs(deriv.value[0,0] - (15*a.value**2.0+2*a.value**3)) < 1e-9
 
-        # recorder = csdl.get_current_recorder()
-        # recorder.visualize_graph(visualize_style='hierarchical')
+        
 
         # check real:
         a_0np = a_val*1.0
@@ -277,48 +276,54 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         )
 
     def test_simple_loop_feedback_indexing2(self):
-        self.prep(always_build_inline = True)
-        import csdl_alpha as csdl
-        from csdl_alpha.api import frange
-        import numpy as np
+        loop_kwargs = [
+            ({'stack_all':False},{'stack_all':True}),
+            ({'stack_all':True},{'stack_all':False}),
+            ({'stack_all':True},{'stack_all':True}),
+        ]
+        for loop1_kwargs, loop2_kwargs in loop_kwargs:
+            self.prep(always_build_inline = True)
+            import csdl_alpha as csdl
+            from csdl_alpha.api import frange
+            import numpy as np
 
-        # a = a*b[i,0] + b[i+1,1]
-        # a = a.set([i, 0], a[i,0]+1.0)
+            # a = a*b[i,0] + b[i+1,1]
+            # a = a.set([i, 0], a[i,0]+1.0)
 
-        a_val = np.arange(6).reshape(3,2)*0.01+0.1
-        a_0 = csdl.Variable(value=a_val, name='a_0')
-        a = a_0*1.0
-        b = a
-        b.add_name(f'b_in')
-        for i in csdl.frange(2):
-            a = a*b[i,0] + b[i+1,1]
-            b = a+b
-            a = a.set(csdl.slice[i, 0], a[i,0])
-            a = a+a
-            c = b*a
-        a.add_name('a_updated')
-        x = csdl.sum(b+a+c)
+            a_val = np.arange(6).reshape(3,2)*0.01+0.1
+            a_0 = csdl.Variable(value=a_val, name='a_0')
+            a = a_0*1.0
+            b = a
+            b.add_name(f'b_in')
+            for i in csdl.frange(2, **loop1_kwargs):
+                a = a*b[i,0] + b[i+1,1]
+                b = a+b
+                a = a.set(csdl.slice[i, 0], a[i,0])
+                a = a+a
+                c = b*a
+            a.add_name('a_updated')
+            x = csdl.sum(b+a+c)
 
-        for i in csdl.frange(2):
-            x = x + a[i,0]
-            b = x/c
+            for i in csdl.frange(2, **loop2_kwargs):
+                x = x + a[i,0]
+                b = x/c
 
-        deriv = csdl.derivative([x, b], a_0)
-        deriv_x = deriv[x]
-        deriv_b = deriv[b]
-        # TODO: manual derivative check
-        # assert abs(deriv.value[0,0] - (15*a.value**2.0+2*a.value**3)) < 1e-9
-        # recorder = csdl.get_current_recorder()
-        # recorder.visualize_graph(visualize_style='hierarchical')
-        self.run_tests(
-            compare_values=[
-                csdl_tests.TestingPair(x, x.value),
-                csdl_tests.TestingPair(c, c.value),
-                csdl_tests.TestingPair(deriv_x, deriv_x.value),
-                csdl_tests.TestingPair(deriv_b, deriv_b.value),
-            ],
-            verify_derivatives=True
-        )
+            deriv = csdl.derivative([x, b], a_0)
+            deriv_x = deriv[x]
+            deriv_b = deriv[b]
+            # TODO: manual derivative check
+            # assert abs(deriv.value[0,0] - (15*a.value**2.0+2*a.value**3)) < 1e-9
+            # recorder = csdl.get_current_recorder()
+            # recorder.visualize_graph(visualize_style='hierarchical')
+            self.run_tests(
+                compare_values=[
+                    csdl_tests.TestingPair(x, x.value),
+                    csdl_tests.TestingPair(c, c.value),
+                    csdl_tests.TestingPair(deriv_x, deriv_x.value),
+                    csdl_tests.TestingPair(deriv_b, deriv_b.value),
+                ],
+                verify_derivatives=True
+            )
 
     def test_nested(self):
         self.prep()
@@ -398,80 +403,88 @@ class TestFrangeDeriv(csdl_tests.CSDLTest):
         )
 
     def test_nested_double_indexing(self):
-        self.prep()
-        import csdl_alpha as csdl
-        from csdl_alpha.api import frange
-        import numpy as np
-        a_val = np.arange(8).reshape(4,2)*0.01+0.1
-        a_0 = csdl.Variable(value=a_val, name='a_0')
-        d_0 = csdl.Variable(value=0.2, name='d')
-        d = d_0*1.0
-        a = a_0*1.0
-        b = a
-        b.add_name(f'b_in')
-        for i,j in csdl.frange(vals = ([0,2,1], [1,0,0])):
-            a = a*b[i,0] + b[i+1,1]
-            b = a+b
-            a = a.set(csdl.slice[i, 0], a[i,0])
-            for k, l in csdl.frange(vals = ([0,1], [1,0])):
-                a = a.set(csdl.slice[k, j], a[l,j]*b[i+1,j])
-                for k in csdl.frange(3):
-                    d = 1.2*d/(k+1)
-            a = a+a+d
-            c = b*a
-        x = csdl.sum(b+a*c)
-        a.add_name('a_updated')
-        d.add_name('d_updated')
-
-        deriv = csdl.derivative([x, b, c], [a_0, d])
-        dx_da0 = csdl.norm(deriv[x, a_0])
-        dx_d = csdl.norm(deriv[x, d])
-        db_da0 = csdl.norm(deriv[b, a_0])
-        db_d = csdl.norm(deriv[b, d])
-        dc_da0 = csdl.norm(deriv[c, a_0])
-        dc_d = csdl.norm(deriv[c, d])
-        deriv_sums = dx_da0+dx_d+db_da0+db_d+dc_da0+dc_d
-        deriv_sums.add_name('deriv_sums')
-
-        recorder = csdl.get_current_recorder()
-        # recorder.visualize_graph(visualize_style='hierarchical')
-        a_0.set_value(np.arange(8).reshape(4,2)*0.01+0.015)
-        recorder.execute()
-
-        a_val = np.arange(8).reshape(4,2)*0.01+0.015
-        a_val = a_val*1.0
-        b_val = a_val
-        d_val = 0.2
-        for i,j in zip([0,2,1], [1,0,0]):
-            a_val = a_val*b_val[i,0] + b_val[i+1,1]
-            b_val = a_val+b_val
-            a_val[i, 0] = a_val[i,0]
-            for k,l in zip([0,1], [1,0]):
-                a_val[k, j] = a_val[l,j]*b_val[i+1,j]
-                for k in range(3):
-                    d_val = 1.2*d_val/(k+1)
-            a_val = a_val+a_val+d_val
-            c_val = b_val*a_val
-        x_val = np.sum(b_val+a_val*c_val)
         
-        # recorder = csdl.get_current_recorder()
-        # recorder.visualize_graph(visualize_style='hierarchical')
-        
-        self.run_tests(
-            compare_values=[
-                csdl_tests.TestingPair(x, x_val.reshape(x.shape)),
-                csdl_tests.TestingPair(c, c_val.reshape(c.shape)),
-                csdl_tests.TestingPair(a, a_val.reshape(a.shape)),
-                csdl_tests.TestingPair(d, np.array(d_val).reshape(d.shape)),
-                csdl_tests.TestingPair(deriv_sums, deriv_sums.value, decimal=4),
-            ],
-            verify_derivatives=True
-        )
+        loop_kwargs = [
+            ({'stack_all':False},{'stack_all':True},{'stack_all':False}),
+            ({'stack_all':True},{'stack_all':False},{'stack_all':True}),
+        ]
+
+        for loop_kwarg, loop_kwarg_inner, loop_kwarg_inner_inner in loop_kwargs:
+            print('testing case: ', loop_kwarg, loop_kwarg_inner,loop_kwarg_inner_inner)
+            self.prep()
+            import csdl_alpha as csdl
+            from csdl_alpha.api import frange
+            import numpy as np
+            a_val = np.arange(8).reshape(4,2)*0.01+0.1
+            a_0 = csdl.Variable(value=a_val, name='a_0')
+            d_0 = csdl.Variable(value=0.2, name='d')
+            d = d_0*1.0
+            a = a_0*1.0
+            b = a
+            b.add_name(f'b_in')
+            for i,j in csdl.frange(vals = ([0,2,1], [1,0,0]),**loop_kwarg):
+                a = a*b[i,0] + b[i+1,1]
+                b = a+b
+                a = a.set(csdl.slice[i, 0], a[i,0])
+                for k, l in csdl.frange(vals = ([0,1], [1,0]),**loop_kwarg_inner):
+                    a = a.set(csdl.slice[k, j], a[l,j]*b[i+1,j])
+                    for k in csdl.frange(3, **loop_kwarg_inner_inner):
+                        d = 1.2*d/(k+1)
+                a = a+a+d
+                c = b*a
+            x = csdl.sum(b+a*c)
+            a.add_name('a_updated')
+            d.add_name('d_updated')
+
+            deriv = csdl.derivative([x, b, c], [a_0, d])
+            dx_da0 = csdl.norm(deriv[x, a_0])
+            dx_d = csdl.norm(deriv[x, d])
+            db_da0 = csdl.norm(deriv[b, a_0])
+            db_d = csdl.norm(deriv[b, d])
+            dc_da0 = csdl.norm(deriv[c, a_0])
+            dc_d = csdl.norm(deriv[c, d])
+            deriv_sums = dx_da0+dx_d+db_da0+db_d+dc_da0+dc_d
+            deriv_sums.add_name('deriv_sums')
+
+            recorder = csdl.get_current_recorder()
+            # recorder.visualize_graph(visualize_style='hierarchical')
+            a_0.set_value(np.arange(8).reshape(4,2)*0.01+0.015)
+            recorder.execute()
+
+            a_val = np.arange(8).reshape(4,2)*0.01+0.015
+            a_val = a_val*1.0
+            b_val = a_val
+            d_val = 0.2
+            for i,j in zip([0,2,1], [1,0,0]):
+                a_val = a_val*b_val[i,0] + b_val[i+1,1]
+                b_val = a_val+b_val
+                a_val[i, 0] = a_val[i,0]
+                for k,l in zip([0,1], [1,0]):
+                    a_val[k, j] = a_val[l,j]*b_val[i+1,j]
+                    for k in range(3):
+                        d_val = 1.2*d_val/(k+1)
+                a_val = a_val+a_val+d_val
+                c_val = b_val*a_val
+            x_val = np.sum(b_val+a_val*c_val)
+            
+            # recorder = csdl.get_current_recorder()
+            # recorder.visualize_graph(visualize_style='hierarchical')
+            
+            self.run_tests(
+                compare_values=[
+                    csdl_tests.TestingPair(x, x_val.reshape(x.shape)),
+                    csdl_tests.TestingPair(c, c_val.reshape(c.shape)),
+                    csdl_tests.TestingPair(a, a_val.reshape(a.shape)),
+                    csdl_tests.TestingPair(d, np.array(d_val).reshape(d.shape)),
+                    csdl_tests.TestingPair(deriv_sums, deriv_sums.value, decimal=4),
+                ],
+                verify_derivatives=True
+            )
 
 if __name__ == '__main__':
     t = TestFrangeDeriv()
     t.overwrite_backend = 'jax'
-    # t.overwrite_backend = 'inline'
+    t.overwrite_backend = 'inline'
     # t.test_simple_loop()
     # t.test_simple_second_deriv()
     # t.test_simple_loop2()

@@ -541,6 +541,7 @@ class frange():
             *,
             vals:Union[list[int],tuple[list[int]]] = None,
             inline_lazy_stack = False,
+            stack_all:bool = False,
         ):
         """Initialize the Loop object.
 
@@ -593,6 +594,7 @@ class frange():
 
         self.curr_index = 0
         self.max_index = 2
+        self.stack_all = stack_all
 
         # enter new graph
         # TODO: Enter new subgraph only when the actual iteration begins
@@ -757,7 +759,7 @@ class frange():
 
         # REMOVE LATER
         for loop_var in loop_vars:
-            self.iter2_outputs.append('IF YOU SEE THIS ERROR')
+            self.iter2_outputs.append('IF YOU SEE THIS: ERROR')
 
         # New Loop
         graph_inputs = self._graph.inputs
@@ -782,7 +784,10 @@ class frange():
         lb.lock()
         for output in self.iter2_outputs[:-len(loop_vars)]:
             lb.add_output(output)
-        self.op = lb.finalize(add_all_outputs=False)
+        self.op = lb.finalize(
+            add_all_outputs=False,
+            stack_all = self.stack_all,
+        )
 
     def _check_ops_and_shapes(self, ops, shapes):
         if ops != self.ops:

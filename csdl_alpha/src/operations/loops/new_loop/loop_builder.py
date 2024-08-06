@@ -31,6 +31,10 @@ class LoopBuilder:
         # If locked, can only specify information about outer graph like stacked variables
         self.locked:bool = False
 
+        # store the loop operation
+        from csdl_alpha.src.operations.loops.new_loop.new_loop import NewLoop
+        self.loop:NewLoop = None
+
     def check_locked(self):
         if not self.locked:
             raise ValueError("This method can only be called after the builder is locked (no more changes to the loop body). Call lock() to lock the builder.")
@@ -182,8 +186,12 @@ class LoopBuilder:
             add_all_outputs:bool = True,
             name:str = None,
             parent:Graph = None,
+            stack_all:bool = False,
         ):
+        from csdl_alpha.src.graph.operation import Operation
         self.check_locked()
+        if self.loop is not None:
+            raise ValueError(f"Loop {self.loop.info()} already built.")
 
         # add all intermediate variables as outputs if specified
         if add_all_outputs:
@@ -197,20 +205,40 @@ class LoopBuilder:
         for input_var in self.loop_graph.inputs:
             self.add_input(input_var)
 
+        if stack_all:
+            for node in self.loop_graph.node_table.keys():
+                # if isinstance(node, Operation):
+                #     for output in node.outputs:
+                #         self.add_stack(output)
+                #     for input in node.inputs:
+                #         if input not in self.loop_graph.inputs:
+                #             self.add_stack(input)
+                if not isinstance(node, Operation):
+                    if node not in self.loop_graph.inputs:
+                        self.add_stack(node)
+
         # Stack all feedback variables if not already stacked
         for feedback in self.feedbacks._int_input_to_feedback.values():
             self.add_stack(feedback.internal_input)
             self.add_output(feedback.output)
 
+        # set all all loop body operations to not use precomputed derivatives
+        # TODO: enable somehow?
+        for node in self.loop_graph.node_table.keys():
+            if isinstance(node, Operation):
+                op = node
+                op.disable_vjp_prep()
+
         # Build the actual operation object
         from csdl_alpha.src.operations.loops.new_loop.new_loop import NewLoop
-        loop = NewLoop(
+        self.loop = NewLoop(
             loop_builder = self,
             parent = parent,
             name = name,
+            stack_all = stack_all,
         )
-        loop.finalize_and_return_outputs()
-        return loop
+        self.loop.finalize_and_return_outputs()
+        return self.loop
 
     def __repr__(self) -> str:
         op_id = super().__repr__()
