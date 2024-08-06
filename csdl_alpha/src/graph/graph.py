@@ -17,6 +17,8 @@ class Graph():
         else:
             self.name = name
 
+        self.parent_op = None
+
     def add_node(self, node):
         if node in self.node_table:
             return
@@ -637,6 +639,7 @@ def get_node_info_string(node, graph):
 def _copy_to_current_graph(
         graph_to_replace:'Graph',
         input_map:dict['Variable':'Variable'] ,
+        subgraph_nodes:list = None,
         add_to_graph_inputs:bool = False,
     ):
     """_summary_
@@ -646,13 +649,21 @@ def _copy_to_current_graph(
     graph : Graph
         Replaces the current graph with the graph passed in
     input_map : dict[Variable:Variable] 
-        maps <input leaf node in graph_to_replace> to <new input variable> 
+        maps <input leaf node in graph_to_replace> to <new input variable>
+    subgraph_nodes:list
+        list of nodes in graph_to_replace to copy. By default, will copy every node
+    add_to_graph_inputs:bool
+        If True, will add copied graph's inputs to current graph's inputs 
     """
 
     import csdl_alpha as csdl
     current_graph = csdl.get_current_recorder().active_graph
-    # current_graph.rxgraph = graph_to_replace.rxgraph.copy()
-    current_graph.rxgraph = rx.digraph_union(current_graph.rxgraph, graph_to_replace.rxgraph)
+
+    if subgraph_nodes is None:
+        current_graph.rxgraph = rx.digraph_union(current_graph.rxgraph, graph_to_replace.rxgraph)
+    else:
+        sub_rxgraph = graph_to_replace.rxgraph.subgraph([graph_to_replace.node_table[n] for n in subgraph_nodes])
+        current_graph.rxgraph = rx.digraph_union(current_graph.rxgraph, sub_rxgraph)
 
     current_graph.update_node_table()
     from csdl_alpha.src.operations.copyvar import copyto
