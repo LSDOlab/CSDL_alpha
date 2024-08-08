@@ -85,10 +85,17 @@ def _vjp(seeds:list[tuple[Variable, Variable]],
     import csdl_alpha as csdl
     recorder = csdl.get_current_recorder()
 
-    cotangents = VarTangents()
+    cotangents:VarTangents = VarTangents()
     for of_var, seed in seeds:
         cotangents.initialize(of_var)
         cotangents.accumulate(of_var, variablize(seed))
+
+        # store it for debugging purposes:
+        cotangents.add_of(of_var)
+    
+    for wrt_var in wrt_vars:
+        # store it for debugging purposes:
+        cotangents.add_wrt(wrt_var)
 
     # perform the vector-jacobian here in terms of CSDL operations by going through the node order
     for node in node_order:
@@ -105,7 +112,7 @@ def _vjp(seeds:list[tuple[Variable, Variable]],
             except Exception as e:
                 if recorder.debug is True:
                     node.print_trace()
-                raise ValueError(f"Error with VJP in operation {node.name}: {e}")
+                raise ValueError(f"Error with VJP of operation {node.info()}: {e}")
 
             if recorder.debug is True and recorder.inline is True:
                 for input in node.inputs:

@@ -17,6 +17,8 @@ class Graph():
         else:
             self.name = name
 
+        self.parent_op = None
+
     def add_node(self, node):
         if node in self.node_table:
             return
@@ -177,20 +179,20 @@ class Graph():
             subgraph_inputs_and_outputs = subgraph_inputs.union(subgraph_outputs)
             for node in subgraph_inputs_and_outputs:
                 if node not in self.rxgraph.nodes():
-                    raise ValueError(f"Node {node} not in graph {get_node_info_string(node, self)}")
+                    raise ValueError(f"Node {node.info()} not in graph {get_node_info_string(node, self)}")
             print("  - Check 1 passed")
 
             # all inputs and outputs should be in subgraph and no other variables
             for node in subgraph_inputs_and_outputs:
                 if node not in subgraph.rxgraph.nodes():
-                    raise ValueError(f"Node {node} not in subgraph {get_node_info_string(node, self)}")
+                    raise ValueError(f"Node {node.info()} not in subgraph {get_node_info_string(node, self)}")
             # too lazy to check for no other variables part
             print("  - Check 2 passed")
 
             # all inputs in subgraph should have no predecessors
             for node in subgraph_inputs:
                 if len(subgraph.rxgraph.predecessors(subgraph.node_table[node])) != 0:
-                    raise ValueError(f"Input {node} has predecessors {get_node_info_string(node, self)}")
+                    raise ValueError(f"Input {node.info()} has predecessors {get_node_info_string(node, self)}")
             print("  - Check 3 passed")
 
             print("Check complete...\n")
@@ -243,9 +245,9 @@ class Graph():
         nodes = set(self.rxgraph.nodes())
         for node, index in self.node_table.items():
             if node not in nodes:
-                raise ValueError(f"Node {node} not in graph")
+                raise ValueError(f"Node {node.info()} not in graph")
             if self.rxgraph[index] != node:
-                raise ValueError(f"Node {node} not in graph")
+                raise ValueError(f"Node {node.info()} not in graph")
             
         # nodes in graph should be in node_table
         if len(nodes) != len(self.node_table):
@@ -387,7 +389,7 @@ class Graph():
                 if source_index not in A:
                     targets_string = error_utils.get_node_name_string(targets)
                     raise error_utils.GraphError(
-                        f"Source node {self.rxgraph[source_index].name} does not affect any target node(s) {targets_string}",
+                        f"Source node {self.rxgraph[source_index].info()} does not affect any target node(s) {targets_string}",
                         tag = 'no_path',
                         relevant_nodes = self.rxgraph[source_index],
                     )
@@ -396,7 +398,7 @@ class Graph():
                 if target_index not in D:
                     sources_string = error_utils.get_node_name_string(sources)
                     raise error_utils.GraphError(
-                        f"Target node {self.rxgraph[target_index].name} is not affected by any source node(s) {sources_string}",
+                        f"Target node {self.rxgraph[target_index].info()} is not affected by any source node(s) {sources_string}",
                         tag = 'no_path',
                         relevant_nodes = self.rxgraph[target_index],
                     )
@@ -637,7 +639,8 @@ def get_node_info_string(node, graph):
 def _copy_to_current_graph(
         graph_to_replace:'Graph',
         input_map:dict['Variable':'Variable'] ,
-        delete_nodes:set['Variable'] = None,
+        subgraph_nodes:list = None,
+        add_to_graph_inputs:bool = False,
     ):
     """_summary_
 
@@ -646,18 +649,37 @@ def _copy_to_current_graph(
     graph : Graph
         Replaces the current graph with the graph passed in
     input_map : dict[Variable:Variable] 
-        maps <input leaf node in graph_to_replace> to <new input variable> 
+        maps <input leaf node in graph_to_replace> to <new input variable>
+    subgraph_nodes:list
+        list of nodes in graph_to_replace to copy. By default, will copy every node
+    add_to_graph_inputs:bool
+        If True, will add copied graph's inputs to current graph's inputs 
     """
 
     import csdl_alpha as csdl
     current_graph = csdl.get_current_recorder().active_graph
-    # current_graph.rxgraph = graph_to_replace.rxgraph.copy()
-    current_graph.rxgraph = rx.digraph_union(current_graph.rxgraph, graph_to_replace.rxgraph)
+
+    if subgraph_nodes is None:
+        current_graph.rxgraph = rx.digraph_union(current_graph.rxgraph, graph_to_replace.rxgraph)
+    else:
+        sub_rxgraph = graph_to_replace.rxgraph.subgraph([graph_to_replace.node_table[n] for n in subgraph_nodes])
+        current_graph.rxgraph = rx.digraph_union(current_graph.rxgraph, sub_rxgraph)
 
     current_graph.update_node_table()
-
     from csdl_alpha.src.operations.copyvar import copyto
     for leaf_node in input_map:
         copyto(input_map[leaf_node], leaf_node)
 
     current_graph.update_node_table()
+
+    if add_to_graph_inputs:
+
+        if not hasattr(current_graph, 'inputs'):
+            raise ValueError("current_graph does not have inputs attribute")
+        if not hasattr(graph_to_replace, 'inputs'):
+            raise ValueError("graph_to_replace does not have inputs attribute")
+        
+        alreadied_inputs = set(current_graph.inputs)
+        for node in graph_to_replace.inputs:
+            if node not in alreadied_inputs:
+                current_graph.inputs.append(node)

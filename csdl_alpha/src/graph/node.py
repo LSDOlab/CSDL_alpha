@@ -38,7 +38,15 @@ class Node(object):
         set_origin = True
         info = inspect.getframeinfo(node_stack[-1])
         trace = []
-        if 'csdl_alpha/src' not in info.filename and 'csdl_alpha/utils' not in info.filename:
+
+        banned_paths = ['csdl_alpha/src', 'csdl_alpha/utils']
+        # exception_paths = ['csdl_alpha/src/operations/loops']
+        # exception_paths = ['test_']
+        
+        # banned_paths = ['/node', '/variable']
+        exception_paths=[]
+        
+        if not any(path in info.filename for path in banned_paths):
             trace = [f"{info.filename}:{info.lineno} in {info.function}"]
             self.origin_info = {"filename": info.filename, "lineno": info.lineno, "function": info.function}
             set_origin = False
@@ -46,7 +54,9 @@ class Node(object):
         while node_stack[-1].f_back is not None:
             node_stack.append(node_stack[-1].f_back)
             info = inspect.getframeinfo(node_stack[-1])
-            if 'csdl_alpha/src' in info.filename or 'csdl_alpha/utils' in info.filename:
+            if any(path in info.filename for path in exception_paths):
+                pass
+            elif any(path in info.filename for path in banned_paths):
                 continue
             if set_origin:
                 self.origin_info = {"filename": info.filename, "lineno": info.lineno, "function": info.function}
@@ -66,7 +76,23 @@ class Node(object):
                 print('\t', end = '')
             print(item)
 
-    # def __eq__(self, other):
-    #     return self is other
-    # def __hash__(self):
-    #     return id(self)
+    def info(self,) -> str:
+        """returns a string containing information about the node
+
+        Returns
+        -------
+        str
+            information about the node
+        """
+        if self.name is not None:
+            base_repr = f"{self.get_base_str()} ({self.name})"
+        else:
+            base_repr = f"{self.get_base_str()}"
+
+        if self.trace is None or len(self.trace) == 0:
+            return f"\'{base_repr}\'"
+        else:
+            return f"\'{base_repr} (from {self.trace[-1]})\'"
+            
+    def get_base_str(self) -> str:
+        return f"{self.__class__.__name__} {hex(id(self))}"

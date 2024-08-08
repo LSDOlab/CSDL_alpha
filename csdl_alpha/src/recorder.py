@@ -105,13 +105,17 @@ class Recorder:
         matched_names:list[Variable] = []
         for node in self.active_graph.node_table:
             if isinstance(node, Variable):
-                for node_name in node.names:
-                    if node_name == name:
+                if name == node.name:
                         matched_names.append(node)
+                else:
+                    for node_name in node.names:
+                        if node_name == name:
+                            matched_names.append(node)
 
         if len(matched_names) == 0:
             raise KeyError(f"No variable with name {name} found")
-        
+        if len(matched_names) > 1:
+            raise KeyError(f"Multiple variables with name {name} found")
         return matched_names
 
 
@@ -219,7 +223,8 @@ class Recorder:
 
         origin_counts = {}
 
-        for node in self.active_graph.node_table:
+        # for node in self.active_graph.node_table:
+        for node in self.node_graph_map:
             if isinstance(node, types):
                 if mode == 'function':
                     origin = f"{node.origin_info['function']} in {node.origin_info['filename']}"
@@ -435,13 +440,13 @@ class Recorder:
                 graph.add_node(node_from)
                 if not node_from in graph.inputs: graph.inputs.append(node_from)
             else:
-                raise ValueError(f"Node {node_from.name} not in graph")
+                raise ValueError(f"Node {node_from.info()} not in graph")
         if node_to not in graph.node_table:
             # if graph.add_missing_variables and isinstance(node_to, Variable):
             #     graph.add_node(node_to)
             # else:
             #     raise ValueError(f"Node {node_to} not in graph")
-            raise ValueError(f"Node {node_to.name} not in graph")
+            raise ValueError(f"Node {node_to.info()} not in graph")
         graph.add_edge(node_from, node_to)
 
     def _add_design_variable(self, variable, upper, lower, scaler):
@@ -542,18 +547,29 @@ class Recorder:
         def name_single_node(node):
             return f'{get_raw_node_string(node)}\n{node.name}'
 
-        def name_node(node):
+        def name_node(
+                node,
+                color:str = None,
+                additional_label:str = None,):
             from csdl_alpha.src.graph.variable import Variable
             attr_dict = {}
-            attr_dict['label'] = name_single_node(node)
+
+            label = name_single_node(node)
+            if additional_label is not None:
+                label += f'\n{additional_label}'
+            attr_dict['label'] = label
 
             if isinstance(node, Variable):
                 attr_dict['shape'] = 'ellipse'
+                if color is not None:
+                    attr_dict['fillcolor'] = color
+                    attr_dict['style'] = 'filled'
                 if node.value is not None:
-                    attr_dict['tooltip'] = f'{np.min(node.value):.3e}, {np.max(node.value):.3e}, {np.mean(node.value):.3e}, {node.shape}'
+                    attr_dict['tooltip'] = f'{node.info()}\n{np.min(node.value):.3e}, {np.max(node.value):.3e}, {np.mean(node.value):.3e}, {node.shape}'
                 else:
-                    attr_dict['tooltip'] = f'{node.value}'
+                    attr_dict['tooltip'] = f'{node.info()}\n{node.value}'
             else:
+                attr_dict['tooltip'] = f'{node.info()}'
                 attr_dict['shape'] = 'rectangle'
             return attr_dict
 
@@ -595,6 +611,31 @@ class Recorder:
                     body_output = build_unique_node_name(loop_var[2], parent_op)
                     edge = pydot.Edge(body_output, body_input, color="blue", style = "dashed")
                     dot.add_edge(edge)
+
+            from csdl_alpha.src.operations.loops.new_loop.new_loop import NewLoop
+            if isinstance(parent_op, NewLoop):
+                parent_op:NewLoop = parent_op
+                for feedback in parent_op.loop_builder.feedbacks._int_input_to_feedback.values():
+                    body_input = build_unique_node_name(feedback.internal_input, parent_op)
+                    body_output = build_unique_node_name(feedback.output, parent_op)
+                    edge = pydot.Edge(body_output, body_input, color="blue", style = "dashed")
+                    dot.add_edge(edge)
+                for input in parent_op.loop_builder.inputs:
+                    node_name = build_unique_node_name(input, parent_op)
+                    dot_node = pydot.Node(node_name, **name_node(input, color = '#e6f7ff'))
+                    cluster.add_node(dot_node)
+                for output in parent_op.loop_builder.outputs:
+                    node_name = build_unique_node_name(output, parent_op)
+                    dot_node = pydot.Node(node_name, **name_node(output, color = '#ffe6e6'))
+                    cluster.add_node(dot_node)
+                for accrued in parent_op.loop_builder.accrued:
+                    node_name = build_unique_node_name(accrued, parent_op)
+                    dot_node = pydot.Node(node_name, **name_node(accrued, color = '#ffe6e6', additional_label = '(accrued)'))
+                    cluster.add_node(dot_node)
+                for stack in parent_op.loop_builder.stacked:
+                    node_name = build_unique_node_name(stack, parent_op)
+                    dot_node = pydot.Node(node_name, **name_node(stack, color = '#ffe6e6', additional_label = '(stacked)'))
+                    cluster.add_node(dot_node)
 
             for child in insights['graph_tree'][g]:
                 if isinstance(child[1], Graph):

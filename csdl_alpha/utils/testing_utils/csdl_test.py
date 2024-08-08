@@ -172,6 +172,7 @@ class CSDLTest():
                 step_size,
                 verification_options=of_wrt_meta_data,
                 derivative_kwargs = deriv_kwargs,
+                raise_on_error=True,
             )
 
         else:

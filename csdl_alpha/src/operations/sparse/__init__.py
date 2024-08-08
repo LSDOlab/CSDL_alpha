@@ -1,1 +1,1 @@
-from .sparse_matvec import matvec
+from .sparse_matvec import matvec, matmat

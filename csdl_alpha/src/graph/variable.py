@@ -74,6 +74,8 @@ class Variable(Node):
 
         self.post_init()
 
+        self.inline_update_str:str = None
+
     @property
     def value(self):
         """The value of the variable used for inline evaluation"""
@@ -90,6 +92,18 @@ class Variable(Node):
         """
         self.set_value(value)
 
+    def print_on_update(self, string:str = None):
+        """Prints the variable value when the value is updated along with the string provided.
+
+        Parameters
+        ----------
+        string : str, optional
+            additional string to print along with the value, by default prints the name of the node
+        """
+        if string is None:
+            string = self.name
+        self.inline_update_str = str(string)
+
     def set_value(self, value: Union[np.ndarray, float, int]):
         """Sets the value of a variable.
 
@@ -99,7 +113,9 @@ class Variable(Node):
             Value for the variable
         """
         _, self._value = process_shape_and_value(self.shape, value)
-    
+        if self.inline_update_str:
+            print(f"{self.inline_update_str}: {self._value}")
+
     def post_init(self):
         pass
 

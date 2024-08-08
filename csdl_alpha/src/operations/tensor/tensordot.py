@@ -215,10 +215,84 @@ class TestTensorDot(csdl_tests.CSDLTest):
 
         self.run_tests(compare_values = compare_values,verify_derivatives=True)
 
+    def test_tensordot_complex(self,):
+        self.prep()
+
+        import csdl_alpha as csdl
+        import numpy as np
+        def arange_np(*shape, ones = False):
+            shape = tuple(shape)
+            if not ones:
+                val = np.arange(np.prod(shape)).reshape(shape)/np.prod(shape)*20.0+20.0
+            else:
+                val = np.ones(shape)*2.5
+            return csdl.Variable(value=val), val
+
+        grid_n = 4
+        grid_n1 = grid_n - 1
+        num_physical_dimensions = 1
+        quadrature_order = 2
+
+        grid_values, grid_values_np = arange_np(grid_n, grid_n, 3, ones=True)
+        grid_values = grid_values*0.25
+        # values, values_np = arange_np(grid_n1, grid_n1, num_physical_dimensions)
+        quadrature_values, quadrature_values_np = arange_np(grid_n1, grid_n1, quadrature_order**2, 1, ones=False)
+        quadrature_values = quadrature_values.T().reshape(quadrature_values.shape)
+        quadrature_coord_weights, quadrature_coord_weights_np = arange_np(quadrature_order**2,)
+
+        run_with_loop = False
+        if run_with_loop:
+            # compute the integral
+            values = csdl.Variable(value=np.zeros((grid_n-1, grid_n-1, num_physical_dimensions)))
+            for i in csdl.frange(grid_n-1):
+                for j in csdl.frange(grid_n-1):
+                    for k in csdl.frange(quadrature_order**2):
+                        values = values.set(csdl.slice[i,j], values[i,j] + quadrature_values[i,j,k]*quadrature_coord_weights[k])
+
+            # compute areas of the quadrilaterals
+            output = csdl.Variable(value=np.zeros((grid_n-1, grid_n-1)))
+            for i in csdl.frange(grid_n-1):
+                for j in csdl.frange(grid_n-1):
+                    area_1 = csdl.norm(csdl.cross(grid_values[i+1,j]-grid_values[i,j], grid_values[i,j+1]-grid_values[i,j]) + 1e-2)/2
+                    area_2 = csdl.norm(csdl.cross(grid_values[i,j+1]-grid_values[i+1,j+1], grid_values[i+1,j]-grid_values[i+1,j+1]) + 1e-2)/2
+                    output = output.set(csdl.slice[i,j], (area_1+area_2)*values[i,j])
+        else:
+            values = csdl.tensordot(quadrature_values, quadrature_coord_weights, axes = ([2],[0]))
+            area_1 = csdl.norm(csdl.cross(grid_values[1:,:-1]-grid_values[:-1,:-1], grid_values[:-1,1:]-grid_values[:-1,:-1], axis=2) + 1e-2, axes=(2,))/2
+            area_2 = csdl.norm(csdl.cross(grid_values[:-1,1:]-grid_values[1:,1:], grid_values[1:,:-1]-grid_values[1:,1:], axis=2) + 1e-2, axes=(2,))/2
+            output = (area_1+area_2)*values.reshape(area_1.shape)
+                
+        run_timing = False
+        if not run_timing:
+            out_average = csdl.average(output)
+            print(out_average.value)
+            compare_values = []
+            compare_values += [csdl_tests.TestingPair(out_average, np.ones((1,))*56.65516808, decimal=7)]
+            self.run_tests(compare_values = compare_values, verify_derivatives=True, step_size=1e-8)
+        else:
+            ins = [grid_values, quadrature_values, quadrature_coord_weights]
+            rec = csdl.get_current_recorder()
+            jax_interface = csdl.jax.create_jax_interface(
+                inputs = ins,
+                outputs = [out_average] + [csdl.derivative(out_average,ins, as_block=True)]
+            )
+            import time
+            start = time.time()
+            outputs = jax_interface({input:input.value for input in ins})
+            end1 = time.time()
+            outputs = jax_interface({input:input.value for input in ins})
+            end2 = time.time()
+            print(np.linalg.norm(outputs[out_average]))
+
+            print('Time taken for first run:', end1-start)
+            print('Time taken for second run:', end2-end1)
+
     def test_docstring(self):
         self.docstest(tensordot)
 
 if __name__ == '__main__':
     test = TestTensorDot()
+    test.overwrite_backend = 'jax'
     test.test_functionality()
     test.test_docstring()
+    test.test_tensordot_complex()

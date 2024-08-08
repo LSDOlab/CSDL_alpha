@@ -66,6 +66,19 @@ class VarTangents():
         """
         self.tangent_dictionary:dict[Variable: Variable] = {}
 
+        self.ofs = []
+        self.wrts = []
+
+    def add_of(self, of:Variable):
+        """Doesn't do anything practical, just for fun.
+        """
+        self.ofs.append(of)
+
+    def add_wrt(self, wrt:Variable):
+        """Doesn't do anything practical, just for fun.
+        """
+        self.wrts.append(wrt)
+
     def accumulate(self, variable:Variable, tangent:Variable)->None:
         """Accumulate a tangent for a variable.
 
@@ -83,7 +96,7 @@ class VarTangents():
             else:
                 raise TypeError(f"Expected tangent to be a Variable, but got {type(tangent)}.")
         else:
-            raise KeyError(f"Variable {variable} not found in tangent dictionary.")
+            raise KeyError(f"Variable {variable.info()} not found in tangent dictionary.")
 
         self.tangent_dictionary[variable].add_name(f'tangent_{variable.name}')
 

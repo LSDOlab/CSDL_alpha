@@ -64,6 +64,8 @@ class GaussSeidel(FixedPoint):
         if state_update is not None:
             if not isinstance(state_update, Variable):
                 raise ValueError("State update must be a Variable")
+            elif state_update.shape != state.shape:
+                raise ValueError(f"State update shape {state_update.shape} does not match state shape {state.shape}")
             self.add_intersection_target(state_update)
 
         self.add_state_metadata(state, 'state_update', state_update, is_input=False)

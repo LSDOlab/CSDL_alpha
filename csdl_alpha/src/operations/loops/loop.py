@@ -54,7 +54,6 @@ class Loop(SubgraphOperation):
         self.vals = vals # list of list of values corresponding to iter_var
         self.iter_vars = iter_vars # list of iteration variables
         self.loop_vars = loop_vars # (input node in graph, input for first iter, input for subsiquent iters)
-        self.has_reset = False
         self.loop_var_history = {loop_var:[] for loop_var in loop_vars}
         self.length = len(self.vals[0])
         self.parent = parent
@@ -108,9 +107,6 @@ class Loop(SubgraphOperation):
                     old_var_values[intermediate_var] = intermediate_var.value
 
         import numpy as np
-        # clear loop var history
-        for hist in self.loop_var_history.values():
-            hist.clear()
 
         # If inline stack is True, we do not allocate memory for the stacked feedback variables
         if not self.inline_lazy_stack:
@@ -124,7 +120,6 @@ class Loop(SubgraphOperation):
             for loop_var in self.loop_vars:
                 if i == 0:
                     loop_var[0].value = loop_var[1].value
-                self.loop_var_history[loop_var].append(loop_var[0].value)
             for iter_var, val in zip(self.iter_vars, self.vals):
                 iter_var.set_value(val[i])
 
@@ -185,6 +180,7 @@ class Loop(SubgraphOperation):
 
             graph_outputs = graph_function(*fn_inputs)
             # graph outputs is carry
+            # print('len carry', len(carry), [v.size for v in carry])
 
             return graph_outputs, feedback_outputs
         
@@ -545,6 +541,7 @@ class frange():
             *,
             vals:Union[list[int],tuple[list[int]]] = None,
             inline_lazy_stack = False,
+            stack_all:bool = False,
         ):
         """Initialize the Loop object.
 
@@ -597,6 +594,7 @@ class frange():
 
         self.curr_index = 0
         self.max_index = 2
+        self.stack_all = stack_all
 
         # enter new graph
         # TODO: Enter new subgraph only when the actual iteration begins
@@ -730,27 +728,65 @@ class frange():
             if isinstance(loop_var[1], Constant):
                 external_inputs.append(loop_var[1])
                 self._recorder.active_graph.add_node(loop_var[1])
+                
+        # ============================OLD Loop, deprecate later============================:
+        # for loop_var in loop_vars:
+        #     # stack_output = Variable(name = f'stack_out_{loop_var[1].name}', shape=(len(self.vals[0]),) + loop_var[0].shape, value=0)
 
-        for loop_var in loop_vars:
+        # for loop_var in loop_vars:
             # stack_output = Variable(name = f'stack_out_{loop_var[1].name}', shape=(len(self.vals[0]),) + loop_var[0].shape, value=0)
 
-            inline_lazy_stack = self.inline_lazy_stack
-            if not self._recorder.inline:
-                inline_lazy_stack = True
+        #     inline_lazy_stack = self.inline_lazy_stack
+        #     if not self._recorder.inline:
+        #         inline_lazy_stack = True
 
-            stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]), inline_lazy_stack)
-            self.iter2_outputs.append(stack_output)
+        #     stack_output = build_stacked_variable(loop_var[0], len(self.vals[0]), inline_lazy_stack)
+        #     self.iter2_outputs.append(stack_output)
             
-        # add the loop operation to the graph
-        #NOTE: this only exposes outputs of operations, not variables created within the loop
-        self.op = Loop(
-            external_inputs, 
-            self.iter2_outputs, 
-            self._graph, 
-            self.vals, 
-            self.iteration_variables, 
-            loop_vars,
-            inline_lazy_stack = self.inline_lazy_stack,
+        # # add the loop operation to the graph
+        # # NOTE: this only exposes outputs of operations, not variables created within the loop
+        # self.op = Loop(
+        #     external_inputs, 
+        #     self.iter2_outputs, 
+        #     self._graph, 
+        #     self.vals, 
+        #     self.iteration_variables, 
+        #     loop_vars,
+        #     inline_lazy_stack = self.inline_lazy_stack,
+        # )
+        # return
+        # ============================OLD Loop, deprecate later============================:
+
+        # REMOVE LATER
+        for loop_var in loop_vars:
+            self.iter2_outputs.append('IF YOU SEE THIS: ERROR')
+
+        # New Loop
+        graph_inputs = self._graph.inputs
+        new_inputs = []
+        for input in graph_inputs:
+            if input not in self._graph.node_table:
+                continue
+            new_inputs.append(input)
+        self._graph.inputs = new_inputs
+
+        from csdl_alpha.src.operations.loops.new_loop.loop_builder import LoopBuilder
+        lb = LoopBuilder(
+            loop_graph=self._graph,
+            iter_vars= {iv:val for iv,val in zip(self.iteration_variables, self.vals)},
+        )
+        for loop_var in loop_vars:
+            lb.build_feedback(
+                int_input_var = loop_var[0],
+                ext_input_var = loop_var[1],
+                output = loop_var[2],
+            )
+        lb.lock()
+        for output in self.iter2_outputs[:-len(loop_vars)]:
+            lb.add_output(output)
+        self.op = lb.finalize(
+            add_all_outputs=False,
+            stack_all = self.stack_all,
         )
 
     def _check_ops_and_shapes(self, ops, shapes):
