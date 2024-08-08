@@ -301,12 +301,20 @@ class JaxSimulator(SimulatorBase):
             self,
             use_finite_difference:bool = False,
             finite_difference_step_size:float = 1e-6,
-        ):
+        )->dict[str,Variable]:
         if self.save_on_update:
             self.save_external(self.filename, 'iteration_'+str(self.update_counter))
             self.update_counter += 1
 
         self.check_if_optimization()
+        
+        # Initialize return dict
+        return_dict = {
+            "f": None,
+            "c": None,
+            "df": None,
+            "dc": None,
+        }
 
         if not use_finite_difference:
             if self.opt_derivs_func is None:
@@ -317,6 +325,8 @@ class JaxSimulator(SimulatorBase):
                 print(f"compiling 'compute_optimization_derivatives' function ... ({len(self.recorder.node_graph_map)} nodes)")
 
                 opt_derivs = []
+                opt_derivs += list(self.recorder.objectives.keys())
+                opt_derivs += list(self.recorder.constraints.keys())
                 opt_derivs += [self.objective_gradient] if self.objective_gradient is not None else []
                 opt_derivs += [self.constraint_jacobian] if self.constraint_jacobian is not None else []
 
@@ -330,24 +340,39 @@ class JaxSimulator(SimulatorBase):
                 )
 
             outputs = self.opt_derivs_func({dv:dv.value for dv in self.recorder.design_variables})
-            if self.objective_gradient is None:
-                return None, outputs[self.constraint_jacobian]
-            elif self.constraint_jacobian is None:
-                return outputs[self.objective_gradient], None
-            else:
-                return outputs[self.objective_gradient], outputs[self.constraint_jacobian]
+            for output in outputs:
+                output.set_value(outputs[output])
 
+            # fill out return_dict
+            if self.objective_gradient is not None:
+                return_dict["df"] = outputs[self.objective_gradient]
+            if self.constraint_jacobian is not None:
+                return_dict["dc"] = outputs[self.constraint_jacobian]
+            
+            # get optimization values
+            f,c = self._process_optimization_values()
+            return_dict["f"] = f
+            return_dict["c"] = c
         else:
             from csdl_alpha.src.operations.derivatives.derivative_utils import finite_difference
-            if self.run_forward_func is None:
-                self.run_forward()
+            # fwd evaluation
+            f,c = self.run_forward()
+            
+            # derivatives
             outputs = finite_difference(
                 ofs = list(self.recorder.constraints.keys()) + list(self.recorder.objectives.keys()),
                 wrts = list(self.recorder.design_variables.keys()),
                 step_size = finite_difference_step_size,
                 forward_evaluation=self.run_forward_func)
+            df, dc = self._assemble_jacs(outputs)
 
-            return self._assemble_jacs(outputs)
+            # fill out return_dict
+            return_dict["f"] = f
+            return_dict["c"] = c
+            return_dict["df"] = df
+            return_dict["dc"] = dc
+
+        return return_dict
         
     def save_external(self, filename:str, groupname:str):
         from csdl_alpha.src.data import save_h5py_variables

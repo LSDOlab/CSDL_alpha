@@ -68,7 +68,8 @@ def test_simulator1():
         assert o is None
         np.testing.assert_almost_equal(c, np.array([5.0, 6.0]))
 
-        g, j = sim.compute_optimization_derivatives()
+        deriv_out = sim.compute_optimization_derivatives()
+        g, j = deriv_out['df'], deriv_out['dc']
         assert g is None
         np.testing.assert_almost_equal(j, np.array([[1.0, 1.0],[3.0, 2.0]]))
 
@@ -78,11 +79,13 @@ def test_simulator1():
         assert o is None
         np.testing.assert_almost_equal(c, np.array([9.0, 20.0]))
         
-        g, j = sim.compute_optimization_derivatives()
+        deriv_out = sim.compute_optimization_derivatives()
+        g, j = deriv_out['df'], deriv_out['dc']
         assert g is None
         np.testing.assert_almost_equal(j, np.array([[1.0, 1.0],[5.0, 4.0]]))
 
-        g, j = sim.compute_optimization_derivatives(use_finite_difference = True)
+        deriv_out = sim.compute_optimization_derivatives(use_finite_difference = True)
+        g, j = deriv_out['df'], deriv_out['dc']
         assert g is None
         np.testing.assert_almost_equal(j, np.array([[1.0, 1.0],[5.0, 4.0]]))
 
@@ -112,10 +115,14 @@ def test_simulator2():
 
         # ITER 1:
         o, c = sim.run_forward()
+        outs = sim.compute_optimization_functions()
         np.testing.assert_almost_equal(c, np.array([5.0, 5.0, 5.0, 5.0]))
         np.testing.assert_almost_equal(o, np.array([6.0]))
-
-        g, j = sim.compute_optimization_derivatives()
+        np.testing.assert_almost_equal(c, outs['c'])
+        np.testing.assert_almost_equal(o, outs['f'])
+        
+        deriv_out = sim.compute_optimization_derivatives()
+        g, j = deriv_out['df'], deriv_out['dc']
         np.testing.assert_almost_equal(g, np.hstack((3*np.eye(4), 2*np.eye(4)))[0].reshape(1,-1))
         np.testing.assert_almost_equal(j, np.hstack((np.eye(4), np.eye(4))))
 
@@ -128,17 +135,19 @@ def test_simulator2():
         np.testing.assert_almost_equal(c, (new_x0.flatten()+new_x1.flatten()))
         np.testing.assert_almost_equal(o, (new_x0.flatten()*new_x1.flatten())[0])
 
-        g, j = sim.compute_optimization_derivatives()
+        deriv_out = sim.compute_optimization_derivatives()
+        g, j = deriv_out['df'], deriv_out['dc']
         np.testing.assert_almost_equal(g, np.hstack((np.diagflat(new_x1), np.diagflat(new_x0)))[0].reshape(1,-1))
         np.testing.assert_almost_equal(j, np.hstack((np.eye(4), np.eye(4))))
 
-        g, j = sim.compute_optimization_derivatives(use_finite_difference = True)
+        deriv_out = sim.compute_optimization_derivatives(use_finite_difference = True)
+        g, j = deriv_out['df'], deriv_out['dc']
         np.testing.assert_almost_equal(g, np.hstack((np.diagflat(new_x1), np.diagflat(new_x0)))[0].reshape(1,-1))
         np.testing.assert_almost_equal(j, np.hstack((np.eye(4), np.eye(4))))
 
         sim.check_optimization_derivatives(raise_on_error = True)
 
 if __name__ == "__main__":
-    # test_simulator_base_errors()
-    # test_simulator1()
+    test_simulator_base_errors()
+    test_simulator1()
     test_simulator2()

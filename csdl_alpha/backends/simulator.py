@@ -55,11 +55,15 @@ class SimulatorBase():
     def run(self):
         raise NotImplementedError('run method not implemented')
     
-    def run_forward(self):
+    def run_forward(self)->tuple[np.ndarray]:
         raise NotImplementedError('run_forward method not implemented')
 
-    def compute_optimization_derivatives(self):
+    def compute_optimization_derivatives(self)->dict[str,np.ndarray]:
         raise NotImplementedError('compute_optimization_derivatives method not implemented')
+    
+    def compute_optimization_functions(self)->dict[str,np.ndarray]:
+        f,c = self.run_forward()
+        return {"f": f, "c": c}
 
     def update_design_variables(self, dv_vector:np.ndarray, save = False)->None:
         self.check_if_optimization()
@@ -75,26 +79,6 @@ class SimulatorBase():
         if not self.initialized_totals:
             self.initialized_totals = True
             import csdl_alpha as csdl
-
-
-            
-            # if len(self.recorder.constraints) > 0:
-            #     self.constraint_jacobian = csdl.derivative(
-            #         list(self.recorder.constraints.keys()),
-            #         list(self.recorder.design_variables.keys()),
-            #         as_block=True,
-            #     )
-            # else:
-            #     self.constraint_jacobian = None
-
-            # if len(self.recorder.objectives) > 0:
-            #     self.objective_gradient = csdl.derivative(
-            #         list(self.recorder.objectives.keys()),
-            #         list(self.recorder.design_variables.keys()),
-            #         as_block=True,
-            #     )
-            # else:
-            #     self.objective_gradient = None
 
             derivative_kwargs = derivative_kwargs.copy()
             derivative_kwargs['as_block'] = True
@@ -178,7 +162,7 @@ class SimulatorBase():
 
         Returns
         -------
-        tuple[np.ndarray]
+        tuple[np.ndarray]: df, dc
         """
         num_dvs = self.opt_metadata['d'][0].size
 
@@ -249,13 +233,16 @@ class SimulatorBase():
         """
         from csdl_alpha.src.operations.derivatives.derivative_utils import verify_derivative_values
 
-        analytical_derivs = self._unassemble_jacs(*self.compute_optimization_derivatives())
-        finite_difference_derivs = self._unassemble_jacs(
-            *self.compute_optimization_derivatives(
-                use_finite_difference=True,
-                finite_difference_step_size=step_size,
-            ),
+        # Analytical:
+        ads = self.compute_optimization_derivatives()
+        analytical_derivs = self._unassemble_jacs(ads['df'], ads['dc'])
+        
+        # Finite difference:
+        fds = self.compute_optimization_derivatives(
+            use_finite_difference=True,
+            finite_difference_step_size=step_size,
         )
+        finite_difference_derivs = self._unassemble_jacs(fds['df'], fds['dc'])
 
         verify_dict = self._build_check_totals_verification_dict(
             list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys()),
@@ -296,9 +283,17 @@ class PySimulator(SimulatorBase):
             self,
             use_finite_difference:bool = False,
             finite_difference_step_size:float = 1e-6,
-        ):
+        )->dict[str,Variable]:
         
         self.check_if_optimization()
+
+        # Initialize return dict
+        return_dict = {
+            "f": None,
+            "c": None,
+            "df": None,
+            "dc": None,
+        }
 
         if not use_finite_difference:
             if self.initialize_totals is False:
@@ -313,12 +308,17 @@ class PySimulator(SimulatorBase):
             else:
                 self.recorder.execute()
             
-            if self.objective_gradient is None:
-                return None, self.constraint_jacobian.value
-            elif self.constraint_jacobian is None:
-                return self.objective_gradient.value, None
-            else:
-                return self.objective_gradient.value, self.constraint_jacobian.value
+            # fill out return_dict
+            if self.objective_gradient is not None:
+                return_dict["df"] = self.objective_gradient.value
+            if self.constraint_jacobian is not None:
+                return_dict["dc"] = self.constraint_jacobian.value
+            
+            # get optimization values
+            f,c = self._process_optimization_values()
+            return_dict["f"] = f
+            return_dict["c"] = c
+
         else:
             from csdl_alpha.src.operations.derivatives.derivative_utils import finite_difference
             
@@ -335,8 +335,16 @@ class PySimulator(SimulatorBase):
                 step_size = finite_difference_step_size,
                 forward_evaluation=forward_evaluation,
             )
-            return self._assemble_jacs(outputs)
+            f, c = self._process_optimization_values()
+            df, dc = self._assemble_jacs(outputs)
 
+            # fill out return_dict
+            return_dict["f"] = f
+            return_dict["c"] = c
+            return_dict["df"] = df
+            return_dict["dc"] = dc
+
+        return return_dict
 
     def __getitem__(self, key:Variable):
         if not isinstance(key, Variable):

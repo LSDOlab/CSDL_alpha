@@ -240,7 +240,8 @@ def test_jsimulator_optimization():
 
     # Check initial values
     jax_sim.run_forward()
-    old_grad, _ = jax_sim.compute_optimization_derivatives()
+    deriv_out = jax_sim.compute_optimization_derivatives()
+    old_grad = deriv_out['df']
     jax_sim.compute_totals()
     jax_sim.check_totals(raise_on_error=True)
     output_vals = fwd_func(*[input.value for input in all_inputs])
@@ -256,7 +257,8 @@ def test_jsimulator_optimization():
 
     # Check new values of optimization only. Additional outputs should not be updated
     jax_sim.run_forward()
-    new_grad, _ = jax_sim.compute_optimization_derivatives()
+    deriv_out = jax_sim.compute_optimization_derivatives()
+    new_grad = deriv_out['df']
     assert not np.allclose(old_grad, new_grad)
 
     output_vals = fwd_func(*([new_val for new_val in new_vals]+[input.value for input in all_inputs[len(inputs):]]))
@@ -338,7 +340,8 @@ def test_jsimulator_optimization_finite_difference():
 
     # Check initial values
     jax_sim.run_forward()
-    old_grad, old_jac = jax_sim.compute_optimization_derivatives(use_finite_difference=True)
+    deriv_out = jax_sim.compute_optimization_derivatives(use_finite_difference=True)
+    old_grad = deriv_out['df']
     jax_sim.compute_totals()
     jax_sim.check_totals(raise_on_error=True)
     output_vals = fwd_func(*[input.value for input in all_inputs])
@@ -354,9 +357,13 @@ def test_jsimulator_optimization_finite_difference():
 
     # Check new values of optimization only. Additional outputs should not be updated
     jax_sim.run_forward()
-    new_grad, new_jac = jax_sim.compute_optimization_derivatives(use_finite_difference=True)
+    deriv_out = jax_sim.compute_optimization_derivatives(use_finite_difference=True)
+    new_grad = deriv_out['df']
+    new_jac = deriv_out['dc']
     assert not np.allclose(old_grad, new_grad)
-    new_grad_a, new_jac_a = jax_sim.compute_optimization_derivatives(use_finite_difference=False)
+    deriv_out = jax_sim.compute_optimization_derivatives(use_finite_difference=False)
+    new_grad_a = deriv_out['df']
+    new_jac_a = deriv_out['dc']
     assert np.allclose(new_grad, new_grad_a)
     assert np.allclose(new_jac, new_jac_a)
 
@@ -436,8 +443,8 @@ def test_save_hd5f(tmp_path):
     jaxsim.save_external('test', 1)
 
 if __name__ == '__main__':
-    # test_jsimulator_errors()
-    # test_jsimulator()
-    # test_jsimulator_constants()
-    # test_jsimulator_optimization()
+    test_jsimulator_errors()
+    test_jsimulator()
+    test_jsimulator_constants()
+    test_jsimulator_optimization()
     test_jsimulator_optimization_finite_difference()
