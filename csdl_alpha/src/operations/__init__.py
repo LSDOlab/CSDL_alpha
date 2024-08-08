@@ -47,6 +47,7 @@ from .tensor.expand import expand
 from .tensor.reorder_axes import reorder_axes
 from .tensor.einsum import einsum
 from .tensor.vstack import vstack
+from .tensor.concatenate import concatenate
 
 # Sparse operations are in sparse submodule
 from . import sparse
