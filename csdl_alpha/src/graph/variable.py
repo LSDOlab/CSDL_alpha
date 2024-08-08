@@ -406,7 +406,7 @@ class Variable(Node):
         from csdl_alpha.src.operations.linalg.matmat import matmat
         return matmat(other, self)
 
-    def reshape(self, shape:tuple[int])->'Variable':
+    def reshape(self, *shape:tuple[int])->'Variable':
         """Returns a reshaped version of the variable.
 
         Parameters
@@ -428,7 +428,16 @@ class Variable(Node):
         >>> x.reshape((2,2)).value # same thing as above
         array([[1., 2.],
                [3., 4.]])
+        >>> x.reshape(2,2).value # same thing as above
+        array([[1., 2.],
+               [3., 4.]])
+        >>> x.reshape(4).value # optionally pass in integers
+        array([1., 2., 3., 4.])
         """
+        if len(shape) == 1 and isinstance(shape[0], tuple):
+            shape = shape[0]
+        else:
+            shape = tuple(shape)
         from csdl_alpha.src.operations.tensor.reshape import reshape
         return reshape(self, shape)
 

@@ -183,7 +183,7 @@ class LoopBuilder:
 
     def finalize(
             self,
-            add_all_outputs:bool = True,
+            add_all_outputs:bool = False,
             name:str = None,
             parent:Graph = None,
             stack_all:bool = False,

@@ -40,7 +40,7 @@ class BroadcastMult(Operation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[z].inner(y))
         if cotangents.check(y):
-            cotangents.accumulate(y, cotangents[z]*x)
+            cotangents.accumulate(y, x*cotangents[z])
 
 def mult(x,y):
     """Elementwise multiplication of two tensors x and y.
@@ -146,11 +146,19 @@ class TestMult(csdl_tests.CSDLTest):
         s8 = 3.0*z
         compare_values += [csdl_tests.TestingPair(s8, t2, tag = 's8')]
 
+        v11 = csdl.Variable(value = np.array([[2.0]]))
+        v1 = csdl.Variable(value = np.array([3.0]))
+        s9 = v1*v11
+        compare_values += [csdl_tests.TestingPair(s9, np.array([[6.0]]), tag = 's9')]
+        s9 = v11*v1
+        compare_values += [csdl_tests.TestingPair(s9, np.array([6.0]), tag = 's9')]
+
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_docstring(self):
         self.docstest(mult)
 if __name__ == '__main__':
     test = TestMult()
+    test.overwrite_backend = 'inline'
     test.test_functionality()
     test.test_docstring()
