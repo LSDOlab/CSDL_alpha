@@ -39,7 +39,7 @@ class VStack(Operation):
                     cotangents.accumulate(input, stack_out[i:i+input.shape[0]])
                     i += input.shape[0]
             else:
-                if len(inputs.shape) == 1:
+                if len(input.shape) == 1:
                     cotangents[input] = stack_out[i]
                     i += 1
                 else:
