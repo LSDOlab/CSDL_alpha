@@ -49,7 +49,11 @@
     csdl_alpha.einsum
     csdl_alpha.bessel
     csdl_alpha.sparse.matvec
+    csdl_alpha.sparse.matmat
     csdl_alpha.derivative
+    csdl_alpha.vstack
+    csdl_alpha.concatenate
+    csdl_alpha.linear_combination
 
 ```
 
@@ -147,6 +151,14 @@
 
 .. autofunction:: csdl_alpha.sparse.matvec
 
+.. autofunction:: csdl_alpha.sparse.matmat
+
 .. autofunction:: csdl_alpha.derivative
+
+.. autofunction:: csdl_alpha.vstack
+
+.. autofunction:: csdl_alpha.concatenate
+
+.. autofunction:: csdl_alpha.linear_combination
 
 ```
