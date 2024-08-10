@@ -1,22 +1,10 @@
-from csdl_alpha.backends.simulator import SimulatorBase, Recorder
+from csdl_alpha.backends.simulator import SimulatorBase, Recorder, timer
 from csdl_alpha.backends.jax.graph_to_jax import create_jax_interface
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import get_type_string, listify_variables
 import numpy as np
 
 from typing import Optional, Union, Callable
-
-# For debugging:
-def timer(func):
-    import time
-    def wrapper(*args, **kwargs):
-        print(f"START {func.__name__}")
-        s = time.time()
-        result = func(*args, **kwargs)
-        end = time.time()
-        print(f"END {func.__name__} took {end-s} seconds")
-        return result
-    return wrapper
 
 class VarManager():
     def __init__(
@@ -151,6 +139,7 @@ class JaxSimulator(SimulatorBase):
         self.derivatives_kwargs:dict[str,any] = derivatives_kwargs
         self.derivatives_kwargs['as_block'] = False
 
+    # @timer # For debugging
     def run(self)->dict[Variable, np.ndarray]:
         """
         Computes all constraints, objectives, additional outputs and saved outputs
@@ -193,6 +182,7 @@ class JaxSimulator(SimulatorBase):
             self.run_forward_func = None
             self.opt_derivs_func = None
 
+    # @timer # For debugging
     def compute_totals(
             self,
             use_finite_difference:bool = False,

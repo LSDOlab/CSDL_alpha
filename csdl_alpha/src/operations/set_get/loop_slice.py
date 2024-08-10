@@ -168,7 +168,10 @@ class VarSlice(Slice):
             # arg_index is the index of the CSDL variable
             # arg_value is the value of that CSDL variable
             if isinstance(arg_value, np.ndarray):
-                arg_int = int(arg_value[0]) # value that has been cast to an integer to replace slice variable
+                if arg_value.shape == ():
+                    arg_int = int(arg_value)
+                else:
+                    arg_int = int(arg_value[0]) # value that has been cast to an integer to replace slice variable
             else:
                 arg_int = int(arg_value) # value that has been cast to an integer to replace slice variable
 

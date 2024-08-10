@@ -39,9 +39,20 @@ class GetVarIndex(Operation):
         x_indexed = slice_args_and_outputs[-1]
         slice_args = slice_args_and_outputs[:-1]
         if cotangents.check(x):
-            new_var = csdl.Variable(value = np.zeros(x.shape))
-            x_cot =  new_var.set(self.slice, cotangents[x_indexed])
-            cotangents.accumulate(x, x_cot)
+            # Old
+            # new_var = csdl.Variable(value = np.zeros(x.shape))
+            # x_cot =  new_var.set(self.slice, cotangents[x_indexed])
+            # cotangents.accumulate(x, x_cot)
+
+            # New:
+            if cotangents[x] is None:
+                new_var = csdl.Variable(value = np.zeros(x.shape))
+                x_cot =  new_var.set(self.slice, cotangents[x_indexed])
+                cotangents.accumulate(x, x_cot)
+            else:
+                new_var = cotangents[x]
+                x_cot =  new_var.set(self.slice, new_var[self.slice] + cotangents[x_indexed])
+                cotangents.accumulate(x, x_cot, replace = True)
 
 def get_index(x:Variable, slices: Slice, shape = None):
     """
@@ -235,6 +246,9 @@ class TestGet(csdl_tests.CSDLTest):
         x6 = x[0:2, [2, 1], 3]
         compare_values += [csdl_tests.TestingPair(x6, x_val[0:2, [2,1], 3])]
 
+        x7 = x[0:2, [2, 1], 3] + x[0:2, [2, 1], 4] + x[1:3, [2, 1], 3]
+        compare_values += [csdl_tests.TestingPair(x7, x_val[0:2, [2,1], 3]+x_val[0:2, [2,1], 4]+x_val[1:3, [2, 1], 3])]
+
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
 
@@ -242,5 +256,5 @@ if __name__ == '__main__':
     test = TestGet()
     test.overwrite_backend = 'jax'
     # test.overwrite_backend = 'inline'
-    test.test_functionality()
+    # test.test_functionality()
     test.test_deriv()

@@ -79,7 +79,7 @@ class VarTangents():
         """
         self.wrts.append(wrt)
 
-    def accumulate(self, variable:Variable, tangent:Variable)->None:
+    def accumulate(self, variable:Variable, tangent:Variable, replace:bool = False)->None:
         """Accumulate a tangent for a variable.
 
         Args:
@@ -92,7 +92,10 @@ class VarTangents():
             if self.tangent_dictionary[variable] is None:
                 self.tangent_dictionary[variable] = tangent
             elif isinstance(tangent, Variable):
-                self.tangent_dictionary[variable] = self.tangent_dictionary[variable] + tangent
+                if not replace:
+                    self.tangent_dictionary[variable] = self.tangent_dictionary[variable] + tangent
+                else:
+                    self.tangent_dictionary[variable] = tangent
             else:
                 raise TypeError(f"Expected tangent to be a Variable, but got {type(tangent)}.")
         else:

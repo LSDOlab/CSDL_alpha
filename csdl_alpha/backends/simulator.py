@@ -5,6 +5,18 @@ from csdl_alpha.utils.inputs import get_type_string, listify_variables
 from typing import Optional, Union, Callable
 import numpy as np
 
+# For debugging:
+def timer(func):
+    import time
+    def wrapper(*args, **kwargs):
+        print(f"START {func.__name__}")
+        s = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"END {func.__name__} took {end-s} seconds")
+        return result
+    return wrapper
+
 class SimulatorBase():
     def __init__(
             self, 
@@ -271,14 +283,17 @@ class PySimulator(SimulatorBase):
         self.derivative_hashes = {}
         self.derivative_kwargs = derivatives_kwargs if derivatives_kwargs is not None else {}
 
+    # @timer
     def run(self):
         self.recorder.execute()
 
+    # @timer
     def run_forward(self)->tuple[np.ndarray,np.ndarray]:
         self.check_if_optimization()
         self.recorder.execute()
         return self._process_optimization_values()
 
+    # @timer
     def compute_optimization_derivatives(
             self,
             use_finite_difference:bool = False,
@@ -359,6 +374,7 @@ class PySimulator(SimulatorBase):
 
         key.value = value
 
+    # @timer
     def compute_totals(
             self,
             ofs:list[Variable],
