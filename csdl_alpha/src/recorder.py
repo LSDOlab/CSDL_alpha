@@ -285,10 +285,7 @@ class Recorder:
         for i, (variable, size) in enumerate(variable_sizes):
             if i >= n:
                 break
-            if variable.origin_info is not None:
-                print(f'{variable} : {variable.shape} at {variable.origin_info["function"]} in {variable.origin_info["filename"]}:{variable.origin_info["lineno"]}')
-            else:
-                print(f'{variable} : {variable.shape}')
+            print(f'{variable.info()} : {variable.shape}')
 
     def print_graph_structure(self):
         """

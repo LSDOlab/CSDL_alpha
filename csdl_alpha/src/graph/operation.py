@@ -1,6 +1,7 @@
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.node import Node
 from csdl_alpha.utils.inputs import variablize
+import numpy as np
 
 class Operation(Node):
     """
@@ -152,7 +153,7 @@ class Operation(Node):
         """
         pass
 
-    def compute_inline(self, *args):
+    def compute_inline(self, *args:tuple[np.ndarray])->tuple[np.ndarray]:
         raise NotImplementedError(f'not implemented for {self.__class__.__name__}') 
 
     def compute_jax(self, *args):

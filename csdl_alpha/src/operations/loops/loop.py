@@ -760,7 +760,6 @@ class frange():
         # REMOVE LATER
         for loop_var in loop_vars:
             self.iter2_outputs.append('IF YOU SEE THIS: ERROR')
-
         # New Loop
         graph_inputs = self._graph.inputs
         new_inputs = []
@@ -782,7 +781,12 @@ class frange():
                 output = loop_var[2],
             )
         lb.lock()
-        for output in self.iter2_outputs[:-len(loop_vars)]:
+
+        if len(loop_vars) == 0:
+            final_iter_outputs = self.iter2_outputs
+        else:
+            final_iter_outputs = self.iter2_outputs[:-len(loop_vars)]
+        for output in final_iter_outputs:
             lb.add_output(output)
         self.op = lb.finalize(
             add_all_outputs=False,

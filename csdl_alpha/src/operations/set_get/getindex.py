@@ -69,7 +69,7 @@ def get_index(x:Variable, slices: Slice, shape = None):
         #     from csdl_alpha.utils.error_utils.error_utils import check_if_valid_shape
         #     check_if_valid_shape(shape)
 
-        shape = np.zeros(x.shape)[slices.evaluate_zeros()].shape
+        shape = np.zeros(x.shape, dtype = bool)[slices.evaluate_zeros()].shape
         if shape == ():
             shape = (1,)
 

@@ -139,6 +139,27 @@ class Testfrange(csdl_tests.CSDLTest):
         )
 
 
+    def test_no_feedback(self):
+        # added after bug found by Nick
+        self.prep()
+        import csdl_alpha as csdl
+        from csdl_alpha.api import frange
+        import numpy as np
+
+        a = csdl.Variable(value=1)
+        x = csdl.Variable(value=2)
+
+        for i in csdl.frange(10):
+            b = a*x
+        c = b*1.0
+        self.run_tests(
+            compare_values=[
+                csdl_tests.TestingPair(b, np.array([2])),
+                csdl_tests.TestingPair(c, np.array([2]))
+            ],
+            verify_derivatives=True
+        )
+
 
 
     # def test_loop_var_history(self):
