@@ -143,6 +143,10 @@ class Newton(FixedPoint):
 
         # Solve residual Jacobian system
         solved_system = jnp.linalg.solve(residual_jacobian, residual_vector)
+        
+        # import jax #TODO: Add API for different solvers?
+        # solved_system = jax.scipy.linalg.solve(residual_jacobian, residual_vector)
+        # solved_system = jax.scipy.linalg.cho_solve(residual_jacobian, residual_vector)
 
         # update states
         output_states = []

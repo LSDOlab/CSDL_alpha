@@ -83,6 +83,7 @@ class JaxSimulator(SimulatorBase):
         self.update_counter = 0
         self.save_on_update = save_on_update
         self.filename = filename
+        self.callback_func = None
 
         # Process inputs and outputs
         if additional_inputs is None:
@@ -159,6 +160,9 @@ class JaxSimulator(SimulatorBase):
         # Run the function
         outputs = self.run_func({in_var:in_var.value for in_var in self.input_manager.list})
         
+        # Callback if user-specified
+        self.callback()
+
         # Update the values 
         for output in outputs:
             output.set_value(outputs[output])
@@ -214,6 +218,9 @@ class JaxSimulator(SimulatorBase):
                 )
 
             derivs = self.totals_derivs({in_var:in_var.value for in_var in self.input_manager.list})
+            
+            # Callback if user-specified
+            self.callback()
 
             return_derivs = {}
             for key in self.derivative_variables:
@@ -284,6 +291,9 @@ class JaxSimulator(SimulatorBase):
         for output in outputs:
             output.set_value(outputs[output])
         
+        # Callback if user-specified
+        self.callback()
+
         return self._process_optimization_values()
     
     # @timer # For debugging
@@ -339,6 +349,9 @@ class JaxSimulator(SimulatorBase):
             if self.constraint_jacobian is not None:
                 return_dict["dc"] = outputs[self.constraint_jacobian]
             
+            # Callback if user-specified
+            self.callback()
+
             # get optimization values
             f,c = self._process_optimization_values()
             return_dict["f"] = f
@@ -367,3 +380,10 @@ class JaxSimulator(SimulatorBase):
     def save_external(self, filename:str, groupname:str):
         from csdl_alpha.src.data import save_h5py_variables
         save_h5py_variables(filename, groupname, self.saved_outputs)
+
+    def add_callback(self, func:Callable):
+        self.callback_func = func
+
+    def callback(self):
+        if self.callback_func is not None:
+            self.callback_func(self)
