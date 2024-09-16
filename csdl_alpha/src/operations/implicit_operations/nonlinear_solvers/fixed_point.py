@@ -28,7 +28,6 @@ class FixedPoint(NonlinearSolver):
             elementwise_states = elementwise_states,
             residual_jac_kwargs = residual_jac_kwargs,
         )
-        self.do_count = False
 
     def add_state(*args, **kwargs):
         """
