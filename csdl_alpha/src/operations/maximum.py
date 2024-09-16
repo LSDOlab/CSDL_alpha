@@ -88,7 +88,8 @@ class Maximum(Operation):
         if cotangents.check(x):
             if self.axes is None:
                 rho = self.rho
-                exp_x = csdl.exp(rho*(x) - y)
+                diff = x - y
+                exp_x = csdl.exp(rho*diff)
                 vjp = cotangents[y] * exp_x / csdl.sum(exp_x)
             else:
                 rho = self.rho
@@ -302,6 +303,14 @@ class TestMaximum(csdl_tests.CSDLTest):
         # s6.add_name('s6')
         compare_values += [csdl_tests.TestingPair(s6, t5, tag = 's6', decimal=8)]
 
+        # maximum of a single tensor constant
+        # compare_values = []
+        n7 = np.array([10000.0,-10000.0])
+        s7 = csdl.maximum(n7)
+        s7.add_name('s7')
+        t7 = np.max(n7).flatten()
+        compare_values += [csdl_tests.TestingPair(s7, t7, tag = 's7')]
+
         # TODO: maximum of a zero tensor - need to check this 
         # to avoid errors from sum(log(1+1+..)) if there are multiple entries of zero
         # and zero is the maximum
@@ -318,5 +327,6 @@ class TestMaximum(csdl_tests.CSDLTest):
 
 if __name__ == '__main__':
     test = TestMaximum()
+    test.overwrite_backend = 'jax'
     test.test_functionality()
     test.test_example()

@@ -169,7 +169,10 @@ class JaxSimulator(SimulatorBase):
 
         return outputs
 
-    def __getitem__(self, key:Variable)->np.ndarray:
+    def __getitem__(self, key:Union[Variable, str])->np.ndarray:
+        if isinstance(key, str):
+            key = self.recorder._find_variables_by_name(key)[0]
+
         self.output_manager.verify_type(key)
         if self.output_manager.check_valid_var(key):
             return self.output_manager[key]
@@ -338,7 +341,6 @@ class JaxSimulator(SimulatorBase):
                     enable_f64=self.use_f64,
                     name = 'compute_optimization_derivatives',
                 )
-
             outputs = self.opt_derivs_func({dv:dv.value for dv in self.recorder.design_variables})
             for output in outputs:
                 output.set_value(outputs[output])

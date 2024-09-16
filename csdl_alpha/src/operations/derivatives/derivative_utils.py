@@ -168,6 +168,7 @@ def verify_derivative_values(
 
         error = np.linalg.norm(analytical_jac - fd_jac)
         derivative_values[key]['abs_error'] = error
+        derivative_values[key]['rel_error'] = error/fd_norm if fd_norm > 1e-15 else 0.0
 
         max_rel_error = derivative_values[key]['max_rel_error']
         pair_tag = derivative_values[key]['tag']

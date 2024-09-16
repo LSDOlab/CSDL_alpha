@@ -119,11 +119,11 @@ def _vjp(seeds:list[tuple[Variable, Variable]],
                     if cotangents.check(input):
                         if cotangents[input] is not None:
                             if np.isnan(cotangents[input].value).any():
-                                print(f'\n========Nan found during derivative of operation {node}:=======')
-                                print(f'Input variable (with name {input.name} and avg value {np.average(input.value)}) trace:')
-                                input.print_trace(tab = True)
-                                print('Operation trace:')
-                                node.print_trace(tab = True)
+                                print(f'\n========Nan found during derivative of operation {node.info()}:=======')
+                                print(f'Input variable: ({input.info()})')
+                                # input.print_trace(tab = True)
+                                # print('Operation trace:')
+                                # node.print_trace(tab = True)
                                 print()
 
 
