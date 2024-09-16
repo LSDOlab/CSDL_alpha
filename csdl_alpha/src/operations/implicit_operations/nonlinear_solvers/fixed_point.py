@@ -124,26 +124,6 @@ class FixedPoint(NonlinearSolver):
         # loop
         states, residuals, iter = lax.while_loop(loop_condition, loop_body, val)
         
-        # import csdl_alpha as csdl
-        # recorder = csdl.get_current_recorder()
-
-        # if not hasattr(recorder, 'nlsolvers'):
-        #     recorder.nlsolvers = {}
-        # if not hasattr(recorder, 'nlsolvers_instances'):
-        #     recorder.nlsolvers_instances = {}
-
-        # if self not in recorder.nlsolvers:
-        #     recorder.nlsolvers[self.name] = 0
-        #     recorder.nlsolvers_instances[self] = 0
-
-        # if self.do_count:
-        #     def callback_func(iter):
-        #         recorder.nlsolvers[self.name] += 1
-        #         # print(f"Newton iteration {recorder.nlsolvers[self.name]}")
-
-        #     from jax import debug
-        #     debug.callback(callback_func, iter)
-        
         return states
 
 
