@@ -40,7 +40,6 @@ class VStack(Operation):
                     i += input.shape[0]
             else:
                 if len(input.shape) == 1:
-                    cotangents[input] = stack_out[i]
                     i += 1
                 else:
                     i += input.shape[0]
@@ -182,9 +181,25 @@ class TestStack(csdl_tests.CSDLTest):
     def test_example(self,):
         self.docstest(vstack)
 
+    def test_nick(self,):
+        self.prep()
 
-# if __name__ == '__main__':
-#     test = TestBlockMat()
-#     test.test_functionality()
-#     test.test_errors()
-#     # test.test_example()
+        import csdl_alpha as csdl
+        import numpy as np
+
+        nt = 50
+
+        range_dot = csdl.Variable((nt,), value=0)
+        weight_dot = csdl.Variable((nt,), value=0)
+        xdot = csdl.vstack((range_dot, weight_dot))
+
+        deriv1 = csdl.derivative(xdot, [weight_dot])
+        deriv2 = csdl.derivative(xdot, [range_dot])
+
+
+if __name__ == '__main__':
+    test = TestStack()
+    # test.test_functionality()
+    # test.test_errors()
+    # test.test_example()
+    # test.test_nick()
