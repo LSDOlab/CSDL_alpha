@@ -100,3 +100,34 @@ def test_auto_hierarchy():
     e = Variable((1,), name='e')
     assert e.hierarchy == 0
     recorder.stop()
+
+def test_find_variable():
+    import csdl_alpha as csdl
+    from csdl_alpha.src.graph.variable import Variable
+
+    recorder = csdl.Recorder()
+    recorder.start()
+    a = Variable((1,), name='a')
+    b = Variable((1,), name='b')
+    c = Variable((1,), name='c')
+    d = Variable((1,), name='d')
+    assert recorder.find_variable_by_name('a') == a
+    assert recorder.find_variable_by_name('b') == b
+    assert recorder.find_variable_by_name('a', 'c') == (a, c)
+    recorder.find_variable_by_name() == ()
+
+    with pytest.raises(KeyError):
+        # e doesn't exist
+        recorder.find_variable_by_name('e')
+
+    with pytest.raises(KeyError):
+        # f doesn't exist
+        recorder.find_variable_by_name('a', 'd', 'f')
+
+    with pytest.raises(TypeError):
+        # 1 is not a string
+        recorder.find_variable_by_name(1)
+    
+    with pytest.raises(TypeError):
+        # 1 is not a string
+        recorder.find_variable_by_name('a', 1)
