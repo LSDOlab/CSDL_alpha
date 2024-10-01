@@ -113,11 +113,41 @@ class Recorder:
                             matched_names.append(node)
 
         if len(matched_names) == 0:
-            raise KeyError(f"No variable with name {name} found")
+            raise KeyError(f"No variable with name \'{name}\' found")
         if len(matched_names) > 1:
-            raise KeyError(f"Multiple variables with name {name} found")
+            raise KeyError(f"Multiple variables with name \'{name}\' found")
         return matched_names
 
+    def find_variable_by_name(self, *names:str)->'Variable':
+        """Given strings, returns the variables with the given names.
+
+        Parameters
+        ----------
+        names : str
+            The names of the variables to find.
+
+        Returns
+        -------
+        tuple[Variable]
+            The variables with the given names in the order they were provided.
+
+        Raises
+        ------
+        KeyError
+            If no variable with a given name is found.
+        KeyError
+            If multiple variables with the same given name are found.
+        TypeError
+            If strings not given.
+        """
+        for name in names:
+            if not isinstance(name, str):
+                raise TypeError(f"Names must be of type 'string'. Got type {get_type_string(name)}")
+        matched_names = [self._find_variables_by_name(name)[0] for name in names]
+
+        if len(matched_names) == 1:
+            return matched_names[0]
+        return tuple(matched_names)
 
     def gather_insights(self)->dict[str, Union[dict, set]]:
         """
