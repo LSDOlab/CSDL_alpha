@@ -124,7 +124,7 @@ def _vjp(seeds:list[tuple[Variable, Variable]],
                                 # input.print_trace(tab = True)
                                 # print('Operation trace:')
                                 # node.print_trace(tab = True)
-                                print()
+                                raise ValueError(f'Nan found during derivative')
 
 
     wrt_cotangents:dict[Variable:Variable] = {}
