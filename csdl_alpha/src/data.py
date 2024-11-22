@@ -1,7 +1,7 @@
 from typing import Union
 from csdl_alpha.utils.inputs import listify_variables
 
-def inline_export(filename:str, summary_csv:bool=False, do_print=False):
+def inline_export(filename:str, summary_csv:bool=False, do_print=False, groupname:str='inline'):
     """Save variables from the current recorder's node graph to an HDF5 file.
 
     Parameters
@@ -16,9 +16,9 @@ def inline_export(filename:str, summary_csv:bool=False, do_print=False):
     if summary_csv:
         _inline_csv_save(filename, print_csv=do_print)
     else:
-        _export_h5py(filename, do_print=do_print)
+        _export_h5py(filename, do_print=do_print, groupname=groupname)
 
-def _export_h5py(filename:str, do_print=False):
+def _export_h5py(filename:str, do_print=False, groupname:str='inline'):
     """Save variables from the current recorder's node graph to an HDF5 file.
 
     Parameters
@@ -34,7 +34,7 @@ def _export_h5py(filename:str, do_print=False):
         filename = f'{filename}.hdf5'
     f = h5py.File(filename, 'w')
 
-    inline_grp = f.create_group('inline')
+    inline_grp = f.create_group(groupname)
     recorder = get_current_recorder()
     name_counter_dict = {}
     for key, index in recorder.active_graph.node_table.items():
@@ -71,7 +71,7 @@ def _get_savename(key, name_counter_dict):
         savename = key.names[0]
     return savename
 
-def inline_import(filename:str, group:str):
+def inline_import(filename:str, group:str, load_variables=False):
     """
     Import variables from an HDF5 file.
 
@@ -81,6 +81,8 @@ def inline_import(filename:str, group:str):
         The path to the HDF5 file.
     group : str
         The name of the group within the HDF5 file (eg, 'inline', 'iteration1').
+    load_variables : bool, optional
+        If True, the values will be loaded into existing variables in the current recorder, by default False.
 
     Returns
     -------
@@ -100,23 +102,35 @@ def inline_import(filename:str, group:str):
     f = h5py.File(f'{filename}', 'r')
     grp = f[group]
 
+    if load_variables:
+        from ..api import get_current_recorder
+        rec = get_current_recorder()
+
     # Iterate over the keys in the group
     variables = {}
     for key in grp.keys():
         # Get the dataset
         dataset = grp[key]
 
-        # Create a Variable instance with the dataset value and name
-        variable = Variable(value=dataset[...], name=key)
+        if load_variables:
+            index = dataset.attrs['index']
+            try:
+                rec.active_graph.rxgraph[index].value = dataset[...]
+            except KeyError:
+                print(f"Variable {key} at index {index} not found in the current graph.")
 
-        # add attributes to the variable
-        if 'tags' in dataset.attrs:
-            variable.tags = dataset.attrs['tags']
-        if 'hierarchy' in dataset.attrs:
-            variable.hierarchy = dataset.attrs['hierarchy']
-        if 'names' in dataset.attrs:
-            variable.names = dataset.attrs['names']
-        variables[key] = variable
+        else:
+            # Create a Variable instance with the dataset value and name
+            variable = Variable(value=dataset[...], name=key)
+
+            # add attributes to the variable
+            if 'tags' in dataset.attrs:
+                variable.tags = dataset.attrs['tags']
+            if 'hierarchy' in dataset.attrs:
+                variable.hierarchy = dataset.attrs['hierarchy']
+            if 'names' in dataset.attrs:
+                variable.names = dataset.attrs['names']
+            variables[key] = variable
 
     f.close()
 
