@@ -7,6 +7,7 @@ import sympy as sp
 from typing import Union
 
 class Graph():
+    from csdl_alpha.src.graph.node import Node
 
     def __init__(self, name = None):
         self.rxgraph = rx.PyDiGraph()
@@ -25,6 +26,17 @@ class Graph():
         index = self.rxgraph.add_node(node)
         self.node_table[node] = index
 
+    def _delete_node(self,node):
+        from csdl_alpha.src.graph.node import Node
+        if not isinstance(node, Node):
+            raise TypeError(f'Cannot delete non-Node objects')
+        if node not in self.node_table:
+            raise KeyError(f'Node {node.info()} not in graph')
+        
+        index = self.node_table[node]
+        self.node_table.pop(node)
+        self.rxgraph.remove_node(index)
+
     def in_degree(self, node):
         return self.rxgraph.in_degree(self.node_table[node])
     
@@ -42,7 +54,6 @@ class Graph():
     def add_operation(self, operation):
         self.add_node(operation)
 
-    from csdl_alpha.src.graph.node import Node
     def predecessors(self, node:Node) -> list[Node]:
         """
         Returns the predecessors of the node

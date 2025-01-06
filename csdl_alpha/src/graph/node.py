@@ -23,6 +23,20 @@ class Node(object):
         if self.recorder.debug:
             self._apply_debug()
 
+    def check_history(self):
+        tlog = self.recorder.transformation_logger
+
+        print(self.info(), 'transformation history:')
+        for transformation in tlog.call_history:
+            for var, graph in transformation.graph_actions['add']:
+                if var is self:
+                    print('\tcreated:', transformation.name)
+            for var, graph in transformation.graph_actions['del']:
+                if var is self:
+                    print('\tdeleted:', transformation.name)
+
+
+
     def _apply_debug(self):
         """
         Adds useful debugging information to a node.

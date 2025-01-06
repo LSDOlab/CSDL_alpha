@@ -11,6 +11,10 @@ from csdl_alpha.src.operations.linalg import linear_solvers as linear_solvers
 # manager/recorder/module level functions
 from .api import *
 
+# transformations
+from csdl_alpha.src import transformations as transforms
+from csdl_alpha.src import transfomation_helper as transformation_helper
+
 # Other
 import csdl_alpha.experimental as experimental
 import csdl_alpha.src.operations.derivatives.derivative_utils as derivative_utils
