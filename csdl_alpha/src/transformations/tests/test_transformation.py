@@ -35,7 +35,7 @@ def test_transform():
     print(f1.value)
     print(f2.value)
 
-    da_transform = TestTransformation(name = 'poo')
+    da_transform = TestTransformation(name = 'oo')
     da_transform.transform()
 
     print()

@@ -3,7 +3,7 @@ from typing import Union
 
 class TransformationBase(object):
     
-    def __init__(self, name = None):
+    def __init__(self, name = None, print_info:bool = False):
         self.graph_actions:dict[str, dict] = {
             'add': {},
             'del': {},
@@ -52,7 +52,7 @@ class TransformationBase(object):
         for action in actions:
             self.graph_actions[action_type][action] = 0
 
-    def transform(self, print_info:bool = False)->None:
+    def transform(self, *args, **kwargs)->None:
         import csdl_alpha as csdl
         
         # automatically find current recorder
@@ -62,7 +62,7 @@ class TransformationBase(object):
         active_recorder.transformation_logger.push(self)
 
         # apply transfomration here:
-        self.apply()
+        self.apply(*args, **kwargs) # change to decorator to keep linting?
     
         # post-processing
         active_recorder.transformation_logger.pop()

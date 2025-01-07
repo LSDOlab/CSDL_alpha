@@ -169,7 +169,6 @@ class Graph():
         subgraph.rxgraph = rx_sg
         subgraph.update_node_table()
 
-
         # Delete the nodes in the subgraph from the graph
         delete_nodes = set()
         for node_index in S:
