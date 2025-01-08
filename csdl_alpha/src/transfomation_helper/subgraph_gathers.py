@@ -1,6 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.node import Node
+from csdl_alpha.src.transfomation_helper.checks import is_op
 
 def get_subgraph():
     return
@@ -11,7 +12,7 @@ def extract():
 def loopify_subgraph(
         stacked_inputs:dict[Variable, Variable],
         outputs:dict,
-    ):
+    )->dict[Variable, Variable]:
     """
     Takes a part of a graph that exists in a graph and turns it into a loop:
 
@@ -97,18 +98,54 @@ def loopify_subgraph(
             print(f'Found output variable {output_var} in the graph')
         targets.append(output_var)
 
-    rec.visualize_graph('1', visualize_style='hierarchical')
-    subgraph, subgraph_inputs, subgraph_outputs = current_graph.extract_subgraph(
+    # rec.visualize_graph('1', visualize_style='hierarchical')
+    subgraph, calculated_input, subgraph_outputs = current_graph.extract_subgraph(
         sources,
         targets,
         keep_variables=True
     )
-    rec.visualize_graph('2', visualize_style='hierarchical')
 
-    subgraph.visualize()
+    # subgraph.visualize()
+    subgraph.inputs = []
+    for calculated_input in calculated_input:
+        if calculated_input in stacked_inputs:
+            continue
+        subgraph.inputs.append(calculated_input)
 
-    # with csdl.experimental.enter_loop() as vjp_loop_builder:
-    #     pass
+    # prepare loop op:
+    iter_vars = [list(range(num_iter))]
+    from csdl_alpha.src.graph.graph import _copy_to_current_graph
+    
+    # Build the loop:
+    with csdl.experimental.enter_loop(iter_vars) as loop_builder:
+        ind:csdl.Variable = loop_builder.get_loop_indices()
 
-    exit()
-    return
+        # index stacked variables
+        indexed_input_map = {}
+        for input_var, stacked_input in stacked_inputs.items():
+            indexed_input_map[input_var] = stacked_input[ind]
+
+        # Add in the extracted graph
+        _copy_to_current_graph(
+            subgraph,
+            indexed_input_map,
+            add_to_graph_inputs=True
+        )
+
+    # create stacked outputs
+    output_stacks = {}
+    for output in outputs:
+        stacked_output = loop_builder.add_stack(output)
+        output_stacks[output] = stacked_output
+    loop_builder.finalize(name = 'extracted_loop')
+
+    # Delete the extracted subgraph nodes from the original graph
+    for node in subgraph.node_table:
+        if is_op(node):
+            continue
+        if current_graph.out_degree(node) == 0 and current_graph.in_degree(node) == 0:
+            rec.delete_node(node)
+
+    # rec.visualize_graph('2', visualize_style='hierarchical')
+
+    return output_stacks

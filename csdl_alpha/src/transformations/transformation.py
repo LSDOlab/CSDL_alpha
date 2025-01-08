@@ -62,10 +62,12 @@ class TransformationBase(object):
         active_recorder.transformation_logger.push(self)
 
         # apply transfomration here:
-        self.apply(*args, **kwargs) # change to decorator to keep linting?
+        outs = self.apply(*args, **kwargs) # change to decorator to keep linting?
     
         # post-processing
         active_recorder.transformation_logger.pop()
+
+        return outs
 
     def info(self)->str:
         string = f'Transformation {self.name} info:'

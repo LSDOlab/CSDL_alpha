@@ -464,7 +464,8 @@ class Recorder:
 
         from csdl_alpha.src.graph.variable import Variable
         if isinstance(node, Variable):
-            raise ValueError('deleting just a variable is not allowed')
+            if graph.in_degree(node) > 0 or graph.out_degree(node) > 0:
+                raise ValueError('deleting just a variable is not allowed')
         
         graph._delete_node(node)
 

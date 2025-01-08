@@ -56,8 +56,9 @@ class Node(object):
         banned_paths = ['csdl_alpha/src', 'csdl_alpha/utils']
         # exception_paths = ['csdl_alpha/src/operations/loops']
         # exception_paths = ['test_']
+        # banned_paths = []
         
-        # banned_paths = ['/node', '/variable']
+        banned_paths = ['/node', '/variable', '/operation']
         exception_paths=[]
         
         if not any(path in info.filename for path in banned_paths):
