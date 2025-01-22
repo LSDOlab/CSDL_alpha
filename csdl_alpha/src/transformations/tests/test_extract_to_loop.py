@@ -1,5 +1,6 @@
 import csdl_alpha as csdl
 import numpy as np
+import pytest
 
 def f(x1, x2):
     z = x1*x2
@@ -74,16 +75,6 @@ def test_transform():
     derivs = csdl.derivative(output_stacks[z_stacked], stacked_a_perturb)
     recorder.execute()
 
-    # Save this into nparray:
-    #     [[[3.24522405 3.43556376]
-    # [3.21562852 3.3802278 ]]
-
-    # [[3.33901864 3.52960719]
-    # [3.31006835 3.47541554]]
-
-    # [[3.43299235 3.62381823]
-    # [3.40465766 3.57072072]]]
-
     real = np.array(
         [[[3.24522405, 3.43556376],
         [3.21562852, 3.3802278 ]],
@@ -96,18 +87,16 @@ def test_transform():
     )
     np.testing.assert_allclose(output_stacks[z_stacked].value, real, rtol=1e-5)
 
-
-
 def test_transform2():
 
     def f10(x):
         return x**2.0
     
     def f01(y):
-        return csdl.sin(y)**2.0
+        return csdl.sin(y+0.5)**2.0
     
     def f11(x, y):
-        return csdl.maximum(csdl.outer(x,y))
+        return csdl.average(csdl.outer(x,y))
     
     recorder =csdl.Recorder(inline = False, debug=True)
     recorder.start()    
@@ -128,12 +117,78 @@ def test_transform2():
     y_out_stacked = LoopTransformation().transform({y:y_stacked},{y_out:None})[y_out]
 
     # z
-    x_out_stacked = x_out_stacked.expand((2,1))
-    z_stacked = LoopTransformation().transform({x_out:x_out_stacked, y_out:y_out_stacked},{z:None})[z]
+    x_out_stacked2 = csdl.expand(x_out_stacked, (2,1,2), 'ij->ijk').reshape(4,1)
+    y_out_stacked2 = csdl.expand(y_out_stacked, (2,2,1), 'ij->kij').reshape(4,1)
+    z_stacked = LoopTransformation().transform({x_out:x_out_stacked2, y_out:y_out_stacked2},{z:None})[z]
+    # recorder.visualize_graph(visualize_style='hierarchical')
+    recorder.execute()
+
+    # Real calculation:
+    def np_f10(x):
+        return x**2.0
+    
+    def np_f01(y):
+        return np.sin(y+0.5)**2.0
+    
+    def np_f11(x, y):
+        return np.average(np.outer(x,y))
+    
+    x_stacked_np = np.array([[1.0],[2.0]])
+    x_out_stacked_np = np_f10(x_stacked_np)
+    y_stacked_np = np.array([[3.0],[4.0]])
+    y_out_stacked_np = np_f01(y_stacked_np)
+    x_out_stacked2_np = np.repeat(x_out_stacked_np, 2, axis=0).reshape(4,1)
+    y_out_stacked2_np = np.repeat(y_out_stacked_np, 2, axis=1).ravel(order='F').reshape(4,1)
+    z_stacked_np = []
+    for i in range(4):
+        z_np = np_f11(x_out_stacked2_np[i], y_out_stacked2_np[i])
+        z_stacked_np.append(z_np)
+    z_stacked_np = np.array(z_stacked_np).reshape(4,1)
+
+    # check all values:
+    np.testing.assert_allclose(x_out_stacked.value, x_out_stacked_np, rtol=1e-5)
+    np.testing.assert_allclose(y_out_stacked.value, y_out_stacked_np, rtol=1e-5)
+    np.testing.assert_allclose(x_out_stacked2.value, x_out_stacked2_np, rtol=1e-5)
+    np.testing.assert_allclose(y_out_stacked2.value, y_out_stacked2_np, rtol=1e-5)
+    np.testing.assert_allclose(z_stacked.value, z_stacked_np, rtol=1e-5)
 
 
-    return
+
+def test_errors():
+
+    def f10(x):
+        return x**2.0
+    
+    def f01(y):
+        return csdl.sin(y+0.5)**2.0
+    
+    def f11(x, y):
+        return csdl.average(csdl.outer(x,y))
+    
+    recorder =csdl.Recorder(inline = False, debug=True)
+    recorder.start()    
+    x = csdl.Variable(value=np.array([1.0]))
+    y = csdl.Variable(value=np.array([1.0]))
+
+    x_out = f10(x)
+    y_out = f01(y)
+    z = f11(x_out, y_out)
+
+    # Do the loop thing
+    # x
+    with pytest.raises(ValueError):
+        x_stacked = csdl.Variable(value=np.array([[1.0, 1.5],[2.0, 1.5]]))
+        x_out_stacked = LoopTransformation().transform({x:x_stacked},{x_out:None})[x_out]
+
+    with pytest.raises(ValueError):
+        x_stacked = csdl.Variable(value=np.array([[1.0],[2.0]]))
+        y_stacked = csdl.Variable(value=np.array([[1.0],[2.0],[3.0]]))
+        x_out_stacked = LoopTransformation().transform({x:x_stacked, y:y_stacked},{x_out:None})[x_out]
+
+    # recorder.visualize_graph(visualize_style='hierarchical')
+    recorder.execute()
 
 if __name__ == '__main__':
     # test_transform()
-    test_transform2()
+    # test_transform2()
+    test_errors()

@@ -5,6 +5,16 @@ from csdl_alpha.src.graph.node import Node
 from csdl_alpha.src.operations.loops.new_loop.new_loop import NewLoop
 from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation 
 
+from typing import Any
+
+def is_node(node:Any)->bool:
+    """
+    Check if a node is a node.
+    """
+    if isinstance(node, Node):
+        return True
+    return False
+
 def is_var(node:Node)->bool:
     """
     Check if a node is a variable.

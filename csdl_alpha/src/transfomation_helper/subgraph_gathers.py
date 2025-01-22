@@ -11,7 +11,7 @@ def extract():
 
 def loopify_subgraph(
         stacked_inputs:dict[Variable, Variable],
-        outputs:dict,
+        outputs:dict[Variable, Variable],
     )->dict[Variable, Variable]:
     """
     Takes a part of a graph that exists in a graph and turns it into a loop:
@@ -32,10 +32,10 @@ def loopify_subgraph(
 
     Args:
         stacked_inputs: dict[Variable, Variable]
-            Map of input variables in subgraph to stacked inputs with extra first dimension 
+            Map of input variables in subgraph to stacked inputs with extra first dimension. The size of first dimension must match for all inputs
         
-        outputs: 
-            Mapping outputs to inputs  
+        outputs: list of outputs
+            List of outputs
     """
 
     # Pre-processing:
@@ -64,6 +64,9 @@ def loopify_subgraph(
     sources = []
     targets = []
     num_iter = None
+
+    if len(stacked_inputs) == 0:
+        raise ValueError('No inputs provided')
 
     for input_var, stacked_input in stacked_inputs.items():
 
@@ -94,15 +97,15 @@ def loopify_subgraph(
     for output_var in outputs:
         if output_var not in current_graph.node_table:
             raise ValueError(f'Output variable {output_var} not in the graph')
-        else:
-            print(f'Found output variable {output_var} in the graph')
         targets.append(output_var)
 
     # rec.visualize_graph('1', visualize_style='hierarchical')
     subgraph, calculated_input, subgraph_outputs = current_graph.extract_subgraph(
         sources,
         targets,
-        keep_variables=True
+        keep_variables=True,
+        check_sources=False,
+        check_targets=False,
     )
 
     # subgraph.visualize()
@@ -137,7 +140,7 @@ def loopify_subgraph(
     for output in outputs:
         stacked_output = loop_builder.add_stack(output)
         output_stacks[output] = stacked_output
-    loop_builder.finalize(name = 'extracted_loop')
+    loop_builder.finalize(name = f'extracted_loop_{num_iter}')
 
     # Delete the extracted subgraph nodes from the original graph
     for node in subgraph.node_table:
@@ -145,7 +148,4 @@ def loopify_subgraph(
             continue
         if current_graph.out_degree(node) == 0 and current_graph.in_degree(node) == 0:
             rec.delete_node(node)
-
-    # rec.visualize_graph('2', visualize_style='hierarchical')
-
     return output_stacks

@@ -1,2 +1,2 @@
-from .data_assimilation import DataAssimilation
+from .amtc import AMTC
 from .transformation import TransformationBase

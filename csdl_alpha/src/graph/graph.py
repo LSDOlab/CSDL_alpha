@@ -60,6 +60,20 @@ class Graph():
         """
         return self.rxgraph.predecessors(self.node_table[node])
 
+    def descendants(self, node:Node) -> set[Node]:
+        """
+        Returns the descendants of the node
+        """
+        descendants = rx.descendants(self.rxgraph, self.node_table[node])
+        return {self.rxgraph.get_node_data(i) for i in descendants}
+    
+    def ancestors(self, node:Node) -> set[Node]:
+        """
+        Returns the ancestors of the node
+        """
+        ancestors = rx.ancestors(self.rxgraph, self.node_table[node])
+        return {self.rxgraph.nodes()[i] for i in ancestors}
+    
     def execute_inline(self, subset = None, debug = False):
         """
         executes the graph inline

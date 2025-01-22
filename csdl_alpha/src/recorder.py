@@ -451,7 +451,7 @@ class Recorder:
         current_transform:TransformationBase = self.transformation_logger.get_current()
         current_transform.record_action('add', (node, self.active_graph))
 
-    def delete_node(self, node, graph:Graph = None):
+    def delete_node(self, node, graph:Graph = None, force_delete:bool = False):
         """
         Deletes a node from the active graph.
 
@@ -462,10 +462,11 @@ class Recorder:
         if graph is None:
             graph = self.active_graph
 
-        from csdl_alpha.src.graph.variable import Variable
-        if isinstance(node, Variable):
-            if graph.in_degree(node) > 0 or graph.out_degree(node) > 0:
-                raise ValueError('deleting just a variable is not allowed')
+        if not force_delete:
+            from csdl_alpha.src.graph.variable import Variable
+            if isinstance(node, Variable):
+                if graph.in_degree(node) > 0 or graph.out_degree(node) > 0:
+                    raise ValueError('deleting just a variable is not allowed')
         
         graph._delete_node(node)
 
