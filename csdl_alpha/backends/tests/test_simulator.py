@@ -50,13 +50,17 @@ def test_optimization_meta():
     from csdl_alpha.backends.simulator import SimulatorBase
     sim = SimulatorBase(recorder = rec)
     dmeta, cmeta, ometa = sim.get_optimization_metadata()
-    assert len(dmeta) == 4
-    assert len(cmeta) == 3
-    assert len(ometa) == 1
+    assert len(dmeta) == 5
+    assert len(cmeta) == 4
+    assert len(ometa) == 2
 
-    np.testing.assert_almost_equal(ometa, np.ones((o_size,)))
+    np.testing.assert_almost_equal(ometa[0], np.ones((o_size,)))
     np.testing.assert_almost_equal(cmeta[0], np.ones((c_size,)))
     np.testing.assert_almost_equal(dmeta[0], np.ones((dv_size,)))
+
+    np.testing.assert_almost_equal(ometa[1], np.zeros((o_size,)))
+    np.testing.assert_almost_equal(cmeta[3], np.zeros((c_size,)))
+    np.testing.assert_almost_equal(dmeta[4], np.zeros((dv_size,)))
     
     np.testing.assert_almost_equal(cmeta[1], -np.inf*np.ones((c_size,)))
     np.testing.assert_almost_equal(dmeta[1], -np.inf*np.ones((dv_size,)))
@@ -87,9 +91,10 @@ def test_optimization_meta_1():
     from csdl_alpha.backends.simulator import SimulatorBase
     sim = SimulatorBase(recorder = rec)
     dmeta, cmeta, ometa = sim.get_optimization_metadata()
-    assert len(dmeta) == 4
-    assert len(cmeta) == 3
-    assert isinstance(ometa, np.ndarray)
+    assert len(dmeta) == 5
+    assert len(cmeta) == 4
+    assert len(ometa) == 2
+    # assert isinstance(ometa, np.ndarray)
 
     # print('scaler:', dmeta[0])
     # print('lower:', dmeta[1])
@@ -97,10 +102,15 @@ def test_optimization_meta_1():
     # print('value:', dmeta[3])
 
     # scaler:
-    np.testing.assert_almost_equal(ometa, np.ones((o_size,)))
+    np.testing.assert_almost_equal(ometa[0], np.ones((o_size,)))
     np.testing.assert_almost_equal(cmeta[0], np.ones((c_size,)))
     np.testing.assert_almost_equal(dmeta[0][:9], 2.0*np.ones((9,)))
     np.testing.assert_almost_equal(dmeta[0][9:], 1e3*np.arange(9))
+
+    # adder:
+    np.testing.assert_almost_equal(ometa[1], np.zeros((o_size,)))
+    np.testing.assert_almost_equal(cmeta[3], np.zeros((c_size,)))
+    np.testing.assert_almost_equal(dmeta[4], np.zeros((dv_size,)))
     
     # lower:
     np.testing.assert_almost_equal(cmeta[1], -np.inf*np.ones((c_size,)))
@@ -134,9 +144,9 @@ def test_optimization_meta_2():
     from csdl_alpha.backends.simulator import SimulatorBase
     sim = SimulatorBase(recorder = rec)
     dmeta, cmeta, ometa = sim.get_optimization_metadata()
-    assert len(dmeta) == 4
-    assert len(cmeta) == 3
-    assert isinstance(ometa, np.ndarray)
+    assert len(dmeta) == 5
+    assert len(cmeta) == 4
+    assert len(ometa) == 2
 
     # print('scaler:', dmeta[0])
     # print('lower:', dmeta[1])
@@ -144,10 +154,15 @@ def test_optimization_meta_2():
     # print('value:', dmeta[3])
 
     # scaler:
-    np.testing.assert_almost_equal(ometa, np.ones((o_size,)))
+    np.testing.assert_almost_equal(ometa[0], np.ones((o_size,)))
     assert cmeta[0] is None
     np.testing.assert_almost_equal(dmeta[0][:9], 2.0*np.ones((9,)))
     np.testing.assert_almost_equal(dmeta[0][9:], 1e3*np.arange(9))
+
+    # adder:
+    np.testing.assert_almost_equal(ometa[1], np.zeros((o_size,)))
+    assert cmeta[3] is None
+    np.testing.assert_almost_equal(dmeta[4], np.zeros((dv_size,)))
     
     # lower:
     assert cmeta[1] is None

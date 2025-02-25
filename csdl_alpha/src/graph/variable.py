@@ -142,15 +142,17 @@ class Variable(Node):
 
     # TODO: add checks for parents
     # TODO: allow float and arrays
-    # TODO: add  checks for shape of upper, scaler etc
-    def set_as_design_variable(self, upper: float = None, lower: float = None, scaler: float = None):
+    # TODO: add  checks for shape of upper, scaler, adder, etc
+    def set_as_design_variable(self, upper: float = None, lower: float = None, scaler: float = None, adder: float = None):
         scaler = ingest_value(scaler)
+        adder = ingest_value(adder)
         upper = ingest_value(upper)
         lower = ingest_value(lower)
-        self.recorder._add_design_variable(self, upper, lower, scaler)
+        self.recorder._add_design_variable(self, upper, lower, scaler, adder)
 
-    def set_as_constraint(self, upper: float = None, lower: float = None, equals: float = None, scaler: float = None):
+    def set_as_constraint(self, upper: float = None, lower: float = None, equals: float = None, scaler: float = None, adder: float = None):
         scaler = ingest_value(scaler)
+        adder = ingest_value(adder)
         if equals is not None:
             if upper is not None or lower is not None:
                 raise ValueError("Constraint cannot have both equals and upper/lower")
@@ -158,14 +160,15 @@ class Variable(Node):
             lower = ingest_value(equals)
         upper = ingest_value(upper)
         lower = ingest_value(lower)
-        self.recorder._add_constraint(self, upper, lower, scaler)
+        self.recorder._add_constraint(self, upper, lower, scaler, adder)
 
-    def set_as_objective(self, scaler: float = None):
+    def set_as_objective(self, scaler: float = None, adder: float = None):
         scaler = ingest_value(scaler)
+        adder = ingest_value(adder)
 
         if self.size != 1:
             raise ValueError("Objective must be a scalar")
-        self.recorder._add_objective(self, scaler)
+        self.recorder._add_objective(self, scaler, adder)
 
     from csdl_alpha.src.operations.set_get.slice import Slice
     def set(self, slices:Slice, value:'VariableLike') -> 'Variable':

@@ -476,7 +476,7 @@ class Recorder:
             raise ValueError(f"Node {node_to.info()} not in graph")
         graph.add_edge(node_from, node_to)
 
-    def _add_design_variable(self, variable, upper, lower, scaler):
+    def _add_design_variable(self, variable, upper, lower, scaler, adder):
         """
         Adds a design variable to the recorder.
 
@@ -485,10 +485,11 @@ class Recorder:
             upper: The upper bound of the design variable.
             lower: The lower bound of the design variable.
             scaler: The scaler value of the design variable.
+            adder: The adder value of the design variable.
         """
-        self.design_variables[variable] = (scaler, lower, upper)
+        self.design_variables[variable] = (scaler, lower, upper, adder)
 
-    def _add_constraint(self, variable, upper, lower, scaler):
+    def _add_constraint(self, variable, upper, lower, scaler, adder):
         """
         Adds a constraint to the recorder.
 
@@ -497,20 +498,22 @@ class Recorder:
             upper: The upper bound of the constraint.
             lower: The lower bound of the constraint.
             scaler: The scaler value of the constraint.
+            adder: The adder value of the constraint.
         """
-        self.constraints[variable] = (scaler, lower, upper)
+        self.constraints[variable] = (scaler, lower, upper, adder)
 
-    def _add_objective(self, variable, scaler):
+    def _add_objective(self, variable, scaler, adder):
         """
         Adds an objective to the recorder.
 
         Args:
             variable: The objective variable.
             scaler: The scaler value of the objective.
+            adder: The adder value of the objective.
         """
         if len(self.objectives) > 0:
             raise ValueError("Objective has already been set")
-        self.objectives[variable] = (scaler,)
+        self.objectives[variable] = (scaler, adder)
 
     def _delete_current_graph(self):
         """
