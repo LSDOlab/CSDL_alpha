@@ -22,10 +22,10 @@ class VariableGroup:
 
     def __setattr__(self, name, value):
         if hasattr(self, '_metadata'):
-            value = self._check_pamaeters(name, value)
+            value = self._check_parameters(name, value)
         super().__setattr__(name, value)
 
-    def _check_pamaeters(self, name, value):
+    def _check_parameters(self, name, value):
         if name in self._metadata:
             if self._metadata[name]['variablize']:
                 # NOTE: variablize now turns things into Constant objects, idk if this is the desired behavior
@@ -45,7 +45,7 @@ class VariableGroup:
             if not hasattr(self, key):
                 raise ValueError(f"Variable {key} not found in the group.")
             val = getattr(self, key)
-            setattr(self, key, self._check_pamaeters(key, val))
+            setattr(self, key, self._check_parameters(key, val))
 
     def define_checks(self):
         pass
