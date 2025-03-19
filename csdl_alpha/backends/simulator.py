@@ -33,17 +33,17 @@ class SimulatorBase():
 
         if self.is_opt:
             self.opt_metadata:dict[str,dict[Variable,Union[np.array]]] = {}
-            dv_maps, dscaler, dlower, dupper, d0 = build_opt_metadata(recorder.design_variables, 'd')
-            c_maps, cscaler, clower, cupper, _ = build_opt_metadata(recorder.constraints, 'c')
-            o_maps, oscaler = build_opt_metadata(recorder.objectives, 'o')
+            dv_maps, dscaler, dlower, dupper, d0, dadder = build_opt_metadata(recorder.design_variables, 'd')
+            c_maps, cscaler, clower, cupper, _, cadder = build_opt_metadata(recorder.constraints, 'c')
+            o_maps, oscaler, oadder = build_opt_metadata(recorder.objectives, 'o')
 
             self.dv_meta = dv_maps
             self.c_meta = c_maps
             self.o_meta = o_maps
 
-            self.opt_metadata['d'] = (dscaler, dlower, dupper, d0)
-            self.opt_metadata['c'] = (cscaler, clower, cupper)
-            self.opt_metadata['o'] = oscaler
+            self.opt_metadata['d'] = (dscaler, dlower, dupper, d0, dadder)
+            self.opt_metadata['c'] = (cscaler, clower, cupper, cadder)
+            self.opt_metadata['o'] = (oscaler, oadder)
 
     def get_optimization_metadata(self)->tuple[
             tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray],
@@ -55,7 +55,7 @@ class SimulatorBase():
         Returns
         -------
         tuple[ tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray], tuple[np.ndarray,np.ndarray,np.ndarray], np.ndarray, ]
-            (dscaler, dlower, dupper, d0), (cscaler, clower, cupper), oscaler
+            (dscaler, dlower, dupper, d0, dadder), (cscaler, clower, cupper, cadder), (oscaler, oadder)
         """
         self.check_if_optimization()
         return self.opt_metadata['d'], self.opt_metadata['c'], self.opt_metadata['o']
@@ -483,7 +483,7 @@ def determine_if_optimization(recorder:Recorder)->bool:
 def build_opt_metadata(
         recorder_data:dict[Variable,Union[np.array]],
         meta_type:str   
-    )->tuple[dict, np.array, np.array, np.array, np.array]:
+    )->tuple[dict, np.array, np.array, np.array, np.array, np.array]:
     if meta_type not in ['d','c','o']:
         raise ValueError(f"meta_type must be one of ['d','c','o']. {meta_type} given.")
 
@@ -493,14 +493,15 @@ def build_opt_metadata(
 
     if not meta_type == 'o':
         if concat_size == 0:
-            return metadata, None, None, None, None
+            return metadata, None, None, None, None, None
         lower_vector = -np.inf*np.ones(concat_size)
         upper_vector = np.inf*np.ones(concat_size)
         val_vector = np.zeros(concat_size)
     else:
         if concat_size == 0:
-            return metadata, None
+            return metadata, None, None
     scaler_vector = np.ones(concat_size)
+    adder_vector  = np.zeros(concat_size)
 
     running_size = 0
     for var in recorder_data:
@@ -532,8 +533,12 @@ def build_opt_metadata(
         if scaler is not None:
             scaler_vector[l_ind:u_ind] = scaler.flatten()
 
+        adder = recorder_data[var][-1]
+        if adder is not None:
+            adder_vector[l_ind:u_ind] = adder.flatten()
+
     if not meta_type == 'o':
-        return metadata, scaler_vector, lower_vector, upper_vector, val_vector
+        return metadata, scaler_vector, lower_vector, upper_vector, val_vector, adder_vector
     else:
-        return metadata, scaler_vector
+        return metadata, scaler_vector, adder_vector
     
