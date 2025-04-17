@@ -178,6 +178,6 @@ def test_amtc_transform_tensor_2rv():
 if __name__ == '__main__':
     test_amtc_simple()
     test_amtc_simple2()
-    # test_amtc_transform()
-    # test_amtc_transform_tensor_1rv()
-    # test_amtc_transform_tensor_2rv()
+    test_amtc_transform()
+    test_amtc_transform_tensor_1rv()
+    test_amtc_transform_tensor_2rv()
