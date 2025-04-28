@@ -141,19 +141,8 @@ class ComposedOperation(SubgraphOperation):
         #                 node.value = None
 
     def evaluate_vjp(self, cotangents, *inputs_outputs):
-        # TODO: extremely messy and crappy. FIX!
-        # TODO: extremely messy and crappy. FIX!
-        # TODO: extremely messy and crappy. FIX!
-        # TODO: extremely messy and crappy. FIX!
-        # TODO: extremely messy and crappy. FIX!
-        # TODO: extremely messy and crappy. FIX!
-        # TODO: extremely messy and crappy. FIX!
-        # TODO: extremely messy and crappy. FIX!!!!
-        # TODO: extremely messy and crappy. FIX
-        # TODO: extremely messy and crappy. FIX!
-        # TODO: extremely messy and crappy. FIX!
-        # TODO: extremely messy and crappy. FIX!
-
+        # TODO: extremely messy. FIX!
+        
         # Created a new composed operation which inputs the same inputs as the original operation
         # plus the cotangents. This composed operation just computes the single VJP operation.
         inputs = inputs_outputs[:self.num_inputs]

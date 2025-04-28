@@ -121,6 +121,35 @@ def postprocess_compute_derivatives(
         if total_tuple not in derivative_meta:
             raise KeyError(f'derivative {total_tuple} does not exist')
         
+def postprocess_custom_nth_derivs(
+        jacobians:dict[tuple[str,str], Variable],
+        input_dict:dict[str, Variable],
+        output_dict:dict[str, Variable],
+    )->dict[tuple[str,str], Variable]:
+    # Checks:
+    # - Make sure non-input/output pairs do not exist in the dictionary
+    # - Fill non-declared derivatives with Nones
+    # - Make sure declared derivatives are of the correct shape
+
+    derivative_tuples = set()
+    for input_name, input in input_dict.items():
+        for output_name, output in output_dict.items():
+            derivative_tuple = (output_name, input_name)
+            derivative_tuples.add(derivative_tuple)
+            if derivative_tuple not in jacobians:
+                jacobians[derivative_tuple] = None
+            elif jacobians[derivative_tuple] is None:
+                continue
+            else:
+                # Check that the jacobian is of the correct shape
+                if jacobians[derivative_tuple].shape != (output.size, input.size):
+                    raise ValueError(f'Jacobian {derivative_tuple} is of incorrect shape. {jacobians[derivative_tuple].shape} != {(output.size, input.size)}')
+
+    for key in jacobians:
+        if key not in derivative_tuples:
+            raise KeyError(f'Derivative key \'{key}\' has been declared but does not exist.')
+
+    return jacobians
 
 # https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
 def _readonly(self, *args, **kwargs):

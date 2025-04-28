@@ -3,13 +3,10 @@ from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.utils.inputs import variablize, get_type_string, ingest_value
 from csdl_alpha.src.operations.custom.utils import (
-    prepare_compute_derivatives,
-    process_custom_derivatives_metadata,
-    postprocess_compute_derivatives,
-    preprocess_custom_inputs,
-    postprocess_custom_outputs,
+    postprocess_custom_nth_derivs
 )
 from csdl_alpha.src.operations.custom.custom import CustomExplicitOperation, CustomOperation
+from csdl_alpha.src.operations.derivatives.bookkeeping import VarTangents
 
 import warnings
 import numpy as np
@@ -20,6 +17,7 @@ class CustomExplicitOperationBeta(CustomExplicitOperation):
 
     def __init__(self):
         super().__init__()
+        self.vjp_func = None
 
     def evaluate(self):
         raise NotImplementedError('not implemented')
@@ -34,6 +32,13 @@ class CustomExplicitOperationBeta(CustomExplicitOperation):
        raise NotImplementedError('Use self.declare_derivative_function instead or a CustomExplicitOperation')
     
     def declare_derivative_function(self, derivative_operation:Union[Callable, type[CustomOperation]], *args, **kwargs):
+        """Declare a custom operation (or function) that computes the derivatives of this custom operation.
+
+        Parameters
+        ----------
+        derivative_operation : Union[Callable, type[CustomOperation]]
+        """
+        
         if inspect.isclass(derivative_operation) and issubclass(derivative_operation, CustomOperation):
             call_deriv_func = lambda inputs: derivative_operation(*args, **kwargs).evaluate(inputs)
         elif callable(derivative_operation):
@@ -41,48 +46,44 @@ class CustomExplicitOperationBeta(CustomExplicitOperation):
         else:
             raise TypeError(f'derivative_operation must be a callable function or a CustomOperation class (not instance), got type {get_type_string(derivative_operation)}')
         
-        def vjp_func(cotangents:dict, inputs:dict[Variable]):
+        def vjp_func(cotangents:VarTangents, inputs:list[Variable], outputs:list[Variable]):
+            # dictionify inputs to derivative function
+            input_dict = {}
+            for i, (input_name, original_input) in enumerate(self.input_dict.items()):
+                input_dict[input_name] = inputs[i]
+            
             # call derivative function
-            jacobians = call_deriv_func(inputs)
+            jacobians = call_deriv_func(input_dict)
 
             # postprocess output functions and check jacobians dictionary to make sure everything is correct
-            jacobians, info = postprocess_custom_nth_derivs(jacobians)
+            jacobians = postprocess_custom_nth_derivs(
+                jacobians,
+                self.input_dict,
+                self.output_dict,
+            )
 
             # accumulate cotangents
-            print('poo')
+            for i, (input_name, input) in enumerate(self.input_dict.items()):
+                inputs_vjp = inputs[i]
+                if not cotangents.check(inputs_vjp):
+                    continue
+                for j, (output_name, output) in enumerate(self.output_dict.items()):
+                    output_vjp = outputs[j]
+                    if not cotangents.check(output_vjp):
+                        continue
+                    jac = jacobians[output_name, input_name]
+                    if jac is None:
+                        continue
+
+                    cotangents.accumulate(inputs_vjp, (cotangents[output_vjp].reshape(1,-1)@jac).reshape(inputs_vjp.shape))
 
         self.vjp_func = vjp_func
         
-    def evaluate_vjp(self, cotangents, *inputs_and_outputs):
+    def evaluate_vjp(self, cotangents:VarTangents, *inputs_and_outputs):
         inputs = inputs_and_outputs[:self.num_inputs]
-
-        # dictionify inputs to derivative function
-        input_dict = {}
-        for i, (input_name, original_input) in enumerate(self.input_dict.items()):
-            input_dict[input_name] = inputs[i]
+        outputs = inputs_and_outputs[self.num_inputs:]
 
         # call derivative function
-        self.vjp_func(cotangents, input_dict)
-
-
-        # output_cots = []
-        # for output in outputs:
-        #     if not cotangents.check(output):
-        #         output_cots.append(Variable(value = np.zeros(output.shape)))
-        #     else:
-        #         output_cots.append(cotangents[output])
-        # input_cots = []
-        # for input in inputs:
-        #     if cotangents.check(input):
-        #         input_cots.append(input)
-
-        # vjps = self.build_custom_operation_vjp(
-        #     input_cotangents = input_cots,
-        #     output_cotangents = output_cots,
-        #     deriv_order = 1)
-        # cots = vjps.finalize_and_return_outputs()
-        
-        # if not isinstance(cots, tuple):
-        #     cots = (cots,)
-        # for i, input in enumerate(input_cots):
-            # cotangents.accumulate(input, cots[i])
+        if self.vjp_func is None:
+            raise RuntimeError(f'Derivatives for custom operation {self.info()} has not been set. Use self.declare_derivative_function to define derivatives.')
+        self.vjp_func(cotangents, inputs, outputs)
