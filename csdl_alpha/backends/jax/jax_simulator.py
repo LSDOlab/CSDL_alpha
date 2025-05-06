@@ -159,7 +159,7 @@ class JaxSimulator(SimulatorBase):
 
         # Run the function
         outputs = self.run_func({in_var:in_var.value for in_var in self.input_manager.list})
-        
+
         # Callback if user-specified
         self.callback()
 

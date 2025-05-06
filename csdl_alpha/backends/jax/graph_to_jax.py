@@ -223,6 +223,27 @@ def create_jax_interface(
             jax_interface_inputs.append(jax.numpy.array(inputs_dict[input_var]))
         jax_outputs = jax_function(*jax_interface_inputs)
 
+        #### Potential analysis tools ####
+        ## ----- compiled func cost estimates ----- 
+        # traced = jax_function.trace(*jax_interface_inputs)
+        # lowered = traced.lower()
+        # compiled = lowered.compile()
+        # for compiled_costs in compiled.cost_analysis():
+        #     print(compiled_costs)
+        # print(compiled.memory_analysis())
+        # lowered_func_string = lowered.as_text()
+        # save the lowered function to a file
+        # with open("lowered_func.txt", "w") as f:
+            # f.write(lowered_func_string)
+
+        ## ----- save the HLO graph to a file ----- 
+        # z=jax.xla_computation(jax_function)(*jax_interface_inputs)
+        # with open("t.txt", "w") as f:
+        #     f.write(z.as_hlo_text())
+        # with open("t.dot", "w") as f:
+            # f.write(z.as_hlo_dot_graph())
+        # exit()
+
         # jax_grad_outputs = jax_grad(*jax_interface_inputs)
 
         outputs_dict = {}
