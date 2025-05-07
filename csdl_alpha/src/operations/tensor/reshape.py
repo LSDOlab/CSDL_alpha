@@ -79,7 +79,7 @@ def reshape(x:Variable, shape: tuple[int]) -> Variable:
     if x.size == np.prod(shape):
         op = Reshape(x, shape = shape)
     else:
-        raise ValueError(f'Variable size and new shape do not match: ({x.size} != {np.prod(shape)})')
+        raise ValueError(f'Variable shape ({x.shape}) and new shape ({shape}) are incompatible: ({x.size} != {np.prod(shape)})')
     return op.finalize_and_return_outputs()
 
 class TestReshape(csdl_tests.CSDLTest):
