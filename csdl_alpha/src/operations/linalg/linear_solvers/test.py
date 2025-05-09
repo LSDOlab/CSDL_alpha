@@ -1,31 +1,46 @@
-# import csdl_alpha.utils.testing_utils as csdl_tests
+import csdl_alpha.utils.testing_utils as csdl_tests
 
-# class TestLinear(csdl_tests.CSDLTest):
+class TestLinear(csdl_tests.CSDLTest):
     
-    # def test_functionality(self,):
-    #     self.prep()
+    def test_functionality(self,):
+        self.prep()
 
-    #     import csdl_alpha as csdl
-    #     import numpy as np
-    #     x_val = 3.0
-    #     y_val = 2.0
-    #     x = csdl.Variable(name = 'x', value = x_val)
-    #     y = csdl.Variable(name = 'y', value = y_val)
+        import csdl_alpha as csdl
+        import numpy as np
+
+        compare_values = []
+
+        n = 10
+        theta_row = np.sin(np.arange(n)+0.3)
+        theta_col = np.cos(-np.arange(n))
+        A_val, b_val = np.outer(theta_row, theta_col), np.sin(np.arange(n)**2.0)
+        A = csdl.Variable(value = A_val)
+        b = csdl.Variable(value = b_val)
+
+        def linear_operator(x):
+            return A @ x
         
-    #     compare_values = []
-    #     # add scalar variables
-    #     s1 = csdl.add(x,y)
-    #     t1 = np.array([x_val + y_val])
-    #     compare_values += [csdl_tests.TestingPair(s1, t1, tag = 's1')]
+        def linear_transpose_operator(x):
+            return A.T() @ x
 
+        x_assembled = csdl.linear.solve_gmres(
+            A = A,
+            b = b,
+            transpose_solve = lambda x: csdl.krylov_solve(A.T(), x), 
+        )
 
-    #     self.run_tests(compare_values = compare_values, verify_derivatives=True)
+        x_matrix_free = csdl.linear.solve_gmres(
+            A = linear_operator,
+            b = b,
+            transpose_solve = lambda x: csdl.krylov_solve(linear_transpose_operator, x),
+        )
 
-    # def test_docstring(self):
-        # self.docstest(add)
+        x = csdl.solve_linear(A,b)
 
-# if __name__ == '__main__':
-#     test = TestLinear()
-    # test.overwrite_backend = 'jax'
-    # test.test_functionality()
-    # test.test_docstring()
+        self.run_tests(compare_values = compare_values, verify_derivatives=True)
+
+if __name__ == '__main__':
+    test = TestLinear()
+    test.overwrite_backend = 'jax'
+    test.test_functionality()
+    test.test_docstring()

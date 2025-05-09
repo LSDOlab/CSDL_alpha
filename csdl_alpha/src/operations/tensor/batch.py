@@ -164,15 +164,15 @@ class TestBatch(csdl_tests.CSDLTest):
 
         # TEST 3,4,5,6: Double batch
         def matvec(theta_i,theta_j, vec):
-            print(f'SHAPES: theta_i: {theta_i.shape}, theta_j: {theta_j.shape}, vec: {vec.shape}')
             A_grid = csdl.outer(theta_i, theta_j)
-            assert A_grid.shape == (theta_i.shape[0], theta_j.shape[0])
             return A_grid @ vec
         n = 6
         batch_size_row = 2
         batch_size_col = 3
         theta_row_val, theta_col_val, vec_val = np.sin(np.arange(n)), np.cos(-np.arange(n)/3+0.1), 1.0/(np.arange(n)+1.0)
         theta_row, theta_col, vec = csdl.Variable(value = theta_row_val), csdl.Variable(value = theta_col_val), csdl.Variable(value = vec_val)
+        batched_func_row = csdl.experimental.batch_function(matvec, batch_size_row,[0, None, None])
+        Av_rows = batched_func_row(theta_row, theta_col, vec)
 
         # Compute real matvec
         A_np = np.outer(theta_row_val, theta_col_val)

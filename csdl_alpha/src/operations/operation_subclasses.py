@@ -227,24 +227,100 @@ class ComposedOperation(SubgraphOperation):
                 i+=1
 
 
-# def expand_subgraph(evaluate_function):
-    # """
-    # Decorator to expand a composed operation to a flat graph
+class SubgraphFunctionOperation(SubgraphOperation):
+    def __init__(
+            self,
+            subgraph_inputs,
+            outs,
+            subgraph,
+            func,
+            name,
+        ):
+        super().__init__(*subgraph_inputs) # pass in inputs
+        self.set_outputs(outs)
+        for out in outs:
+            self.recorder._add_node(out)
+        self.assign_subgraph(subgraph)
+        self.func = func
+        self.name = name
 
-    # Parameters
-    # ----------
-    # evaluate_function : function
-    #     direct function to evaluate the composed operation
-    # """
-    # def decorator(func):
-    #     from csdl_alpha.api import manager
-    #     recorder = manager.active_recorder
-    #     if recorder.expand_ops:
-    #         return evaluate_function
-    #     else:
-    #         return func
+    def compute_inline(self, *inputs):
+        for input_val, input_var in zip(inputs, self.inputs):
+            input_var.value = input_val
+        self.get_subgraph().execute_inline()
+        outs = []
+        for output_var in self.outputs:
+            outs.append(output_var.value)
+
+        if len(outs) == 1:
+            return outs[0]
+        else:
+            return tuple(outs)
+
+    def compute_jax(self, *inputs):
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        jax_fn = create_jax_function(self.get_subgraph(), self.outputs, self.inputs)
+        return tuple(jax_fn(*inputs))
+
+    def evaluate_vjp(self, cotangents, *inputs_outputs):
+        inputs = inputs_outputs[:self.num_inputs]
+        outputs = inputs_outputs[self.num_inputs:]
+        exit('SHOULDN"T BE CALLED')
+
+def subgraph_operationify(func, name = 'subgraph_op'):
+    import csdl_alpha as csdl
+    recorder = csdl.get_current_recorder()
+    assert callable(func), f"func must be a callable, but got {type(func)}"
+
+    def new_func(*args):
+        # process args
+        for arg in args:
+            if not isinstance(arg, Variable):
+                raise TypeError(f"All arguments must be Variables, but got {type(arg)}")
+        arg_set = set(args)
+
+        recorder._enter_subgraph(name=name, add_missing_variables=True)
+        outs_orig = func(*args)
+        subgraph = recorder.active_graph
+        recorder._exit_subgraph()
+
+        # process outputs
+        if isinstance(outs_orig, (list,tuple)):
+            outs = list(outs_orig)
+        elif isinstance(outs_orig, Variable):
+            outs = [outs_orig]
+        else:
+            raise TypeError(f"Outputs must be a Variable or a list/tuple of Variables, but got {type(outs_orig)}")
         
-    # return decorator
+        for out in outs:
+            if not isinstance(out, Variable):
+                raise TypeError(f"All outputs must be Variables, but got {type(out)}")
+
+        # process inputs
+        subgraph_inputs = list(args)
+        for input_var in subgraph.inputs:
+            if input_var not in arg_set:
+                subgraph_inputs.append(input_var)
+
+        # create the subgraph operation
+        new_outputs = SubgraphFunctionOperation(
+            subgraph_inputs,
+            outs,
+            subgraph,
+            func,
+            name = name,
+        ).finalize_and_return_outputs()
+
+        if len(outs_orig) == 1:
+            if isinstance(outs_orig, Variable):
+                return new_outputs
+            else:
+                return (new_outputs,)
+        else:
+            return new_outputs
+    
+    return new_func
+
 
 def check_expand_subgraphs():
     from csdl_alpha.api import manager
