@@ -151,6 +151,35 @@ def postprocess_custom_nth_derivs(
 
     return jacobians
 
+def postprocess_custom_nth_vjps(
+        vjps:dict[str, Variable],
+        input_dict:dict[str, Variable],
+    )->dict[str, Variable]:
+    # Checks:
+    # - Make sure non-input strings do not exist in the dictionary
+    # - Fill non-declared vjps with Nones
+    # - Make sure vjps are of the correct shape
+
+    input_names = set(input_dict.keys())
+    for input_name, input in input_dict.items():
+        if input_name not in vjps:
+            vjps[input_name] = None
+        elif vjps[input_name] is None:
+            continue
+        else:
+            if type(vjps[input_name]) != Variable:
+                raise TypeError(f'VJP {input_name} is not a Variable. {get_type_string(vjps[input_name])} was given.')
+            # Check that the vjp is of the correct shape
+            if vjps[input_name].shape != input.shape:
+                raise ValueError(f'VJP {input_name} is of incorrect shape. {vjps[input_name].shape} given, {input.shape} expected.')
+
+    for key in vjps:
+        if key not in input_names:
+            raise KeyError(f'VJP input \'{key}\' does not exist. Declared inputs are {input_names}.')
+
+    return vjps
+
+
 # https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
 def _readonly(self, *args, **kwargs):
     raise RuntimeError("Cannot modify inputs dictionary.")

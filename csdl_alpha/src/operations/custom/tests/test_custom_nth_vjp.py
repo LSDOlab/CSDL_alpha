@@ -5,99 +5,90 @@ import numpy as np
  
 from csdl_alpha.src.operations.custom.tests.test_custom import Paraboloid
 
-class CustomParaboloidDerivativeDerivative(csdl.experimental.CustomExplicitOperationBeta):
+
+class CustomParaboloidVJPVJP(csdl.experimental.CustomExplicitOperationBeta):
     def __init__(self, a, b, c):
         super().__init__()
         self.a, self.b, self.c = a, b, c
     
-    def evaluate(self, inputs):
+    def evaluate(self, inputs, d_outputs):
+        # Inputs of first-order VJP
         self.declare_input('x', inputs['x'])
         self.declare_input('y', inputs['y'])
         self.declare_input('z', inputs['z'])
+        self.declare_input('d_f', inputs['d_f'])
+        self.declare_input('d_g', inputs['d_g'])
+
+        # d_outputs of second-order VJP
+        self.declare_input('d_d_x', d_outputs['d_x'])
+        self.declare_input('d_d_y', d_outputs['d_y'])
+        self.declare_input('d_d_z', d_outputs['d_z'])
 
         # declare output variables (derivatives)
-        size = inputs['x'].size
-        g_x_x = self.create_output('g_x_x', (size*size, size))
-        g_x_y = self.create_output('g_x_y', (size*size, size))
-        g_y_x = self.create_output('g_y_x', (size*size, size))
-        g_y_y = self.create_output('g_y_y', (size*size, size))
+        shape = inputs['x'].shape
+        d_x = self.create_output('d_x', inputs['x'].shape)
+        d_y = self.create_output('d_y', inputs['y'].shape)
+        d_d_f = self.create_output('d_d_f', inputs['d_f'].shape)
+        d_d_g = self.create_output('d_d_g', inputs['d_g'].shape)
 
         # define derivatives:
-        derivatives = {
-            ('g_x', 'x'): g_x_x,
-            ('g_x', 'y'): g_x_y,
-            ('g_y', 'x'): g_y_x,
-            ('g_y', 'y'): g_y_y,
+        d_inputs = {
+            'x': d_x,
+            'y': d_y,
+            'z': None,
+            'd_f': d_d_f,
+            'd_g': d_d_g,
         }
-        return derivatives
+        return d_inputs
 
     def compute(self, input_vals, outputs_vals):
-        x = input_vals['x']
-        y = input_vals['y']
-        z = input_vals['z']
+        x, y, z = input_vals['x'], input_vals['y'], input_vals['z']
+        d_f, d_g = input_vals['d_f'], input_vals['d_g']
+        d_d_x, d_d_y, d_d_z = input_vals['d_d_x'], input_vals['d_d_y'], input_vals['d_d_z']
 
-        # Second-order derivatives
-        ddg_dx2 = np.zeros((6, 6, 6))
-        ddg_dxdy = np.zeros((6, 6, 6))
+        # Second-order VJPS
+        outputs_vals['d_x'] = 6.0*x*(y**2.0)*d_g*d_d_x + 6.0*(x**2.0)*y*d_g*d_d_y
+        outputs_vals['d_y'] = 6.0*(x**2.0)*(y)*d_g*d_d_x + 2.0*(x**3.0)*d_g*d_d_y
+        outputs_vals['d_d_f'] = 2.0*d_d_x + self.a*d_d_y
+        outputs_vals['d_d_g'] = 3.0*(x**2.0)*(y**2.0)*d_d_x + 2.0*(x**3.0)*y*d_d_y + 3.0*d_d_z
 
-        ddg_dy2 = np.zeros((6, 6, 6))
-        ddg_dydx = np.zeros((6, 6, 6)) 
-
-        for i in range(6):
-            x_i = x.flatten()[i]
-            y_i = y.flatten()[i]
-            
-            # 'g' 'x'
-            ddg_dx2[i, i, i] = 6 * x_i * y_i**2
-            ddg_dxdy[i, i, i] = 6 * x_i**2 * y_i
-            
-            # 'g' 'y'
-            ddg_dy2[i, i, i] = 2 * x_i**3
-            ddg_dydx[i, i, i] = (3 * x_i**2) * (2 * y_i)
-        
-        # assign to derivatives
-        outputs_vals['g_x_x'] = ddg_dx2.reshape(6*6, 6)
-        outputs_vals['g_x_y'] = ddg_dxdy.reshape(6*6, 6)
-        outputs_vals['g_y_x'] = ddg_dydx.reshape(6*6, 6)
-        outputs_vals['g_y_y'] = ddg_dy2.reshape(6*6, 6)
-
-
-class CustomParaboloidDerivative(csdl.experimental.CustomExplicitOperationBeta):
+class CustomParaboloidVJP(csdl.experimental.CustomExplicitOperationBeta):
     def __init__(self, a, b, c):
         super().__init__()
         self.a, self.b, self.c = a, b, c
     
-    def evaluate(self, inputs):
+    def evaluate(self, inputs, d_outputs):
         self.declare_input('x', inputs['x'])
         self.declare_input('y', inputs['y'])
         self.declare_input('z', inputs['z'])
 
+        self.declare_input('d_f', d_outputs['f'])
+        self.declare_input('d_g', d_outputs['g'])
+
         # declare output variables (derivatives)
-        size = inputs['x'].size
-        f_x, f_y = self.create_output('f_x', (size, size)), self.create_output('f_y', (size, size))
-        g_x, g_y, g_z = self.create_output('g_x', (size, size)), self.create_output('g_y', (size, size)), self.create_output('g_z', (size, size))
+        shape = inputs['x'].shape
+        d_x = self.create_output('d_x', shape)
+        d_y = self.create_output('d_y', shape)
+        d_z = self.create_output('d_z', shape)
 
         # define derivative function
-        self.declare_derivative_function(CustomParaboloidDerivativeDerivative, a=self.a, b=self.b, c=self.c)
+        self.declare_vjp_function(CustomParaboloidVJPVJP , a=self.a, b=self.b, c=self.c)
 
         # define derivatives:
-        derivatives = {
-            ('f', 'x'): f_x, ('f', 'y'): f_y, ('f', 'z'): None,
-            ('g', 'x'): g_x, ('g', 'y'): g_y, ('g', 'z'): g_z,
+        d_inputs = {
+            'x': d_x,
+            'y': d_y,
+            'z': d_z,
         }
-        return derivatives
+        return d_inputs
 
     def compute(self, input_vals, output_vals):
         x, y, z = input_vals['x'], input_vals['y'], input_vals['z']
+        d_f, d_g = input_vals['d_f'], input_vals['d_g']
 
-        # compute derivatives
-        output_vals['f_x'] = np.diag(2.0*np.ones(x.size))
-        output_vals['f_y'] = np.diag(self.a*np.ones(x.size))
-
-        output_vals['g_x'] = np.diag(y.flatten()**2.0 * 3.0*x.flatten()**2.0)
-        output_vals['g_y'] = np.diag(x.flatten()**3.0 * 2.0*y.flatten())
-        output_vals['g_z'] = np.diag(3.0*np.ones(x.size))
-
+        output_vals['d_x'] = 2.0*d_f + 3.0*(x**2.0)*(y**2.0)*d_g
+        output_vals['d_y'] = self.a*d_f + 2.0*(x**3.0)*y*d_g
+        output_vals['d_z'] = 3.0*d_g
 
 class CustomParaboloid(csdl.experimental.CustomExplicitOperationBeta):
     def __init__(self, a, b, c):
@@ -105,6 +96,7 @@ class CustomParaboloid(csdl.experimental.CustomExplicitOperationBeta):
         self.a, self.b, self.c = a, b, c
 
     def evaluate(self, x, y, z):
+        # assign method _dict to input dictionary
         self.declare_input('x', x)
         self.declare_input('y', y)
         self.declare_input('z', z)
@@ -113,14 +105,12 @@ class CustomParaboloid(csdl.experimental.CustomExplicitOperationBeta):
         f,g = self.create_output('f', x.shape), self.create_output('g', x.shape)
 
         # define derivative function
-        self.declare_derivative_function(
-            CustomParaboloidDerivative,
-            a=self.a, b=self.b, c=self.c,
-        )
+        # self.declare_derivative_function(CustomParaboloidDerivative, a=self.a, b=self.b, c=self.c)
+        self.declare_vjp_function(CustomParaboloidVJP, a=self.a, b=self.b, c=self.c)
         return f, g
     
     def compute(self, input_vals, output_vals):
-        x, y, z = input_vals['x'], input_vals['y'], input_vals['z']
+        x,y,z = input_vals['x'], input_vals['y'], input_vals['z']
 
         output_vals['f'] = self.a*y + x*2.0
         output_vals['g'] = 3.0*z + (x**3.0)*(y**2.0)
