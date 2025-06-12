@@ -7,10 +7,22 @@ from csdl_alpha.src.operations.linalg.linear_solvers.utils import process_linsol
 import pytest
 import numpy as np
 from typing import Callable, Union
+import jax
+
+class gmres_counter(object):
+    def __init__(self, disp=True):
+        self._disp = disp
+        self.niter = 0
+    def __call__(self, rk=None):
+        self.niter += 1
+        if self._disp:
+            if np.mod(self.niter, 5) == 0:
+                print('iter %3i\trk = %s' % (self.niter, str(rk)))
+
 
 @set_properties()
 class MatFreeLinearSolve(SubgraphOperation):
-    def __init__(self, A_inputs, b, Av, v, A_subgraph, transpose_solve, A_func):
+    def __init__(self, A_inputs, b, Av, v, A_subgraph, transpose_solve, A_func, x0):
         super().__init__(*A_inputs,b) # pass in inputs
         self.set_dense_outputs((b.shape,))
         self.assign_subgraph(A_subgraph)
@@ -22,10 +34,23 @@ class MatFreeLinearSolve(SubgraphOperation):
         self.n = b.size
         self.transpose_solve = transpose_solve
         self.A_func = A_func
+        self.x0 = x0
+
+        from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+        matvec_func = create_jax_function(
+            self.get_subgraph(),
+            [self.subgraph_Av],
+            [self.subgraph_v] + self.subgraph_A_inputs,
+        )
+        # potentially jit to the GPU
+        jax.config.update("jax_enable_x64", True)
+        self.matvec_func = jax.jit(matvec_func, device=jax.devices("cpu")[0])
+        # replace gpu with cpu to jit between the two
 
     def compute_inline(self, *inputs):
         from scipy.sparse.linalg import gmres
         from scipy.sparse.linalg import LinearOperator
+        import jax
 
         subgraph_inputs = inputs[:-1]
         b = inputs[-1]
@@ -33,18 +58,31 @@ class MatFreeLinearSolve(SubgraphOperation):
         subgraph = self.get_subgraph()
         for input_var, input_val in zip(subgraph.inputs, subgraph_inputs):
             input_var.value = input_val
+        
+        
+        matvec_func = self.matvec_func
+        
+        matvec_func_single = lambda v: matvec_func(v, *[jax.numpy.array(x) for x in subgraph_inputs])[0]
 
         def matvec_func_inline(v):
-            self.subgraph_v.value = v
-            subgraph.execute_inline()
-            Av = self.subgraph_Av.value
-            return Av
+            # self.subgraph_v.value = v
+            # subgraph.execute_inline()
+            # Av = self.subgraph_Av.value
+            v=jax.numpy.array(v)
+            Av = matvec_func_single(v)
+            return np.array(Av)
 
-        x, int = gmres(LinearOperator((self.n,self.n), matvec=matvec_func_inline), b, tol = 1e-12)
-        print('GMRES # iterations:', int)
+        counter = gmres_counter()
+        # x, int = gmres(LinearOperator((self.n,self.n), matvec=matvec_func_inline), b, tol = 1e-12)
+        x, int = gmres(LinearOperator((self.n,self.n), matvec=matvec_func_inline), b, x0=self.x0, tol = 1e-12, callback=counter)
+        # print('GMRES # iterations:', int)
+        print('GMRES # iterations:', counter.niter)
+        # print(f'counter: {counter.niter}')
         return x.reshape(b.shape)
     
     def compute_jax(self, *inputs):
+        from csdl_alpha.backends.jax.utils import fallback_to_inline_jax
+        return fallback_to_inline_jax(self,*inputs)
         # JAX stuff
         import jax.numpy as jnp
         from jax.scipy.sparse.linalg import gmres
@@ -63,7 +101,8 @@ class MatFreeLinearSolve(SubgraphOperation):
         )
         
         matvec_func_single = lambda v: matvec_func(v, *subgraph_inputs)[0]
-        x_solved, _ = gmres(matvec_func_single, b.flatten(), tol=1e-12, maxiter=None)
+        # x_solved, _ = gmres(matvec_func_single, b.flatten(), tol=1e-12, maxiter=None)
+        x_solved, _ = gmres(matvec_func_single, b.flatten(), tol=1e-6, maxiter=1, restart=1)
         
         return x_solved
 
@@ -110,6 +149,7 @@ class GMRESSolve(MatFreeLinearSolve):
 def solve_gmres(
         A:Union[Variable,Callable],
         b:Variable,
+        x0,
         transpose_solve:Callable = None, 
     )->Variable:
 
@@ -127,7 +167,7 @@ def solve_gmres(
     recorder = get_current_recorder()
     A_subgraph, A_inputs, Av, v = build_matvec_subgraph(A_func, b, recorder, 'gmres_matvec_subgraph')
 
-    output = GMRESSolve(A_inputs, b, Av, v, A_subgraph, transpose_solve, A_func).finalize_and_return_outputs()
+    output = GMRESSolve(A_inputs, b, Av, v, A_subgraph, transpose_solve, A_func, x0).finalize_and_return_outputs()
     return return_b(output, b_shape)
 
 class TestGmres(csdl_tests.CSDLTest):

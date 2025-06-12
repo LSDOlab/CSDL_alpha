@@ -12,7 +12,7 @@ def batch_function(
         func:Callable,
         batch_size:int,
         batch_dims:Tuple[Union[int,None]],
-        output_dims:Tuple[Union[int,None]] = None)->Callable:
+        output_types:Tuple[Union[int,None]] = None)->Callable:
 
     # ==== Error checks ====:
     # - check if the function is callable
@@ -20,7 +20,7 @@ def batch_function(
     # - check if the batch_dims is a tuple that matches the input arguments tuple
     # - - additionally, if the batch_dims is a tuple of integers, check if they are within the shape of that variable (and make sure they are variables in the first place)
     # - check if the output_sums is a tuple of integers
-
+    
     # Checks:
     if not callable(func):
         raise TypeError(f'argument func must be a callable. Type {get_type_string(func)} given')
@@ -106,12 +106,29 @@ def batch_function(
             out_tuple = False
         else:
             out_tuple = True
+
+        if output_types is None:
+            output_types_post = (0,) * len(single_outs)
+        else:
+            if isinstance(output_types, numbers.Integral):
+                output_types_post = (output_types,)
+            elif isinstance(output_types, list):
+                output_types_post = tuple(output_types)
+            else:
+                output_types_post = output_types
+            if len(output_types) != len(single_outs):
+                raise ValueError(f"output_types must be a tuple of integers that matches the outputs. {len(single_outs)} outputs given, {len(output_types)} output_types provided.")
         
         batched_outs = []
-        for out in single_outs:
+        for output_type, out in zip(output_types_post, single_outs):
             if not isinstance(out, Variable):
                 raise TypeError(f"Function outputs must be a Variable. Type {get_type_string(out)} given.")
-            batched_output = loop_builder.add_stack(out)
+            if output_type == 0:
+                batched_output = loop_builder.add_stack(out)
+            elif output_type == 1:
+                batched_output = loop_builder.add_pure_accrue(out)
+            else:
+                raise ValueError(f"output_types must be a tuple of integers that are either 0 or 1. {output_type} given.")
             batched_outs.append(batched_output)
         loop_builder.finalize()
         if out_tuple:
@@ -227,7 +244,8 @@ class TestBatch(csdl_tests.CSDLTest):
         def matvec(A_grid, vec):
             print(f'SHAPES: A_grid: {A_grid.shape} vec: {vec.shape}')
             return A_grid @ vec
-        n = 6
+
+        n = 150
         batch_size_row = 2
         batch_size_col = 3
         theta_row_val, theta_col_val, vec_val = np.sin(np.arange(n)), np.cos(-np.arange(n)/3+0.1), 1.0/(np.arange(n)+1.0)
@@ -236,6 +254,7 @@ class TestBatch(csdl_tests.CSDLTest):
         # Compute real matvec
         A_np = np.outer(theta_row_val, theta_col_val)
         Av_np = A_np @ vec_val
+        AA_np = A_np @ A_np
 
         A_full = csdl.outer(theta_row, theta_col)
         # TEST 8: Row batching only
@@ -246,18 +265,33 @@ class TestBatch(csdl_tests.CSDLTest):
         batched_func_col = csdl.experimental.batch_function(matvec, batch_size_col,[1, 0])
         Av_cols = csdl.sum(batched_func_col(A_full, vec), axes=(0,))
 
+        # TEST 9.1: Col batching only using output_sum
+        batched_func_col = csdl.experimental.batch_function(matvec, batch_size_col,[1, 0], output_types = (1,))
+        Av_cols_s = batched_func_col(A_full, vec)
+
         # TEST 10: Grid batching row->col
         batched_func_row = csdl.experimental.batch_function(matvec, batch_size_row,[0, None])
         batched_func_row_col = csdl.experimental.batch_function(batched_func_row, batch_size_col,[1, 0])
         Av_grid_rc = csdl.sum(batched_func_row_col(A_full, vec), axes=(0,)).reshape((n,))
 
+        # TEST 11: Col batching only on matmat
+        batched_func_col_matmat = csdl.experimental.batch_function(matvec, batch_size_col,[1, 0])
+        asdf = batched_func_col_matmat(A_full, A_full)
+        print(asdf.shape)
+        AA_cols_matmat = csdl.sum(batched_func_col_matmat(A_full, A_full), axes=(0,))
+
         print('Numpy:      ',Av_np)
         print('row:        ',Av_rows.value)
         print('col:        ',Av_cols.value)
+        print('col s:      ',Av_cols_s.value)
         print('row->col:   ',Av_grid_rc.value)
+        print('Numpy matmat:',AA_np)
+        print('matmat col: ', AA_cols_matmat.value)
         compare_values += [csdl_tests.TestingPair(Av_rows, Av_np, tag = 'row_batch')]
         compare_values += [csdl_tests.TestingPair(Av_cols, Av_np, tag = 'col_batch')]
+        compare_values += [csdl_tests.TestingPair(Av_cols_s, Av_np, tag = 'col_batch_s')]
         compare_values += [csdl_tests.TestingPair(Av_grid_rc, Av_np, tag = 'grid_batch')]
+        compare_values += [csdl_tests.TestingPair(AA_cols_matmat, AA_np, tag = 'col_batch_matmat')]
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
 
     def test_errors(self):
