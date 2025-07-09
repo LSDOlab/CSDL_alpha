@@ -237,6 +237,13 @@ class ComposedOperation(SubgraphOperation):
                 cotangents.accumulate(input_var, wrt_derivs[i])
                 i+=1
 
+@set_properties()
+class RandomOperation(Operation):
+    """
+    Base class for random operations.
+    """
+    def evaluate_vjp(self, *args):
+        raise NotImplementedError("Random operations do not support VJP evaluation.")
 
 # def expand_subgraph(evaluate_function):
     # """
