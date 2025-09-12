@@ -119,13 +119,14 @@ class Variable(Node):
     def post_init(self):
         pass
 
-    def add_name(self, name: str):
+    def add_name(self, name: str)->'Variable':
         if self.name is None:
             self.name = name
         if self.recorder.active_namespace.prepend is not None:
             self.names.append(f'{self.recorder.active_namespace.prepend}.{name}')
         else:
             self.names.append(name)
+        return self
     
     def add_tag(self, tag: str):
         self.tags.append(tag)

@@ -583,7 +583,6 @@ class Recorder:
             self.active_graph.visualize(filename, trim_loops=trim_loops, format = format)
         elif visualize_style == 'hierarchical':
             self.visualize_hierarchical(filename)
-
         else:
             raise ValueError(f"Invalid visualize_style: {visualize_style}. Must be 'namespace' or 'hierarchical'")
 

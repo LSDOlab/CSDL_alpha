@@ -226,6 +226,68 @@ class Graph():
 
         return subgraph, subgraph_inputs, subgraph_outputs
 
+    def extract_subgraph_nodes(
+            self,
+            subgraph_nodes:list[Node],
+            keep_variables = True):
+        
+        S = set()
+        for node in subgraph_nodes:
+            if node not in self.node_table:
+                raise ValueError(f"Node {node.info()} not in graph {get_node_info_string(node, self)}")
+            S.add(self.node_table[node])
+
+        # Create a new graph which is the subgraph
+        rx_sg = self.rxgraph.subgraph(list(S))
+
+        subgraph = Graph()
+        subgraph.rxgraph = rx_sg
+        subgraph.update_node_table()
+
+        # Delete the nodes in the subgraph from the graph
+        delete_nodes = set()
+        for node_index in S:
+            node = self.rxgraph[node_index]
+            if keep_variables:
+                if is_variable(node):
+                    continue
+            delete_nodes.add(node_index)
+    
+
+        # self.visualize(f'in_extract_b')
+
+        # Checks: (temporary)
+        # # TODO: apply checks in debug mode?
+        # if 0:
+        #     print("\nChecking extraction...")
+        #     # all inputs and outputs should be in self
+        #     subgraph_inputs_and_outputs = subgraph_inputs.union(subgraph_outputs)
+        #     for node in subgraph_inputs_and_outputs:
+        #         if node not in self.rxgraph.nodes():
+        #             raise ValueError(f"Node {node.info()} not in graph {get_node_info_string(node, self)}")
+        #     print("  - Check 1 passed")
+
+        #     # all inputs and outputs should be in subgraph
+        #     for node in subgraph_inputs_and_outputs:
+        #         if node not in subgraph.rxgraph.nodes():
+        #             raise ValueError(f"Node {node.info()} not in subgraph {get_node_info_string(node, self)}")
+        #     # too lazy to check for no other variables part
+        #     print("  - Check 2 passed")
+
+        #     # all inputs in subgraph should have no predecessors
+        #     for node in subgraph_inputs:
+        #         if len(subgraph.rxgraph.predecessors(subgraph.node_table[node])) != 0:
+        #             raise ValueError(f"Input {node.info()} has predecessors {get_node_info_string(node, self)}")
+        #     print("  - Check 3 passed")
+
+        #     print("Check complete...\n")
+
+        self._delete_nodes(delete_nodes)
+        # self.visualize(f'in_extract_a')
+
+        return subgraph
+
+
     # TODO: make this work with variables only?
     def _delete_nodes(self, nodes):
         """
@@ -446,7 +508,14 @@ class Graph():
         S = S.union(pred_succ_vars)
         return S
 
-    def visualize(self, filename = 'image', trim_loops = False, format = 'svg'):
+    def visualize(
+            self,
+            filename:str = 'image',
+            format:str = 'svg',
+            trim_loops:bool = False,
+            containers:dict = None,
+            colors:dict = None,
+        ):
         from csdl_alpha.src.graph.variable import Variable
         # inverse_node_table = {v: k for k, v in self.node_table.items()}
 
@@ -461,7 +530,12 @@ class Graph():
         #     return attr_dict
 
 
-        dot = self.to_dot(node_attr_fn=self.name_node, trim_loops=trim_loops)
+        dot = self.to_dot(
+            node_attr_fn=self.name_node,
+            trim_loops=trim_loops,
+            containers=containers,
+            colors=colors,
+        )
 
         if format == 'svg':
             dot.write_svg(f'{filename}.svg')
@@ -470,7 +544,7 @@ class Graph():
             dot.write_png(f'{filename}.png')
             # graphviz_draw(self, node_attr_fn = self.name_node, filename= 'graph.png')
         else:
-            raise ValueError(f"Invalid format {format}")
+            raise ValueError(f"Invalid format {format}. Must be 'svg' or 'png'")
 
     def save(self, filename):
         dot = self.to_dot(node_attr_fn=self.name_node)
@@ -483,7 +557,172 @@ class Graph():
         self.rxgraph = graph.rxgraph
         self.update_node_table()
 
-    def to_dot(self, node_attr_fn=None, trim_loops=False):
+    def to_dot(
+            self,
+            node_attr_fn=None,
+            trim_loops=False,
+            containers:dict = None,
+            colors:dict = None,
+        ):
+        import pydot
+
+        # containers mapping NODEs to SOME HASHABLE
+        # if a node is in containers, it will be placed in the corresponding subgraph
+        # if a node is NOT in containers, it will be placed in the global subgraph
+        if containers is None:
+            containers = {}
+        if colors is None:
+            colors = {}
+
+        dot = pydot.Dot(graph_type='digraph')
+
+        # Create a dictionary to store subgraphs (container objects)
+        dot_clusters = {}
+        global_container = 'GLOBAL'
+        dot_clusters[global_container] = pydot.Cluster(global_container, label=global_container)
+
+        # For each node in the graph
+        for node in self.rxgraph.nodes():
+            # Get the namespace of the node
+            # = node.namespace if hasattr(node, 'namespace') else 'global'
+            container_objs = containers.get(node, [global_container])
+
+            if not isinstance(container_objs, list):
+                raise TypeError(f"containers must map nodes to a list of hashable objects, got {type(container_objs)}")
+
+            for i, container_obj in enumerate(container_objs):
+                if container_obj not in dot_clusters:
+                    dot_clusters[container_obj] = pydot.Cluster(str(container_obj), label=str(container_obj))
+                    dot_clusters[global_container].add_subgraph(dot_clusters[container_obj])
+
+                # optionally trim loop outputs that aren't used
+                node_index = self.node_table[node]
+                if trim_loops and is_variable(node):
+                    predecessors = self.rxgraph.predecessors(node_index)
+                    if len(predecessors) == 1:
+                        predecessors = predecessors[0]
+                    if isinstance(predecessors, Loop) and not self.rxgraph.successors(node_index):
+                        # print(f"Trimming {node.name} from graph")
+                        continue
+                
+                # Create a new node for the dot graph
+                color = colors.get(node, None)
+                node_str = str(node)+str(i)
+
+                dot_node = pydot.Node(node_str, **node_attr_fn(node, color = color))
+
+                # Add the node to the corresponding subgraph
+                dot_clusters[container_obj].add_node(dot_node)
+
+                # Add upstream edges to the dot graph
+                for parent in self.rxgraph.predecessors(node_index):
+                    edge = pydot.Edge(str(parent)+str(0), node_str)
+                    dot.add_edge(edge)
+                
+                if i > 0:
+                    # Add edge from previous container to this container
+                    edge = pydot.Edge(str(node)+str(i-1), node_str, style='dashed', color='gray')
+                    dot.add_edge(edge)
+
+        # # Add all edges to the dot graph
+        # for edge_tuple in self.rxgraph.edge_index_map().values():
+        #     dot.add_edge(pydot.Edge(str(self.rxgraph[edge_tuple[0]]), str(self.rxgraph[edge_tuple[1]])))
+
+        # add subgraphs to subgraphs to reflect namespace tree
+        
+        # Add all subgraphs to the dot graph
+        dot.add_subgraph(dot_clusters['GLOBAL'])
+
+        return dot
+
+    def name_node(self, node, color:str = None):
+        from csdl_alpha.src.graph.variable import Variable
+        import numpy as np
+        attr_dict = {}
+        attr_dict['id'] = self.node_table[node]
+        if node.name is None:
+            attr_dict['label'] = 'var'
+        else:
+            attr_dict['label'] = node.name
+        
+        if node.recorder.debug:
+            attr_dict['label'] = str(node).split()[-1][:-1]+'\n'+str(node.name)
+
+        if isinstance(node, Variable):
+            attr_dict['shape'] = 'ellipse'
+            if node.value is not None:
+                attr_dict['tooltip'] = f'{np.min(node.value):.3e}, {np.max(node.value):.3e}, {np.mean(node.value):.3e}, {node.shape}'
+        else:
+            attr_dict['shape'] = 'rectangle'
+
+        if color is not None:
+            attr_dict['fillcolor'] = color
+            attr_dict['style'] = 'filled'
+        return attr_dict
+
+    def create_n2(self):
+        from csdl_alpha.src.graph.variable import Variable
+        # Get the number of nodes in the graph
+        n = len(self.rxgraph.nodes())
+
+        # Create an empty N2 matrix
+        n2_matrix = np.zeros((n, n))
+
+        # For each node in the graph
+        for node in range(n):
+            # Check if the node is a variable node
+            if isinstance(self.rxgraph[node], Variable):
+                n2_matrix[node, node] = 0.5
+                # Get the successors of the node
+                successor_ops = self.rxgraph.successor_indices(node)
+
+                # For each successor of the node
+                for successor_op in successor_ops:
+                    for successor in self.rxgraph.successor_indices(successor_op):
+                        # Mark the corresponding cell in the N2 matrix
+                        n2_matrix[node, successor] = 1
+                        # Remove all zero rows and columns from n2_matrix
+
+        n2_matrix = n2_matrix[~np.all(n2_matrix == 0, axis=1)]
+        n2_matrix = n2_matrix[:, ~np.all(n2_matrix == 0, axis=0)]
+        # Return the N2 matrix
+        return n2_matrix
+
+    def visualize_n2(self):
+        import matplotlib.pyplot as plt
+        from csdl_alpha.src.graph.variable import Variable
+        # Create the N2 matrix
+        n2_matrix = self.create_n2()
+        node_names = []
+        for node in self.rxgraph.nodes():
+            if isinstance(node, Variable):
+                node_names.append(self.name_node(node)['label'])
+
+        # Create a figure and a set of subplots
+        fig, ax = plt.subplots()
+
+        # Display an image on the axes
+        cax = ax.matshow(n2_matrix, cmap='gray_r')
+
+        # Set the labels for the x and y axes
+        ax.set_xticks(np.arange(len(node_names)))
+        ax.set_yticks(np.arange(len(node_names)))
+        ax.set_xticklabels(node_names)
+        ax.set_yticklabels(node_names)
+
+        # Rotate the x labels and set their alignment
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+        # Show the plot
+        plt.show()
+
+    def to_dot_ns(
+            self,
+            node_attr_fn=None,
+            trim_loops=False,
+            containers:dict = None,
+            colors:dict = None,
+        ):
         import pydot
 
 
@@ -546,80 +785,6 @@ class Graph():
 
         return dot
 
-    def name_node(self, node):
-        from csdl_alpha.src.graph.variable import Variable
-        import numpy as np
-        attr_dict = {}
-        attr_dict['id'] = self.node_table[node]
-        if node.name is None:
-            attr_dict['label'] = 'var'
-        else:
-            attr_dict['label'] = node.name
-
-        if isinstance(node, Variable):
-            attr_dict['shape'] = 'ellipse'
-            if node.value is not None:
-                attr_dict['tooltip'] = f'{np.min(node.value):.3e}, {np.max(node.value):.3e}, {np.mean(node.value):.3e}, {node.shape}'
-        else:
-            attr_dict['shape'] = 'rectangle'
-        return attr_dict
-
-    def create_n2(self):
-        from csdl_alpha.src.graph.variable import Variable
-        # Get the number of nodes in the graph
-        n = len(self.rxgraph.nodes())
-
-        # Create an empty N2 matrix
-        n2_matrix = np.zeros((n, n))
-
-        # For each node in the graph
-        for node in range(n):
-            # Check if the node is a variable node
-            if isinstance(self.rxgraph[node], Variable):
-                n2_matrix[node, node] = 0.5
-                # Get the successors of the node
-                successor_ops = self.rxgraph.successor_indices(node)
-
-                # For each successor of the node
-                for successor_op in successor_ops:
-                    for successor in self.rxgraph.successor_indices(successor_op):
-                        # Mark the corresponding cell in the N2 matrix
-                        n2_matrix[node, successor] = 1
-                        # Remove all zero rows and columns from n2_matrix
-
-        n2_matrix = n2_matrix[~np.all(n2_matrix == 0, axis=1)]
-        n2_matrix = n2_matrix[:, ~np.all(n2_matrix == 0, axis=0)]
-        # Return the N2 matrix
-        return n2_matrix
-
-    def visualize_n2(self):
-        import matplotlib.pyplot as plt
-        from csdl_alpha.src.graph.variable import Variable
-        # Create the N2 matrix
-        n2_matrix = self.create_n2()
-        node_names = []
-        for node in self.rxgraph.nodes():
-            if isinstance(node, Variable):
-                node_names.append(self.name_node(node)['label'])
-
-        # Create a figure and a set of subplots
-        fig, ax = plt.subplots()
-
-        # Display an image on the axes
-        cax = ax.matshow(n2_matrix, cmap='gray_r')
-
-        # Set the labels for the x and y axes
-        ax.set_xticks(np.arange(len(node_names)))
-        ax.set_yticks(np.arange(len(node_names)))
-        ax.set_xticklabels(node_names)
-        ax.set_yticklabels(node_names)
-
-        # Rotate the x labels and set their alignment
-        plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
-
-        # Show the plot
-        plt.show()
-
 def is_operation(x):
     from csdl_alpha.src.graph.operation import Operation
     return isinstance(x, Operation)
@@ -658,7 +823,6 @@ def get_node_info_string(node, graph):
     if is_variable(node):
         node_info += f"\nValue:                 {node.value}"
     return node_info
-
 
 def _copy_to_current_graph(
         graph_to_replace:'Graph',

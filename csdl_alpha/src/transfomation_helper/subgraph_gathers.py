@@ -12,6 +12,9 @@ def extract():
 def loopify_subgraph(
         stacked_inputs:dict[Variable, Variable],
         outputs:dict[Variable, Variable],
+        subgraph_nodes:set[Node] = None,
+        fixed_inputs:set[Variable] = None,
+        name:str = 'loopify',
     )->dict[Variable, Variable]:
     """
     Takes a part of a graph that exists in a graph and turns it into a loop:
@@ -67,6 +70,8 @@ def loopify_subgraph(
 
     if len(stacked_inputs) == 0:
         raise ValueError('No inputs provided')
+    if fixed_inputs is None:
+        fixed_inputs = set()
 
     for input_var, stacked_input in stacked_inputs.items():
 
@@ -100,20 +105,30 @@ def loopify_subgraph(
         targets.append(output_var)
 
     # rec.visualize_graph('1', visualize_style='hierarchical')
-    subgraph, calculated_input, subgraph_outputs = current_graph.extract_subgraph(
-        sources,
-        targets,
-        keep_variables=True,
-        check_sources=False,
-        check_targets=False,
-    )
+    if subgraph_nodes is None:
+        subgraph, calculated_input, subgraph_outputs = current_graph.extract_subgraph(
+            sources,
+            targets,
+            keep_variables=True,
+            check_sources=False,
+            check_targets=False,
+        )
+        
+        subgraph.inputs = []
+        for calculated_input in calculated_input:
+            if calculated_input in stacked_inputs:
+                continue
+            subgraph.inputs.append(calculated_input)
 
-    # subgraph.visualize()
-    subgraph.inputs = []
-    for calculated_input in calculated_input:
-        if calculated_input in stacked_inputs:
-            continue
-        subgraph.inputs.append(calculated_input)
+    else:
+        subgraph = current_graph.extract_subgraph_nodes(
+            subgraph_nodes,
+            keep_variables=True,
+        )
+
+        subgraph.inputs = []
+        for fixed_input in fixed_inputs:
+            subgraph.inputs.append(fixed_input)
 
     # prepare loop op:
     iter_vars = [list(range(num_iter))]
@@ -129,18 +144,27 @@ def loopify_subgraph(
             indexed_input_map[input_var] = stacked_input[ind]
 
         # Add in the extracted graph
+        if subgraph_nodes is not None:
+            nodes_copy = list(subgraph_nodes)
+
+        else:
+            nodes_copy = None
+
         _copy_to_current_graph(
             subgraph,
             indexed_input_map,
+            subgraph_nodes=nodes_copy,
             add_to_graph_inputs=True
         )
+
+        # loop_builder.loop_graph.visualize(f'{name}_inner')
 
     # create stacked outputs
     output_stacks = {}
     for output in outputs:
         stacked_output = loop_builder.add_stack(output)
         output_stacks[output] = stacked_output
-    loop_builder.finalize(name = f'extracted_loop_{num_iter}')
+    loop_builder.finalize(name = f'{name}_{num_iter}')
 
     # Delete the extracted subgraph nodes from the original graph
     for node in subgraph.node_table:

@@ -16,7 +16,7 @@ alphabet = string.ascii_lowercase
 
 class AMTC(TransformationBase):
 
-    def apply(self, rvs:dict[Variable, VariableLike], outputs:list[Variable]):
+    def apply(self, rvs:dict[Variable, VariableLike], outputs:list[Variable], debug:bool=False)->dict[Variable, Variable]:
         recorder = self.get_current_recorder()
         graph = recorder.get_root_graph()
 
@@ -75,6 +75,7 @@ class AMTC(TransformationBase):
 
         # For each random variable, figure out dependencies
         output_descendants = set()
+        output_set = set(outputs)
         for output in outputs:
             output_descendants_ind = rx.ancestors(graph.rxgraph, graph.node_table[output])
             output_descendants = output_descendants.union({graph.rxgraph.nodes()[ind] for ind in output_descendants_ind})
@@ -99,35 +100,69 @@ class AMTC(TransformationBase):
         index_sets_to_nodes = {frozenset(index_tuple):index_tuple for index_tuple in partition_graph.nodes()}
         for current_node in dependency_data:
             # print('current_node:', current_node, dependency_data[current_node])
+            current_source_dependencies = dependency_data[current_node]
+            current_partition = index_sets_to_nodes[current_source_dependencies]
+            partition_graph.nodes[current_partition]['intermediates'].add(current_node)
             if isinstance(current_node, Variable):
                 if graph.in_degree(current_node) == 0:
                     input_partition = index_sets_to_nodes[dependency_data[current_node]]
                     partition_graph.nodes[input_partition]['inputs'].add(current_node)
+                    partition_graph.nodes[input_partition]['intermediates'].add(current_node)
                 if graph.out_degree(current_node) == 0:
                     output_partition = index_sets_to_nodes[dependency_data[current_node]]
                     partition_graph.nodes[output_partition]['outputs'].add(current_node)
+                    partition_graph.nodes[output_partition]['intermediates'].add(current_node)
+
+                if current_node in output_set:
+                    partition_graph.nodes[current_partition]['outputs'].add(current_node)
                 continue
-            current_source_dependencies = dependency_data[current_node]
+
             for parent_variable in graph.predecessors(current_node):
                 predecessor_source_dependencies = dependency_data[parent_variable]
                 if current_source_dependencies != predecessor_source_dependencies:
                     pred_partition = index_sets_to_nodes[predecessor_source_dependencies]
-                    current_partition = index_sets_to_nodes[current_source_dependencies]
                     partition_graph.edges[pred_partition, current_partition]['transfers'][parent_variable] = None
                     partition_graph.nodes[pred_partition]['outputs'].add(parent_variable)
-                    partition_graph.nodes[current_partition]['inputs'].add(parent_variable)
+                    partition_graph.nodes[pred_partition]['intermediates'].add(parent_variable)
 
-        
-        # recorder.visualize_graph('original_graph', visualize_style='hierarchical')
+                    partition_graph.nodes[current_partition]['inputs'].add(parent_variable)
+                    partition_graph.nodes[current_partition]['intermediates'].add(parent_variable)
+
+        if debug:
+            # Lets visualize the whole graph where nodes are highlighted by partition
+            containers = {}
+            colors = {}
+            for partition in nx.topological_sort(partition_graph):
+                for node in partition_graph.nodes[partition]['inputs']:
+                    if node in colors and colors[node] == 'coral': colors[node] = 'darkolivegreen1'
+                    else: colors[node] = 'aquamarine'
+
+                for node in partition_graph.nodes[partition]['outputs']:
+                    if node in colors and colors[node] == 'aquamarine': colors[node] = 'darkolivegreen1'
+                    else: colors[node] = 'coral'
+            
+                for node in partition_graph.nodes[partition]['intermediates']:
+                    if node not in containers: containers[node] = [str(partition)]
+                    else: containers[node].append(str(partition))
+
+            recorder.get_root_graph().visualize(
+                filename='original_graph_partitioned',
+                containers=containers,
+                colors=colors,
+            )
+
+            # exit('debug')
+
 
         tensor_grid_evaluations = {}
         # Loop through each partition and loopify the subgraph
         for partition in nx.topological_sort(partition_graph):
-            print('partition:', partition, [source_indices_to_rv[ind].info() for ind in partition])
-            print('\tinputs:', partition_graph.nodes[partition]['inputs'])
-            print('\toutputs:', partition_graph.nodes[partition]['outputs'])
+            print('partition:', partition)
+            print('\tinputs:', len(partition_graph.nodes[partition]['inputs']))
+            print('\toutputs:', len(partition_graph.nodes[partition]['outputs']))
 
             partition_outputs:set[Variable] = partition_graph.nodes[partition]['outputs']
+            partition_intermediates:set[Node] = partition_graph.nodes[partition]['intermediates']
 
             # If there are no inputs, there is nothing in the loop --> we don't do anything
             if len(partition_graph.nodes[partition]['inputs']) == 0:
@@ -149,21 +184,33 @@ class AMTC(TransformationBase):
                 # 2) loopify the subgraph
                 # 3) expand the transfer outputs
                 partition_input_mapping = {}
+                fixed_inputs = set()
                 for in_edge in partition_graph.in_edges(partition):
                     pred_partition = in_edge[0]
                     for transfer_var, stacked_transfer in partition_graph.edges[pred_partition, partition]['transfers'].items():
-                        partition_input_mapping[transfer_var] = stacked_transfer
+                        if len(pred_partition) != 0:
+                            partition_input_mapping[transfer_var] = stacked_transfer
+                        else:
+                            fixed_inputs.add(transfer_var)
                 if len(partition) == 1:
                     source_input = source_indices_to_rv[list(partition)[0]]
                     partition_input_mapping[source_input] = rvs_info[source_input]['qp']
-                stacked_outputs = ct.loopify_subgraph(partition_input_mapping, partition_outputs)
+                stacked_outputs = ct.loopify_subgraph(
+                    partition_input_mapping,
+                    partition_outputs,
+                    partition_intermediates,
+                    fixed_inputs = fixed_inputs,
+                    name = str(partition))
 
             for out_edge in partition_graph.out_edges(partition):
                 succ_partition = out_edge[1]
                 for transfer_var in partition_graph.edges[partition, succ_partition]['transfers']:
 
                     stacked_transfer_pre_expand = stacked_outputs[transfer_var]
-                    expanded_transfer = partition_graph.edges[partition, succ_partition]['expansion_function'](stacked_transfer_pre_expand)
+                    if len(partition) != 0:
+                        expanded_transfer = partition_graph.edges[partition, succ_partition]['expansion_function'](stacked_transfer_pre_expand)
+                    else:
+                        expanded_transfer = stacked_transfer_pre_expand
                     partition_graph.edges[partition, succ_partition]['transfers'][transfer_var] = expanded_transfer
                     # partition_graph.edges[partition, succ_partition]['transfers'][transfer_var] = stacked_transfer_pre_expand
 
@@ -171,13 +218,24 @@ class AMTC(TransformationBase):
             for voi in outputs:
                 if voi in partition_outputs:
                     tensor_grid_evaluations[voi] = stacked_outputs[voi]
-                    
+            
+        # Check to make sure all outputs are in tensor_grid_evaluations
+        for voi in outputs:
+            if not voi in tensor_grid_evaluations:
+                raise ValueError(f'INTERNAL ERROR: Output {voi.info()} not computed in any partition')
         # Now we need to delete nodes that are not in the dependency data, as this results in floating subgraphs:
         # Variables/operations that don't depend on any rvs are not added to any loops, these leaf nodes have no values
         # and cannot be evaluated
         # recorder.visualize_graph('partition_graph', visualize_style='hierarchical')
+                    
         ct.delete_unvalued_descendants()
         # recorder.visualize_graph('partition_graph2', visualize_style='hierarchical')
+
+        if debug:
+            recorder.visualize_graph(
+                filename='AMTCed_graph_partitioned',
+                visualize_style='hierarchical',
+            )
 
         return tensor_grid_evaluations
 
@@ -199,6 +257,7 @@ def build_partition_graph(
         partition_graph.add_node(subset)
         partition_graph.nodes[subset]['inputs'] = set()
         partition_graph.nodes[subset]['outputs'] = set()
+        partition_graph.nodes[subset]['intermediates'] = set()
 
     # Build edges (n**2 algorithm)
     for subset_pred in powerset:
@@ -315,7 +374,7 @@ def build_expansion_func(
         in_shape = tuple(num_qp for num_qp in input_n_1d_qp) + x_orig_shape
         
         # Prints:
-        if 1:
+        if 0:
             print('####################')
             print('dependency transfer:', len(input_dp_index), '->', len(result_dp_index))
             print(f'{einsum_input_string1},{einsum_input_string2}->{einsum_output_string}')
