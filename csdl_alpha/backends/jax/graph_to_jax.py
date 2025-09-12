@@ -230,7 +230,12 @@ def create_jax_interface(
         compiled = lowered.compile()
         # for compiled_costs in compiled.cost_analysis():
         #     print(compiled_costs)
-        print(compiled.memory_analysis())
+        # print(compiled.memory_analysis())
+
+        # memory_MB = compiled.memory_analysis().temp_size_in_bytes/1.e6
+        # print('JAX compiled function memory usage (MB):', memory_MB)
+        # uncomment to get memory
+
         # lowered_func_string = lowered.as_text()
         # save the lowered function to a file
         # with open("lowered_func.txt", "w") as f:
@@ -251,7 +256,11 @@ def create_jax_interface(
         for i, output in enumerate(outputs):
             outputs_dict[output] = np.array(jax_outputs[i])
             # print(outputs_dict[output])
+        # memory_dummy_var = csdl.Variable(value=memory_MB)
+        # outputs_dict[memory_dummy_var] = memory_MB
+        # uncomment to get memory
         return outputs_dict
+        # return outputs_dict, memory_MB # uncomment to get memory
     
     return jax_interface
 

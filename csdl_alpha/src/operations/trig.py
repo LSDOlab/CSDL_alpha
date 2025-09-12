@@ -109,6 +109,26 @@ class ArcTan(ElementwiseOperation):
             cotangents.accumulate(x, cotangents[y]/(1.0 + x**2))
 
 @set_properties(linear=False)
+class ArcTan2(ElementwiseOperation):
+    def __init__(self,y,x):
+        super().__init__(y,x)
+        self.name = 'atan2'
+
+    def compute_inline(self, y, x):
+        return np.arctan2(y, x)
+
+    def compute_jax(self, y, x):
+        import jax.numpy as jnp
+        return jnp.arctan2(y, x)
+
+    def evaluate_vjp(self, cotangents, y, x, z):
+        if cotangents.check(y):
+            cotangents.accumulate(y, cotangents[z]*x/(x**2+y**2))
+        if cotangents.check(x):
+            cotangents.accumulate(x, cotangents[z]*-y/(x**2+y**2))
+
+
+@set_properties(linear=False)
 class Tanh(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -363,6 +383,36 @@ def arctan(x:VariableLike) -> Variable:
     x = validate_and_variablize(x)
     return ArcTan(x).finalize_and_return_outputs()
 
+def arctan2(y:VariableLike,x:VariableLike) -> Variable:
+    """Elementwise arctangent2 of a CSDL Variable
+
+    Parameters
+    ----------
+    y : Variable
+        numerator of atan2 input (CSDL Variable)
+
+    x : Variable
+        denominator of atan2 input (CSDL Variable)
+
+    Returns
+    -------
+    z: Variable
+        The elementwise atan2 of y & x
+
+    Examples
+    --------
+    >>> recorder = csdl.Recorder(inline = True)
+    >>> recorder.start()
+    >>> y = csdl.Variable(value = np.array([1.0, 1.0, 1.0]))
+    >>> x = csdl.Variable(value = np.array([2.0, 4.0, 6.0]))
+    >>> z = csdl.arctan2(y,x)
+    >>> z.value
+    array([0.46364761, 0.24497866, 0.16514868])
+    """
+    y = validate_and_variablize(y)
+    x = validate_and_variablize(x)
+    return ArcTan2(y,x).finalize_and_return_outputs()
+
 def tanh(x:VariableLike) -> Variable:
     """Elementwise hyperbolic tangent of a CSDL Variable
 
@@ -415,7 +465,7 @@ class TestTrig(csdl_tests.CSDLTest):
         compare_values += [csdl_tests.TestingPair(s3, t3)]
 
         # compare_values = []
-        # sin/cos/tan scalar variables
+        # asin/acos/atan/atan2 scalar variables
         s1a = csdl.arcsin(x)
         t1a = np.arcsin(x_val).flatten()
         compare_values += [csdl_tests.TestingPair(s1a, t1a)]
@@ -427,6 +477,10 @@ class TestTrig(csdl_tests.CSDLTest):
         s3a = csdl.arctan(x)
         t3a = np.arctan(x_val).flatten()
         compare_values += [csdl_tests.TestingPair(s3a, t3a)]
+
+        s3b = csdl.arctan2(x**2, x)
+        t3b = np.arctan2(x_val**2, x_val).flatten()
+        compare_values += [csdl_tests.TestingPair(s3b, t3b)]
 
         # sin/cos/tan tensor variables
         s4 = csdl.sin(y)
@@ -454,6 +508,10 @@ class TestTrig(csdl_tests.CSDLTest):
         t6a = np.arctan(y_val)
         compare_values += [csdl_tests.TestingPair(s6a, t6a)]
 
+        s6b = csdl.arctan2(y**2, y)
+        t6b = np.arctan2(y_val**2, y_val)
+        compare_values += [csdl_tests.TestingPair(s6b, t6b)]
+
         s7a = csdl.tanh(y)
         t7a = np.tanh(y_val)
         compare_values += [csdl_tests.TestingPair(s7a, t7a)]
@@ -475,6 +533,7 @@ class TestTrig(csdl_tests.CSDLTest):
         self.docstest(arcsin)
         self.docstest(arccos)
         self.docstest(arctan)
+        self.docstest(arctan2)
         self.docstest(tanh)
         self.docstest(sinh)
         self.docstest(cosh)
