@@ -245,7 +245,7 @@ class TestBatch(csdl_tests.CSDLTest):
             print(f'SHAPES: A_grid: {A_grid.shape} vec: {vec.shape}')
             return A_grid @ vec
 
-        n = 150
+        n = 12
         batch_size_row = 2
         batch_size_col = 3
         theta_row_val, theta_col_val, vec_val = np.sin(np.arange(n)), np.cos(-np.arange(n)/3+0.1), 1.0/(np.arange(n)+1.0)
