@@ -2,7 +2,7 @@ from csdl_alpha.src.recorder import Recorder
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import get_type_string, listify_variables
 
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Tuple
 import numpy as np
 
 # For debugging:
@@ -115,7 +115,7 @@ class SimulatorBase():
                 else:
                     self.constraint_jacobian = None
 
-    def _process_optimization_values(self):
+    def _process_optimization_values(self)->Tuple:
         nc = sum([var.size for var in self.recorder.constraints])
         if nc > 0:
             constraints = np.zeros((sum([var.size for var in self.recorder.constraints]),))
