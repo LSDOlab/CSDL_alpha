@@ -168,3 +168,25 @@ def postprocess_custom_outputs(given_outputs:dict, declared_outputs:dict):
             raise KeyError(f'Output \'{declared_key}\' was declared but was not computed')
 
     return processed_outputs
+
+def prepare_d_inputs(inputs_meta):
+    d_inputs = {}
+    for input_var, input_str in inputs_meta.items():
+        d_inputs[input_str] = np.zeros(input_var.shape)
+    return d_inputs
+
+def is_overwritten(child_class, parent_class, method_name):
+    """
+    Check if a method is overwritten in a child class compared to a parent class.
+
+    Parameters:
+    child_class (type): The child class to check.
+    parent_class (type): The parent class to compare against.
+    method_name (str): The name of the method to check.
+
+    Returns:
+    bool: True if the method is overwritten in the child class, False otherwise.
+    """
+    child_method = getattr(child_class, method_name, None)
+    parent_method = getattr(parent_class, method_name, None)
+    return child_method != parent_method

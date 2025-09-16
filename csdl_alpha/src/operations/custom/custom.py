@@ -8,6 +8,8 @@ from csdl_alpha.src.operations.custom.utils import (
     postprocess_compute_derivatives,
     preprocess_custom_inputs,
     postprocess_custom_outputs,
+    is_overwritten,
+    prepare_d_inputs,
 )
 
 import warnings
@@ -40,6 +42,9 @@ class CustomExplicitOperation(CustomOperation):
         raise NotImplementedError('not implemented')
 
     def compute_derivatives(self, inputs, outputs, derivatives):
+        raise NotImplementedError(f'not implemented for operation {self.name}')
+
+    def compute_jacvec_product(self, inputs, outputs, derivatives, d_inputs, d_outputs, mode):
         raise NotImplementedError(f'not implemented for operation {self.name}')
 
     def _wrap_evaluate(self, evaluate):
@@ -370,6 +375,15 @@ class CustomJacOperation(Operation):
         # We only want to output the cotangents that are actually necessary
         self.set_dense_outputs([input.shape for input in self.input_cotangents])
 
+        # Figure out which method to call:
+        self.implementation_type:str = None
+        if is_overwritten(self.custom_operation.__class__, CustomExplicitOperation, 'compute_derivatives'):
+            self.implementation_type:str = 'jac'
+        if is_overwritten(self.custom_operation.__class__, CustomExplicitOperation, 'compute_jacvec_product'):
+            self.implementation_type:str = 'vjp'
+        if self.implementation_type is None:
+            raise NotImplementedError(f'Custom derivative method not implemented for operation {self.custom_operation.name}. Please implement either compute_derivatives or compute_jacvec_product.')
+
     def compute_inline(self, *orig_inputs_and_outputs_and_cots:list[np.array])->list[np.array]:
         """Perform the derivative accumulation procedure here.
         Two main steps:
@@ -380,24 +394,32 @@ class CustomJacOperation(Operation):
         input_values:list[np.array] = orig_inputs_and_outputs_and_cots[:self.num_orig_inputs]
         output_values:list[np.array] = orig_inputs_and_outputs_and_cots[self.num_orig_inputs:self.num_orig_inputs + self.num_orig_outputs]
         cot_values:list[np.array] = orig_inputs_and_outputs_and_cots[self.num_orig_inputs + self.num_orig_outputs:]
-        if (not self.cache_jac) or (self.cached_inputs is None or not all(np.array_equal(input, cached_input) for input, cached_input in zip(input_values, self.cached_inputs))):
-            # print('not cached')
-            inputs:dict[str,Variable] = {self.reverse_input_dict[key]:input for key, input in zip(self.orig_inputs, input_values)}
-            outputs:dict[str,Variable] = {self.reverse_output_dict[key]:output for key, output in zip(self.orig_outputs, output_values)}
-
-            # Call user derivatives
-            derivatives_dict = prepare_compute_derivatives(self.custom_operation.derivative_parameters)
-            inputs = preprocess_custom_inputs(inputs)
-            outputs = preprocess_custom_inputs(outputs)
-            self.custom_operation.compute_derivatives(inputs, outputs, derivatives_dict)
-            postprocess_compute_derivatives(derivatives_dict, self.custom_operation.derivative_parameters)
-
-            self.cached_inputs = input_values
-            self.cached_jacs = derivatives_dict
-        else:
-            # print('cached')
-            derivatives_dict = self.cached_jacs
         
+        # Prepare inputs and outputs for user function
+        inputs:dict[str,Variable] = {self.reverse_input_dict[key]:input for key, input in zip(self.orig_inputs, input_values)}
+        outputs:dict[str,Variable] = {self.reverse_output_dict[key]:output for key, output in zip(self.orig_outputs, output_values)}
+        inputs = preprocess_custom_inputs(inputs)
+        outputs = preprocess_custom_inputs(outputs)
+
+        if self.implementation_type == 'jac':
+            if (not self.cache_jac) or (self.cached_inputs is None or not all(np.array_equal(input, cached_input) for input, cached_input in zip(input_values, self.cached_inputs))):
+                # Call user derivatives
+                derivatives_dict = prepare_compute_derivatives(self.custom_operation.derivative_parameters)
+                self.custom_operation.compute_derivatives(inputs, outputs, derivatives_dict)
+                postprocess_compute_derivatives(derivatives_dict, self.custom_operation.derivative_parameters)
+
+                self.cached_inputs = input_values
+                self.cached_jacs = derivatives_dict
+            else:
+                # print('cached')
+                derivatives_dict = self.cached_jacs
+        elif self.implementation_type == 'vjp':
+            d_outputs = {self.reverse_output_dict[output]:cot_values[i].reshape(output.shape) for i, output in enumerate(self.orig_outputs)}
+            d_outputs = preprocess_custom_inputs(d_outputs)
+            d_inputs = prepare_d_inputs(self.reverse_input_dict)
+            self.custom_operation.compute_jacvec_product(inputs, outputs, d_inputs, d_outputs, mode = 'rev')
+            postprocess_custom_outputs(d_inputs, inputs)
+
         # Accumulate and return
         input_cots:list[np.array] = []
         for input in self.input_cotangents:
@@ -407,12 +429,15 @@ class CustomJacOperation(Operation):
                 output_str = self.reverse_output_dict[output]
                 input_str = self.reverse_input_dict[input]
 
-                cot_vector = cot_values[i].reshape(1, output.size)
-                deriv_matrix = (derivatives_dict[output_str, input_str]).reshape(output.size, input.size)
+                if self.implementation_type == 'jac':
+                    cot_vector = cot_values[i].reshape(1, output.size)
+                    deriv_matrix = (derivatives_dict[output_str, input_str]).reshape(output.size, input.size)
 
-                # for debugging:
-                # print(output.name, input.name, input_cots[-1], cot_vector, deriv_matrix)
-                input_cots[-1] += cot_vector@deriv_matrix
+                    # for debugging:
+                    # print(output.name, input.name, input_cots[-1], cot_vector, deriv_matrix)
+                    input_cots[-1] += cot_vector@deriv_matrix
+                elif self.implementation_type == 'vjp':
+                    input_cots[-1] = d_inputs[input_str].reshape(1, input.size)
 
             # When we return it, it needs to be the correct shape of the input
             input_cots[-1] = input_cots[-1].reshape(input.shape)
