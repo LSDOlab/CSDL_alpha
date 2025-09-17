@@ -68,7 +68,7 @@ class Cross(Operation):
 #             if cotangents.check(y):
 #                 cotangents.accumulate(y, -csdl.cross(x, expanded_cotangents, axis=self.axis))
 
-def cross(x, y, axis=None):
+def cross(x, y, axis=None)->Variable:
     '''
     Computes the cross product of two arrays of 2D or 3D vectors.
 

@@ -121,6 +121,64 @@ def postprocess_compute_derivatives(
         if total_tuple not in derivative_meta:
             raise KeyError(f'derivative {total_tuple} does not exist')
         
+def postprocess_custom_nth_derivs(
+        jacobians:dict[tuple[str,str], Variable],
+        input_dict:dict[str, Variable],
+        output_dict:dict[str, Variable],
+    )->dict[tuple[str,str], Variable]:
+    # Checks:
+    # - Make sure non-input/output pairs do not exist in the dictionary
+    # - Fill non-declared derivatives with Nones
+    # - Make sure declared derivatives are of the correct shape
+
+    derivative_tuples = set()
+    for input_name, input in input_dict.items():
+        for output_name, output in output_dict.items():
+            derivative_tuple = (output_name, input_name)
+            derivative_tuples.add(derivative_tuple)
+            if derivative_tuple not in jacobians:
+                jacobians[derivative_tuple] = None
+            elif jacobians[derivative_tuple] is None:
+                continue
+            else:
+                # Check that the jacobian is of the correct shape
+                if jacobians[derivative_tuple].shape != (output.size, input.size):
+                    raise ValueError(f'Jacobian {derivative_tuple} is of incorrect shape. {jacobians[derivative_tuple].shape} != {(output.size, input.size)}')
+
+    for key in jacobians:
+        if key not in derivative_tuples:
+            raise KeyError(f'Derivative key \'{key}\' has been declared but does not exist.')
+
+    return jacobians
+
+def postprocess_custom_nth_vjps(
+        vjps:dict[str, Variable],
+        input_dict:dict[str, Variable],
+    )->dict[str, Variable]:
+    # Checks:
+    # - Make sure non-input strings do not exist in the dictionary
+    # - Fill non-declared vjps with Nones
+    # - Make sure vjps are of the correct shape
+
+    input_names = set(input_dict.keys())
+    for input_name, input in input_dict.items():
+        if input_name not in vjps:
+            vjps[input_name] = None
+        elif vjps[input_name] is None:
+            continue
+        else:
+            if type(vjps[input_name]) != Variable:
+                raise TypeError(f'VJP {input_name} is not a Variable. {get_type_string(vjps[input_name])} was given.')
+            # Check that the vjp is of the correct shape
+            if vjps[input_name].shape != input.shape:
+                raise ValueError(f'VJP {input_name} is of incorrect shape. {vjps[input_name].shape} given, {input.shape} expected.')
+
+    for key in vjps:
+        if key not in input_names:
+            raise KeyError(f'VJP input \'{key}\' does not exist. Declared inputs are {input_names}.')
+
+    return vjps
+
 
 # https://stackoverflow.com/questions/19022868/how-to-make-dictionary-read-only
 def _readonly(self, *args, **kwargs):
