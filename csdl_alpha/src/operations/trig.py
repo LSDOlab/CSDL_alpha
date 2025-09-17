@@ -6,7 +6,7 @@ import numpy as np
 from csdl_alpha.utils.typing import VariableLike
 from csdl_alpha.utils.inputs import validate_and_variablize
 
-@set_properties(linear=False)
+@set_properties(linear=False, invertible=True)
 class Sin(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -23,7 +23,7 @@ class Sin(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]*cos(x))
 
-@set_properties(linear=False)
+@set_properties(linear=False, invertible=True)
 class ArcSin(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -40,7 +40,7 @@ class ArcSin(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]/(1.0 - x**2)**0.5)
 
-@set_properties(linear=False)
+@set_properties(linear=False, invertible=True)
 class Cos(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -57,7 +57,7 @@ class Cos(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, -cotangents[y]*sin(x))
 
-@set_properties(linear=False)
+@set_properties(linear=False, invertible=True)
 class ArcCos(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -74,7 +74,7 @@ class ArcCos(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, -cotangents[y]/(1.0 - x**2)**0.5)
 
-@set_properties(linear=False)
+@set_properties(linear=False, invertible=True)
 class Tan(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -91,7 +91,11 @@ class Tan(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]/(cos(x)**2))
 
-@set_properties(linear=False)
+    def inverse(self, x, y):
+        assert x is None
+        return arctan(y)
+
+@set_properties(linear=False, invertible=True)
 class ArcTan(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -107,6 +111,10 @@ class ArcTan(ElementwiseOperation):
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]/(1.0 + x**2))
+
+    def inverse(self, x, y):
+        assert x is None
+        return tan(y)
 
 @set_properties(linear=False)
 class ArcTan2(ElementwiseOperation):
@@ -145,7 +153,7 @@ class Tanh(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]*(1-tanh(x)**2))
 
-@set_properties(linear=False)
+@set_properties(linear=False, invertible=True)
 class Sinh(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -162,7 +170,7 @@ class Sinh(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]*cosh(x))
 
-@set_properties(linear=False)
+@set_properties(linear=False, invertible=True)
 class Cosh(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
