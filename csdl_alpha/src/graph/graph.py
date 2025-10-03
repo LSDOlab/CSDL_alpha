@@ -60,20 +60,41 @@ class Graph():
         """
         return self.rxgraph.predecessors(self.node_table[node])
 
-    def descendants(self, node:Node) -> set[Node]:
+    def descendants(self, node:Node, include_node:bool = False) -> set[Node]:
         """
         Returns the descendants of the node
         """
         descendants = rx.descendants(self.rxgraph, self.node_table[node])
-        return {self.rxgraph.get_node_data(i) for i in descendants}
+        descendants = {self.rxgraph.get_node_data(i) for i in descendants}
+        if include_node:
+            descendants.add(node)
+        return descendants
     
-    def ancestors(self, node:Node) -> set[Node]:
+    def ancestors(self, node:Node, include_node:bool = False) -> set[Node]:
         """
         Returns the ancestors of the node
         """
         ancestors = rx.ancestors(self.rxgraph, self.node_table[node])
-        return {self.rxgraph.nodes()[i] for i in ancestors}
+        ancestors = {self.rxgraph.nodes()[i] for i in ancestors}
+        if include_node:
+            ancestors.add(node)
+        return ancestors
     
+    def topological_sort(self, filter:callable=None) -> list[Node]:
+        """
+        Returns the nodes in topological order
+        filter: callable that takes in a node and returns True if the node should be included in the output
+        """
+        sorted_indices = rx.topological_sort(self.rxgraph)
+        sorted_nodes = []
+        for i in range(len(sorted_indices)):
+            node = self.rxgraph[sorted_indices[i]]
+            if filter is not None:
+                if not filter(node):
+                    continue
+            sorted_nodes.append(node)
+        return sorted_nodes
+
     def execute_inline(self, subset = None, debug = False):
         """
         executes the graph inline
