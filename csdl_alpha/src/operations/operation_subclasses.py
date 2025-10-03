@@ -4,6 +4,8 @@ import numpy as np
 from csdl_alpha.utils.inputs import variablize
 from csdl_alpha.src.graph.variable import Variable, Constant
 
+from typing import Union
+
 @set_properties(elementwise = True, diagonal_jacobian = True)
 class ElementwiseOperation(Operation):
 
@@ -226,6 +228,76 @@ class ComposedOperation(SubgraphOperation):
                 cotangents.accumulate(input_var, wrt_derivs[i])
                 i+=1
 
+    def get_invertible_args(self) -> list[Variable]:
+        # go backwards from all operations, propagate which inputs are invertible
+        subgraph = self.get_subgraph()
+
+        # Here is how I think it should go:
+        # 1. Start from outputs, initialize all outputs as invertible
+        # 2. Propagate backwards through the graph, if an operation's outputs are all invertible, then compute which of its inputs are invertible
+        # 3. Stop when you reach the inputs of the subgraph
+        invertible_vars = set(self.outputs)
+        for operation in reversed(subgraph.topological_sort(filter = lambda n: isinstance(n, (Operation)))):
+            all_outputs_invertible = all([out in invertible_vars for out in operation.outputs])
+            if all_outputs_invertible:
+                predecessor_invertible_vars = operation.get_invertible_inputs()
+                if not predecessor_invertible_vars is None:
+                    for var in predecessor_invertible_vars:
+                        invertible_vars.add(var)
+
+        # gather which of the inputs are invertible
+        composed_inputs = []
+        for input_var in self.inputs:
+            if input_var in invertible_vars:
+                composed_inputs.append(input_var)
+
+        # print('invertible inputs: ', composed_inputs)
+        # not invertible if no inputs are invertible
+        if len(composed_inputs) == 0:
+            return None
+        return composed_inputs
+
+    def get_invertible_inputs(self)->Union[list[Variable], None]:
+        return self.get_invertible_args()
+
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        input_index = self.inputs.index(x_target)
+        output_index = self.outputs.index(y_target)
+        import csdl_alpha as csdl
+        
+        def composed_inverse(y_value, *composed_inputs):
+            # re-evaluate the composed operation
+            outputs_again = self.evaluate_composed(*composed_inputs)
+            if not isinstance(outputs_again, tuple): outputs_again = (outputs_again,)
+            
+            # get 1-to-1 mapping of x_target and y_target
+            new_x_target = composed_inputs[input_index]
+            new_y_target = outputs_again[output_index]
+
+            # perform inversion transform on this subgraph
+            inversion_transform = csdl.transforms.EqualityInversion()
+            inverted_lhs, inverted_rhs = inversion_transform.apply(
+                lhs=new_y_target,
+                rhs=y_value,
+                target = new_x_target,
+                debug=debug,
+            )
+
+            assert inverted_lhs is new_x_target, "INTERNAL ERROR: Inverted lhs must be the same as the new x target."
+            return inverted_rhs
+
+        name = self.name
+        class InvertedComposedOperation(ComposedOperation):
+            def __init__(self, *args):
+                super().__init__(*args)
+                self.name = f'inverted_{name}'
+            def evaluate_composed(self, *args):
+                outs = composed_inverse(*args)
+                return outs
+
+        inverse = InvertedComposedOperation(y_value, *self.inputs).finalize_and_return_outputs()
+        return inverse
 
 class SubgraphFunctionOperation(SubgraphOperation):
     def __init__(

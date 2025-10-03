@@ -8,7 +8,7 @@ import csdl_alpha.utils.testing_utils as csdl_tests
 import csdl_alpha.utils.error_utils as error_utils
 import numpy as np
 
-@set_properties(linear=True, diagonal_jacobian = True)
+@set_properties(linear=True, diagonal_jacobian = True, invertible=True, monotonic=True)
 class Transpose(Operation):
     '''
     Transpose of a tensor.
@@ -29,6 +29,11 @@ class Transpose(Operation):
     def evaluate_vjp(self, cotangents, x, z):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[z].T())
+
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,),(y,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if x is None:
+            return transpose(y)
 
 def transpose(x:VariableLike) -> Variable:
     """ 

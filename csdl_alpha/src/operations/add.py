@@ -5,7 +5,7 @@ from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
 
-@set_properties(linear=True)
+@set_properties(linear=True, invertible=True, monotonic=True)
 class Add(ElementwiseOperation):
     '''
     Elementwise addition of two tensors of the same shape.
@@ -30,7 +30,15 @@ class Add(ElementwiseOperation):
         if cotangents.check(y):
             cotangents.accumulate(y, cotangents[z])
 
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if x is None:
+            return z - y
+        elif y is None:
+            return z - x
+
 # TODO: Do we need a broadcast add? There's a lot of code duplication b/w both classes
+@set_properties(linear=True, invertible=True, monotonic=True)
 class BroadcastAdd(Operation):
     '''
     Addition after the first input is broadcasted to the shape of the second input.
@@ -55,6 +63,18 @@ class BroadcastAdd(Operation):
             cotangents.accumulate(x, csdl.sum(cotangents[z]))
         if cotangents.check(y):
             cotangents.accumulate(y, cotangents[z])
+
+    def get_invertible_args(self) -> list[Variable]:
+        # Cannot invert with respect to the broadcasted input because information is lost
+        return [self.inputs[1]]
+
+    # def inverse(self, x:Variable, y:Variable, z:Variable)->Variable:
+    #     self.check_inverse_arg_inputs(x, y)
+    #     return z - x
+
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return z - x
 
 class SparseAdd(ComposedOperation):
 
@@ -104,6 +124,8 @@ def add(x:VariableLike,y:VariableLike)->Variable:
 
     if x.shape == y.shape:
         op = Add(x,y)
+    elif x.size == 1 and y.size == 1:
+        op = Add(x.reshape(y.shape), y)
     elif x.size == 1:
         op = BroadcastAdd(x.flatten(),y)
     elif y.size == 1:

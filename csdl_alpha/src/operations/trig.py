@@ -6,7 +6,7 @@ import numpy as np
 from csdl_alpha.utils.typing import VariableLike
 from csdl_alpha.utils.inputs import validate_and_variablize
 
-@set_properties(linear=False, invertible=True)
+@set_properties(linear=False, invertible=True, monotonic=False)
 class Sin(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -23,7 +23,11 @@ class Sin(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]*cos(x))
 
-@set_properties(linear=False, invertible=True)
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return arcsin(y_value)
+
+@set_properties(linear=False, invertible=True, monotonic=True)
 class ArcSin(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -40,7 +44,11 @@ class ArcSin(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]/(1.0 - x**2)**0.5)
 
-@set_properties(linear=False, invertible=True)
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return sin(y_value)
+
+@set_properties(linear=False, invertible=True, monotonic=False)
 class Cos(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -57,7 +65,11 @@ class Cos(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, -cotangents[y]*sin(x))
 
-@set_properties(linear=False, invertible=True)
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return arccos(y_value)
+
+@set_properties(linear=False, invertible=True, monotonic=True)
 class ArcCos(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -74,7 +86,11 @@ class ArcCos(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, -cotangents[y]/(1.0 - x**2)**0.5)
 
-@set_properties(linear=False, invertible=True)
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return cos(y_value)
+
+@set_properties(linear=False, invertible=True, monotonic=False)
 class Tan(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -91,11 +107,11 @@ class Tan(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]/(cos(x)**2))
 
-    def inverse(self, x, y):
-        assert x is None
-        return arctan(y)
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return arctan(y_value)
 
-@set_properties(linear=False, invertible=True)
+@set_properties(linear=False, invertible=True, monotonic=True)
 class ArcTan(ElementwiseOperation):
     def __init__(self,x):
         super().__init__(x)
@@ -112,9 +128,9 @@ class ArcTan(ElementwiseOperation):
         if cotangents.check(x):
             cotangents.accumulate(x, cotangents[y]/(1.0 + x**2))
 
-    def inverse(self, x, y):
-        assert x is None
-        return tan(y)
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return tan(y_value)
 
 @set_properties(linear=False)
 class ArcTan2(ElementwiseOperation):

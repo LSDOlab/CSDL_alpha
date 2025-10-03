@@ -1,7 +1,7 @@
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.graph.node import Node
-from csdl_alpha.src.transfomation_helper.checks import is_op
+from csdl_alpha.src.transfomation_helper.graph import is_op
 
 def get_subgraph():
     return

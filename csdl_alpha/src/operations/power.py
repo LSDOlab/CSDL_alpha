@@ -5,7 +5,9 @@ from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.utils.typing import VariableLike
 from csdl_alpha.src.graph.variable import Variable
+from csdl_alpha.src.operations.log import log
 
+@set_properties(invertible=True, monotonic=False)
 class Power(ElementwiseOperation):
     '''
     Elementwise power of a tensor.
@@ -34,6 +36,20 @@ class Power(ElementwiseOperation):
         import jax.numpy as jnp
         return (x ** y)
 
+    def get_invertible_args(self) -> list[Variable]:
+        # [z0, z1] = [x0**y0, x1**y1]
+        # possible to solve for:    y_i = log(z_i) / log(x_i)
+        # possible to solve for:    x_i = z_i**(1/y_i)
+        return self.inputs
+    
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if y is None:
+            return log(z) / log(x)
+        if x is None:
+            return z**(1/y)
+
+@set_properties(invertible=True, monotonic=False)
 class LeftBroadcastPower(Operation):
     '''
     First input is broadcasted to the shape of the second input.
@@ -60,6 +76,17 @@ class LeftBroadcastPower(Operation):
             import csdl_alpha as csdl
             cotangents.accumulate(y, cotangents[z]*z*csdl.log(x))
 
+    def get_invertible_args(self) -> list[Variable]:
+        # [z0, z1] = x**[y0,y1]
+        # possible to solve for:    y_i = log(z_i) / log(x)
+        # impossible to solve for:  x != z_i**(1/y_i) as different y_i's give different x's
+        return [self.inputs[1]]
+    
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return log(z) / log(x)
+
+@set_properties(invertible=True, monotonic=False)
 class RightBroadcastPower(Operation):
     '''
     Second input is broadcasted to the shape of the first input.
@@ -85,6 +112,16 @@ class RightBroadcastPower(Operation):
         if cotangents.check(y):
             import csdl_alpha as csdl
             cotangents.accumulate(y, csdl.sum(cotangents[z]*z*csdl.log(x)))
+
+    def get_invertible_args(self) -> list[Variable]:
+        # [z0, z1] = [x0,x1]**y
+        # impossible to solve for:    y_i != log(z_i) / log(x_i) as different x_i's give different y's
+        # possible to solve for:      x_i = z_i**(1/y)
+        return [self.inputs[0]]
+    
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return z**(1/y)
 
 def power(x:VariableLike, y:VariableLike) -> Variable:
     '''
@@ -127,6 +164,8 @@ def power(x:VariableLike, y:VariableLike) -> Variable:
 
     if x.shape == y.shape:
         op = Power(x, y)
+    elif x.size == 1 and y.size == 1:
+        op = Power(x.reshape(y.shape), y)
     elif x.shape == (1,):
         op = LeftBroadcastPower(x, y)
     elif y.shape == (1,):

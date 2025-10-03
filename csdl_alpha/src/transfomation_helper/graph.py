@@ -46,3 +46,17 @@ def is_implicit(node:Node)->bool:
     if isinstance(node, ImplicitOperation):
         return True
     return False
+
+def predecessors(node:Node, graph = None)->list[Node]:
+    """
+    Get the predecessors of a node.
+    """
+    if graph is None:
+        import csdl_alpha as csdl
+        graph = csdl.get_current_recorder().get_root_graph()
+    
+    if node not in graph.node_table:
+        raise ValueError(f'Node {node.info()} not in the graph')
+    
+    preds = list(graph.predecessors(node))
+    return preds

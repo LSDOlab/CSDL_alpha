@@ -246,7 +246,7 @@ def test_amtc_transform_tensor_2rv_2():
     # z = f11(x_out, y_out)
     # z_fake = (a*z)**3.0+2.0
 
-    recorder.visualize_graph(visualize_style='hierarchical')
+    # recorder.visualize_graph(visualize_style='hierarchical')
 
     # Setup:
     # with pytest.raises(ValueError):

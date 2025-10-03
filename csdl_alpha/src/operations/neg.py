@@ -2,8 +2,9 @@ from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 from csdl_alpha.src.graph.operation import set_properties 
 from csdl_alpha.utils.inputs import validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
+from csdl_alpha.src.graph.variable import Variable
 
-@set_properties(linear=True)
+@set_properties(linear=True, invertible=True, monotonic=True)
 class Neg(ElementwiseOperation):
 
     def __init__(self,x):
@@ -20,6 +21,11 @@ class Neg(ElementwiseOperation):
     def evaluate_vjp(self, cotangents, x, neg_x):
         if cotangents.check(x):
             cotangents.accumulate(x, -cotangents[neg_x])
+
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,),(y,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if x is None:
+            return -y
 
 def negate(x):
     """Compute -1*x of a variable x
