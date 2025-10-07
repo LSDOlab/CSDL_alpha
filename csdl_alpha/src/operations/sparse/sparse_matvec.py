@@ -8,10 +8,10 @@ import numpy as np
 import scipy.sparse as sp
 import pytest
 
-@set_properties(supports_sparse=True)
+@set_properties(supports_sparse=True, invertible=True, monotonic=True)
 class SparseMatMat(Operation):
 
-    def __init__(self, sparse_matrix, x:Variable) -> 'MatVec':
+    def __init__(self, sparse_matrix, x:Variable):
         super().__init__(x)
         self.name = 'sp_matvec'
         self.A = sparse_matrix
@@ -33,6 +33,18 @@ class SparseMatMat(Operation):
         import csdl_alpha as csdl
         if cotangents.check(x):
             cotangents.accumulate(x, csdl.sparse.matmat(self.A.T, cotangents[b]))
+
+    def get_invertible_args(self) -> list[Variable]:
+        if self.A.shape[0] != self.A.shape[1]:
+            return None
+        else:
+            return self.inputs
+    
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,),(b,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if x is None:
+            A_inv = sp.linalg.inv(self.A)
+            return matmat(A_inv, b)
 
 # TODO: A will be variablized to sparse csdl matrix in the future
 def matvec(A, x:Variable) -> Variable:
