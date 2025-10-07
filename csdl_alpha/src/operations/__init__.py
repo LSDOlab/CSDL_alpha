@@ -56,6 +56,7 @@ from .derivatives.derivative import derivative
 
 # Special operations
 from .special.bessel import bessel
+from .special.activations import sigmoid, softplus
 
 # other
 from .subop import subop
