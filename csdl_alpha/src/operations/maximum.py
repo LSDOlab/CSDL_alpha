@@ -88,8 +88,10 @@ class Maximum(Operation):
         if cotangents.check(x):
             if self.axes is None:
                 rho = self.rho
+                # Numerically stable derivative using y as reference
+                # y is the smooth max already computed accurately
                 diff = x - y
-                exp_x = csdl.exp(rho*diff)
+                exp_x = csdl.exp(rho * diff)
                 vjp = cotangents[y] * exp_x / csdl.sum(exp_x)
             else:
                 rho = self.rho
@@ -98,10 +100,12 @@ class Maximum(Operation):
                 in_str, out_str  = self.einsum_str.split('->')
                 in_str, ones_str = in_str.split(',')
                 exp_str = in_str + '->' + out_str
-                exp_term = csdl.exp(rho*(x-csdl.expand(y, x.shape, exp_str)))
-                sum = csdl.sum(exp_term, axes=axes)
-                expanded_sum = csdl.expand(sum, out_shape=x.shape, action=exp_str)
-                vjp = csdl.expand(cotangents[y] , x.shape, exp_str) * exp_term / expanded_sum
+                # y is already computed as smooth max, use it as reference
+                diff = x - csdl.expand(y, x.shape, exp_str)
+                exp_term = csdl.exp(rho * diff)
+                sum_exp = csdl.sum(exp_term, axes=axes)
+                expanded_sum = csdl.expand(sum_exp, out_shape=x.shape, action=exp_str)
+                vjp = csdl.expand(cotangents[y], x.shape, exp_str) * exp_term / expanded_sum
 
             cotangents.accumulate(x, vjp)
 
@@ -147,12 +151,19 @@ class ElementwiseMaximum(Operation):
         inputs = inputs_and_outputs[:len(self.inputs)]
         output = inputs_and_outputs[-1]
         rho = self.rho
-        # sum  = cotangents[output]/csdl.sum(*[csdl.exp(rho*(arg-output)) for arg in inputs])
+        # Numerically stable derivative using log-sum-exp trick
+        # For smooth max: vjp = cotangents[output] * exp(rho*(input_var - max_ref)) / sum(exp(rho*(arg - max_ref)))
+        # Use element-wise maximum of all inputs as reference to avoid overflow
+        max_ref = csdl.maximum(*inputs, rho=rho)
+        
         for input_var in inputs:
             if cotangents.check(input_var):
-                cotangents.accumulate(input_var, cotangents[output]/csdl.sum(*[csdl.exp(rho*(arg-input_var)) for arg in inputs]))
-
-                # cotangents.accumulate(input_var, csdl.exp(rho*(input_var-output))*sum)
+                # Compute exp(rho*(arg - max_ref)) for all args - these are numerically safe (≤ 1)
+                exp_terms = [csdl.exp(rho * (arg - max_ref)) for arg in inputs]
+                sum_exp = csdl.sum(*exp_terms)
+                # Numerically stable vjp
+                vjp = cotangents[output] * csdl.exp(rho * (input_var - max_ref)) / sum_exp
+                cotangents.accumulate(input_var, vjp)
 
 def maximum(*args, axes=None, rho=20.):
     '''
@@ -266,6 +277,7 @@ class TestMaximum(csdl_tests.CSDLTest):
 
         compare_values = []
         # maximum of a single tensor variable
+        # s1 = csdl.maximum(x, rho=1)
         s1 = csdl.maximum(x)
         s1.add_name('s1')
         t1 = np.array([15.0])
