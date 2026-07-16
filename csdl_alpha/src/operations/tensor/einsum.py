@@ -169,7 +169,7 @@ def einsum(*args, action=None)->Variable:
     
     alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ,->'
     if not all(char in alphabet for char in action):
-        raise ValueError(f'The `action` string must contain only valid characters: {alphabet}.')
+        raise ValueError(f'The `action` string must contain only valid characters: {alphabet}. `action` string given: {action}.')
     
     args = [variablize(x) for x in args]
     arg_strings, out_string = action.split('->')

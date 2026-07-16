@@ -159,7 +159,11 @@ class JaxSimulator(SimulatorBase):
 
         # Run the function
         outputs = self.run_func({in_var:in_var.value for in_var in self.input_manager.list})
-        
+        # outputs_mem = self.run_func({in_var:in_var.value for in_var in self.input_manager.list})
+        # outputs = outputs_mem[0]
+        # memory_MB = outputs_mem[1]
+        # uncomment to get memory
+
         # Callback if user-specified
         self.callback()
 
@@ -168,6 +172,7 @@ class JaxSimulator(SimulatorBase):
             output.set_value(outputs[output])
 
         return outputs
+        # return outputs, memory_MB # uncomment to get memory
 
     def __getitem__(self, key:Union[Variable, str])->np.ndarray:
         if isinstance(key, str):
@@ -221,7 +226,10 @@ class JaxSimulator(SimulatorBase):
                 )
 
             derivs = self.totals_derivs({in_var:in_var.value for in_var in self.input_manager.list})
-            
+            # derivs_mem = self.totals_derivs({in_var:in_var.value for in_var in self.input_manager.list})
+            # derivs = derivs_mem[0]
+            # memory_MB = derivs_mem[1]
+            # uncomment to get memory
             # Callback if user-specified
             self.callback()
 
@@ -229,6 +237,7 @@ class JaxSimulator(SimulatorBase):
             for key in self.derivative_variables:
                 return_derivs[key] = derivs[self.derivative_variables[key]]
             return return_derivs
+            # return return_derivs, memory_MB # uncomment to get memory
         else:
             from csdl_alpha.src.operations.derivatives.derivative_utils import finite_difference
             if self.run_func is None:
@@ -251,6 +260,9 @@ class JaxSimulator(SimulatorBase):
         from csdl_alpha.src.operations.derivatives.derivative_utils import verify_derivative_values
 
         analytical_derivs = self.compute_totals()
+        # analytical_derivs_mem = self.compute_totals()
+        # analytical_derivs = analytical_derivs_mem[0]
+        # uncomment to get memory
         finite_difference_derivs = self.compute_totals(
             use_finite_difference=True,
             finite_difference_step_size=step_size,
@@ -283,7 +295,7 @@ class JaxSimulator(SimulatorBase):
             print(f"compiling 'run_forward' function ... ({len(self.recorder.node_graph_map)} nodes)")
             self.run_forward_func = create_jax_interface(
                 list(self.recorder.design_variables.keys()),
-                list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys()),
+                list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys())+self.saved_outputs,
                 self.recorder.get_root_graph(),
                 device = self._gpu,
                 enable_f64=self.use_f64,
@@ -381,6 +393,9 @@ class JaxSimulator(SimulatorBase):
         
     def save_external(self, filename:str, groupname:str):
         from csdl_alpha.src.data import save_h5py_variables
+        # update variable values
+        for output in self.saved_outputs:
+            output.value = self[output]
         save_h5py_variables(filename, groupname, self.saved_outputs)
 
     def add_callback(self, func:Callable):

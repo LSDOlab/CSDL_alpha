@@ -7,6 +7,7 @@ import sympy as sp
 from typing import Union
 
 class Graph():
+    from csdl_alpha.src.graph.node import Node
 
     def __init__(self, name = None):
         self.rxgraph = rx.PyDiGraph()
@@ -25,6 +26,17 @@ class Graph():
         index = self.rxgraph.add_node(node)
         self.node_table[node] = index
 
+    def _delete_node(self,node):
+        from csdl_alpha.src.graph.node import Node
+        if not isinstance(node, Node):
+            raise TypeError(f'Cannot delete non-Node objects')
+        if node not in self.node_table:
+            raise KeyError(f'Node {node.info()} not in graph')
+        
+        index = self.node_table[node]
+        self.node_table.pop(node)
+        self.rxgraph.remove_node(index)
+
     def in_degree(self, node):
         return self.rxgraph.in_degree(self.node_table[node])
     
@@ -42,13 +54,26 @@ class Graph():
     def add_operation(self, operation):
         self.add_node(operation)
 
-    from csdl_alpha.src.graph.node import Node
     def predecessors(self, node:Node) -> list[Node]:
         """
         Returns the predecessors of the node
         """
         return self.rxgraph.predecessors(self.node_table[node])
 
+    def descendants(self, node:Node) -> set[Node]:
+        """
+        Returns the descendants of the node
+        """
+        descendants = rx.descendants(self.rxgraph, self.node_table[node])
+        return {self.rxgraph.get_node_data(i) for i in descendants}
+    
+    def ancestors(self, node:Node) -> set[Node]:
+        """
+        Returns the ancestors of the node
+        """
+        ancestors = rx.ancestors(self.rxgraph, self.node_table[node])
+        return {self.rxgraph.nodes()[i] for i in ancestors}
+    
     def execute_inline(self, subset = None, debug = False):
         """
         executes the graph inline
@@ -157,7 +182,6 @@ class Graph():
         subgraph = Graph()
         subgraph.rxgraph = rx_sg
         subgraph.update_node_table()
-
 
         # Delete the nodes in the subgraph from the graph
         delete_nodes = set()
@@ -536,6 +560,8 @@ class Graph():
             attr_dict['shape'] = 'ellipse'
             if node.value is not None:
                 attr_dict['tooltip'] = f'{np.min(node.value):.3e}, {np.max(node.value):.3e}, {np.mean(node.value):.3e}, {node.shape}'
+            else:
+                attr_dict['tooltip'] = f'{node.shape}'
         else:
             attr_dict['shape'] = 'rectangle'
         return attr_dict
