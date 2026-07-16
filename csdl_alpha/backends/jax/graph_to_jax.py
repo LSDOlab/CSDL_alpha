@@ -1,13 +1,14 @@
+from multiprocessing import Array
 from ...src.graph.graph import Graph
 from ...src.graph.variable import Variable
 from ...utils.inputs import listify_variables
 
 from csdl_alpha.src.operations.loops.loop import Loop
 from csdl_alpha.src.operations.implicit_operations.implicit_operation import ImplicitOperation
+from csdl_alpha.src.operations.operation_subclasses import RandomOperation
 
 import numpy as np
 from typing import Union, Callable
-
 
 # Get the graph
 def get_jax_inputs(node, all_jax_variables:dict, return_dict = False)->list:
@@ -72,6 +73,9 @@ def create_jax_function(
     """
     current_graph = graph
     import jax.numpy as jnp
+    from jax import random
+    from jax._src.typing import Array
+    KeyArray = Array  # Type alias for JAX PRNGKey
     
     inputs = list(inputs)
     outputs = list(outputs)
@@ -99,7 +103,22 @@ def create_jax_function(
     # all_sorted_nodes = build_derivative_node_order(current_graph, outputs, inputs, reverse=False)
     
     # Build the JAX function itself
-    def jax_function(*args)->list:
+    def jax_function(*args, prng_key:KeyArray=None)->list:
+        """JAX function that computes the outputs given the inputs.
+        
+        Parameters
+        ----------
+        args : list
+            The input values to the function, in the same order as the inputs.
+        prng_key : KeyArray, optional
+            JAX PRNG key for random operations. If the graph contains random operations, this must be provided.
+        
+        Returns
+        -------
+        list
+            The computed outputs, in the same order as the outputs.
+        """
+
         # Set the input values
         all_jax_variables = {}
         relevant_nodes = set()
@@ -140,6 +159,21 @@ def create_jax_function(
                     if fill_outputs[output_node] is None:
                         raise ValueError(f"Jax function error with node {node.info()}: Output {output_node.info()} was not filled")
                     all_jax_variables[output_node] = fill_outputs[output_node]
+            elif isinstance(node, RandomOperation):
+                # Random operation get a key as an argument to their compute_jax function
+                if prng_key is None:
+                    raise ValueError(f"Jax function error with node {node.info()}: Random operation requires a PRNG key, but got None")
+                # split the key for each random operation
+                prng_key, node_key = random.split(prng_key, 2)
+                
+                jax_inputs = get_jax_inputs(node, all_jax_variables)
+                # key is always the first argument for random operations, so we prepend it to jax_inputs
+                jax_inputs = [node_key] + jax_inputs
+                jax_outputs = node.compute_jax(*jax_inputs)
+                if isinstance(jax_outputs, jnp.ndarray):
+                    jax_outputs = (jax_outputs,)
+                update_jax_variables(node, jax_outputs, all_jax_variables)
+
             else:
                 jax_inputs = get_jax_inputs(node, all_jax_variables)
                 jax_outputs = node.compute_jax(*jax_inputs) # EVERY CSDL OPERATIONS NEEDS THIS FUNCTION
@@ -161,7 +195,7 @@ def create_jax_interface(
         graph:Graph = None,
         device:str='gpu',
         enable_f64:bool=True,
-        name = 'jax_interface')->Callable[[dict[Variable, np.ndarray]], dict[Variable, np.ndarray]]:
+        name = 'jax_interface'):
     """_summary_
 
     Parameters
@@ -176,10 +210,21 @@ def create_jax_interface(
     Returns
     -------
     jax interface: Callable
-        A function with type signature: jax_interface(dict[Variable, np.array])->dict[Variable, np.array], where the input and output variables must match the inputs and outputs respectively.
+        A function with type signature: 
+        jax_interface(dict[Variable, np.array], prng_key:KeyArray=None) -> dict[Variable, np.array], 
+        where the input and output variables must match the inputs and outputs respectively.
+
+    Notes
+    -----
+    The returned jax_interface function accepts an optional keyword argument:
+    
+    prng_key : KeyArray, optional
+        JAX PRNG key for random operations. Required if the graph contains random operations.
     """
     import jax
     import csdl_alpha as csdl
+    from jax._src.typing import Array
+    KeyArray = Array  # Type alias for JAX PRNGKey
 
     # import os
     # os.environ['XLA_FLAGS'] = (
@@ -216,12 +261,25 @@ def create_jax_interface(
     jax_function = jax.jit(jax_function, device=device)
 
     # Create the JAX interface
-    def jax_interface(inputs_dict:dict[Variable, np.ndarray])->dict[Variable, np.ndarray]:
+    def jax_interface(inputs_dict:dict[Variable, np.ndarray], prng_key:KeyArray=None)->dict[Variable, np.ndarray]:
+        """
+        Parameters
+        ----------
+        inputs_dict : dict[Variable, np.ndarray]
+            Dictionary mapping input Variables to their values.
+        prng_key : KeyArray, optional
+            JAX PRNG key for random operations. Required if the graph contains random operations.
+
+        Returns
+        -------
+        outputs_dict : dict[Variable, np.ndarray]
+            Dictionary mapping output Variables to their computed values.
+        """
         jax_interface_inputs = []
         # print('INPUTS:')
         for input_var in inputs:
             jax_interface_inputs.append(jax.numpy.array(inputs_dict[input_var]))
-        jax_outputs = jax_function(*jax_interface_inputs)
+        jax_outputs = jax_function(*jax_interface_inputs, prng_key=prng_key)
 
         #### Potential analysis tools ####
         ## ----- compiled func cost estimates ----- 

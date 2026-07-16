@@ -57,5 +57,9 @@ from .derivatives.derivative import derivative
 # Special operations
 from .special.bessel import bessel
 
+# Random operations
+from .random.bernoulli import bernoulli
+from .random.normal import normal
+
 # other
 from .subop import subop
