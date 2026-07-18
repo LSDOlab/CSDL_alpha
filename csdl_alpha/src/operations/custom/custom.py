@@ -97,7 +97,8 @@ class CustomExplicitOperation(CustomOperation):
         output = jax.pure_callback(
             new_inline_func,
             [jax.ShapeDtypeStruct(self.output_dict[output_var].shape, dtype) for output_var in self.output_dict],
-            *args)
+            *args,
+            vmap_method="sequential")
         # if len(output) == 1:
         #     output = output[0]
         return tuple(output)
@@ -463,7 +464,8 @@ class CustomJacOperation(Operation):
         output = jax.pure_callback(
             new_inline_func,
             [jax.ShapeDtypeStruct(in_cot.shape, dtype) for in_cot in self.input_cotangents],
-            *args)
+            *args,
+            vmap_method="sequential")
         # if len(output) == 1:
         #     output = output[0]
         
