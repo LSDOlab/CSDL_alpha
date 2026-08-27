@@ -31,7 +31,13 @@ class SetVarIndex(Operation):
 
     def compute_inline(self, x, y, *slice_args):
         x_updated = x.copy()
-        x_updated[self.slice.evaluate(*slice_args)] = y
+        eval_slice = self.slice.evaluate(*slice_args)
+        # NumPy 2 no longer silently squeezes a size-1 RHS into a scalar target;
+        # reshape y to the slice target when the total size matches.
+        tgt_shape = np.shape(x_updated[eval_slice])
+        if np.shape(y) != tgt_shape and np.size(y) == int(np.prod(tgt_shape)):
+            y = np.asarray(y).reshape(tgt_shape)
+        x_updated[eval_slice] = y
         return x_updated
 
         # # Set item could add over duplicate indices.
