@@ -85,7 +85,11 @@ def matvec(A, x:Variable) -> Variable:
         raise TypeError(f"A must be a scipy sparse matrix. Got {type(A)}")
     x_vec = validate_and_variablize(x)
 
-    output = SparseMatMat(*process_matA_vecb(A, x_vec)).finalize_and_return_outputs()
+    A, x_vec = process_matA_vecb(A, x_vec)
+    operation = SparseMatMat(A, x_vec)
+    output = operation.finalize_and_return_outputs()
+
+    # output = SparseMatMat(A, x_vec).finalize_and_return_outputs()
 
     if len(x.shape) == 2:
         return output

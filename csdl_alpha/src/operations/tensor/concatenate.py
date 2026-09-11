@@ -50,7 +50,7 @@ class Concatenate(Operation):
                     )]
                 cotangents.accumulate(input, cot)
 
-def concatenate(arrays:tuple[Variable], axis:int = 0)->Variable:
+def concatenate(arrays:tuple[Variable, ...], axis:int = 0)->Variable:
     """
     concatenate arrays along an axis.
 
