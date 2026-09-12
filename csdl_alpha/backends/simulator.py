@@ -58,6 +58,21 @@ class SimulatorBase():
             (dscaler, dlower, dupper, d0, dadder), (cscaler, clower, cupper, cadder), (oscaler, oadder)
         """
         self.check_if_optimization()
+
+        self.opt_metadata:dict[str,dict[Variable,Union[np.array]]] = {}
+        dv_maps, dscaler, dlower, dupper, d0, dadder = build_opt_metadata(self.recorder.design_variables, 'd')
+        c_maps, cscaler, clower, cupper, _, cadder = build_opt_metadata(self.recorder.constraints, 'c')
+        o_maps, oscaler, oadder = build_opt_metadata(self.recorder.objectives, 'o')
+
+        self.dv_meta = dv_maps
+        self.c_meta = c_maps
+        self.o_meta = o_maps
+
+        self.opt_metadata['d'] = (dscaler, dlower, dupper, d0, dadder)
+        self.opt_metadata['c'] = (cscaler, clower, cupper, cadder)
+        self.opt_metadata['o'] = (oscaler, oadder)
+
+
         return self.opt_metadata['d'], self.opt_metadata['c'], self.opt_metadata['o']
 
     def check_if_optimization(self):

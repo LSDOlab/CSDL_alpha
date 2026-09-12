@@ -186,13 +186,14 @@ class JaxSimulator(SimulatorBase):
         else:
             # raise KeyError(f"Variable {key} ({key.name}) not an input or output. Add the variable as an additional input or output to the simulator in order to access values")
             raise KeyError(f"The variable {key.info()} is not recognized as an input or output. Ensure that the variable is added as an input or output to the simulator to access its values.")
+        
     def __setitem__(self, key:Variable, value:np.ndarray):
         self.input_manager[key] = value
 
         # regenerate run_forward, compute_optimization_derivatives if the updated variable is not an optimization input
-        if key not in self.recorder.design_variables:
-            self.run_forward_func = None
-            self.opt_derivs_func = None
+        # if key not in self.recorder.design_variables:
+        #     self.run_forward_func = None
+        #     self.opt_derivs_func = None
 
     # @timer # For debugging
     def compute_totals(
@@ -294,15 +295,18 @@ class JaxSimulator(SimulatorBase):
         if self.run_forward_func is None:
             print(f"compiling 'run_forward' function ... ({len(self.recorder.node_graph_map)} nodes)")
             self.run_forward_func = create_jax_interface(
-                list(self.recorder.design_variables.keys()),
-                list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys())+self.saved_outputs,
+                # list(self.recorder.design_variables.keys()), # <-- OLD 
+                self.input_manager.list,  # <- NEW
+                # list(self.recorder.objectives.keys())+list(self.recorder.constraints.keys())+self.saved_outputs, # <-- OLD
+                self.output_manager.list, # <- NEW
                 self.recorder.get_root_graph(),
                 device = self._gpu,
                 enable_f64=self.use_f64,
                 name = 'run_forward',
             )
 
-        outputs = self.run_forward_func({dv:dv.value for dv in self.recorder.design_variables})
+        # outputs = self.run_forward_func({dv:dv.value for dv in self.recorder.design_variables})  #<-OLD
+        outputs = self.run_forward_func({dv:dv.value for dv in self.input_manager.list})  #<-NEW
         for output in outputs:
             output.set_value(outputs[output])
         
@@ -346,14 +350,16 @@ class JaxSimulator(SimulatorBase):
                 opt_derivs += [self.constraint_jacobian] if self.constraint_jacobian is not None else []
 
                 self.opt_derivs_func = create_jax_interface(
-                    list(self.recorder.design_variables.keys()),
+                    # list(self.recorder.design_variables.keys()),  # <-OLD
+                    self.input_manager.list, # <-NEW
                     opt_derivs,
                     self.recorder.get_root_graph(),
                     device = self._gpu,
                     enable_f64=self.use_f64,
                     name = 'compute_optimization_derivatives',
                 )
-            outputs = self.opt_derivs_func({dv:dv.value for dv in self.recorder.design_variables})
+            # outputs = self.opt_derivs_func({dv:dv.value for dv in self.recorder.design_variables}) # <-OLD
+            outputs = self.opt_derivs_func({dv:dv.value for dv in self.input_manager.list})  # <-NEW
             for output in outputs:
                 output.set_value(outputs[output])
 
