@@ -75,6 +75,7 @@ class Graph():
         Returns the ancestors of the node
         """
         ancestors = rx.ancestors(self.rxgraph, self.node_table[node])
+        # TODO: Use self.rxgraph[i]; deleted nodes leave ID gaps that nodes() compacts.
         ancestors = {self.rxgraph.nodes()[i] for i in ancestors}
         if include_node:
             ancestors.add(node)
