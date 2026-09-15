@@ -164,19 +164,17 @@ class TestActivations(csdl_tests.CSDLTest):
         x = csdl.Variable(value=np.array([-1., 0., 1.]))
         y = csdl.relu(x)
         with np.errstate(invalid='ignore'):
-            with pytest.warns(RuntimeWarning, match='ReLU derivative requested at zero'):
+            with pytest.warns(RuntimeWarning, match='ReLU derivatives return NaN at x=0'):
                 csdl.derivative(y, x)
 
-    def test_relu_nonzero_derivative_no_warning(self):
+    def test_relu_nonzero_derivative_warning(self):
         self.prep(always_build_inline=True)
         import csdl_alpha as csdl
 
         x = csdl.Variable(value=np.array([-1., 1.]))
         y = csdl.relu(x)
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter('always')
+        with pytest.warns(RuntimeWarning, match='ReLU derivatives return NaN at x=0'):
             derivative = csdl.derivative(y, x)
-        assert not any('ReLU derivative requested' in str(w.message) for w in caught)
         np.testing.assert_allclose(derivative.value, np.diag([0., 1.]))
     
     def test_functionality(self,):
