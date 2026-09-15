@@ -40,6 +40,7 @@ setup(
         'pytest',
         'scipy',
         'rustworkx',
+        'networkx',
         'h5py',
         'pydot',
     ],

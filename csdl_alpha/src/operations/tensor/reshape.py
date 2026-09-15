@@ -7,7 +7,7 @@ import csdl_alpha.utils.testing_utils as csdl_tests
 import csdl_alpha.utils.error_utils as error_utils
 import numpy as np
 
-@set_properties(linear=True, diagonal_jacobian = True)
+@set_properties(linear=True, diagonal_jacobian = True, invertible=True, monotonic=True)
 class Reshape(Operation):
     '''
     Elementwise addition of two tensors of the same shape.
@@ -29,6 +29,11 @@ class Reshape(Operation):
     def compute_jax(self, x):
         import jax.numpy as jnp
         return x.reshape(self.new_shape)  
+
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,),(y,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if x is None:
+            return y.reshape(x_target.shape)
 
 def reshape(x:Variable, shape: tuple[int]) -> Variable:
     """Reshape a tensor x to a new shape.

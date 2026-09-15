@@ -6,13 +6,13 @@ import csdl_alpha as csdl
 
 import numpy as np
 
-class Maximum(Operation):
+class HardMaximum(Operation):
     '''
     Maximum entries in the input tensor along the specified axes.
     '''
     def __init__(self, x, axes=None, out_shape=None, rho=20.):
         super().__init__(x)
-        self.name  = 'maximum'
+        self.name  = 'hard_maximum'
         out_shapes = (out_shape,)
         self.set_dense_outputs(out_shapes)
         self.axes  = axes
@@ -39,49 +39,59 @@ class Maximum(Operation):
             self.ones_shape = ones_shape
 
     def compute_inline(self, x):
-        rho = self.rho
-        axes = self.axes
+        # rho = self.rho
+        # axes = self.axes
+
+        # if axes is None:
+        #     x_max = np.max(x)
+        #     smooth_max = x_max + 1/rho * np.log(np.sum(np.exp(rho * (x - x_max))))
+        #     return smooth_max
+        # else:
+        #     ones_shape = self.ones_shape
+        #     axeswise_max = np.max(x, axis=self.axes)
+        #     # print(self.einsum_str, axeswise_max.shape, ones_shape)
+        #     difference = x - np.einsum(
+        #         self.einsum_str,
+        #         axeswise_max,
+        #         np.ones(ones_shape),
+        #         )
+        #     exp = np.exp(rho * difference)
+        #     summation = np.sum(exp, axis=axes)
+        #     smooth_axeswise_max = axeswise_max + 1.0 / rho * np.log(summation)
 
         if axes is None:
-            x_max = np.max(x)
-            smooth_max = x_max + 1/rho * np.log(np.sum(np.exp(rho * (x - x_max))))
-            return smooth_max
+            output = np.max(x)
         else:
-            ones_shape = self.ones_shape
-            axeswise_max = np.max(x, axis=self.axes)
-            # print(self.einsum_str, axeswise_max.shape, ones_shape)
-            difference = x - np.einsum(
-                self.einsum_str,
-                axeswise_max,
-                np.ones(ones_shape),
-                )
-            exp = np.exp(rho * difference)
-            summation = np.sum(exp, axis=axes)
-            smooth_axeswise_max = axeswise_max + 1.0 / rho * np.log(summation)
-            return smooth_axeswise_max
+            output = np.max(x, axis=self.axes)
+        return output
 
     def compute_jax(self, x):
         import jax.numpy as jnp
-        rho = jnp.array(self.rho)
-        axes = self.axes
+        # rho = jnp.array(self.rho)
+        # axes = self.axes
 
-        if axes is None:
-            x_max = jnp.max(x)
-            smooth_max = x_max + 1/rho * jnp.log(jnp.sum(jnp.exp(rho * (x - x_max))))
-            return smooth_max
+        # if axes is None:
+        #     x_max = jnp.max(x)
+        #     smooth_max = x_max + 1/rho * jnp.log(jnp.sum(jnp.exp(rho * (x - x_max))))
+        #     return smooth_max
+        # else:
+        #     ones_shape = self.ones_shape
+        #     axeswise_max = jnp.max(x, axis=self.axes)
+        #     # print(self.einsum_str, axeswise_max.shape, ones_shape)
+        #     difference = x - jnp.einsum(
+        #         self.einsum_str,
+        #         axeswise_max,
+        #         jnp.ones(ones_shape),
+        #         )
+        #     exp = jnp.exp(rho * difference)
+        #     summation = jnp.sum(exp, axis=axes)
+        #     smooth_axeswise_max = axeswise_max + 1.0 / rho * jnp.log(summation)
+        #     return smooth_axeswise_max
+        if self.axes is None:
+            output = jnp.max(x)
         else:
-            ones_shape = self.ones_shape
-            axeswise_max = jnp.max(x, axis=self.axes)
-            # print(self.einsum_str, axeswise_max.shape, ones_shape)
-            difference = x - jnp.einsum(
-                self.einsum_str,
-                axeswise_max,
-                jnp.ones(ones_shape),
-                )
-            exp = jnp.exp(rho * difference)
-            summation = jnp.sum(exp, axis=axes)
-            smooth_axeswise_max = axeswise_max + 1.0 / rho * jnp.log(summation)
-            return smooth_axeswise_max
+            output = jnp.max(x, axis=self.axes)
+        return output
 
 
     def evaluate_vjp(self, cotangents, x, y):

@@ -5,7 +5,7 @@ import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.typing import VariableLike
 
-@set_properties()
+@set_properties(invertible=True, monotonic=True)
 class Div(ElementwiseOperation):
     '''
     Elementwise division of two tensors of the same shape.
@@ -29,7 +29,17 @@ class Div(ElementwiseOperation):
             cotangents.accumulate(y, -cotangents[z]*z/y)
             # cotangents.accumulate(y, -cotangents[z]*x/y**2)
 
-@set_properties()
+    def get_monotonic_args(self) -> list[Variable]:
+        return [self.inputs[0]]
+
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if x is None:
+            return y*z
+        elif y is None:
+            return x/z
+
+@set_properties(invertible=True, monotonic=True)
 class BroadcastDiv1(Operation):
     '''
     Broadcasted division of a scalar (x) and a tensor (y).
@@ -53,7 +63,21 @@ class BroadcastDiv1(Operation):
         if cotangents.check(y):
             cotangents.accumulate(y, -cotangents[z]*z/y)
 
-@set_properties()
+    def get_monotonic_args(self) -> list[Variable]:
+        return [self.inputs[0]]
+    
+    def get_invertible_args(self) -> list[Variable]:
+        # example: x/[y0,y1,y2] = [z0,z1,z2]
+        # impossible to solve for:    x = f_inv(y_0, y_1, y_2, z_0, z_1, z_2)
+        # but possible to solve for:  y_i = x/z_i
+        return [self.inputs[1]]
+
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if y is None:
+            return x/z
+
+@set_properties(invertible=True, monotonic=True)
 class BroadcastDiv2(Operation):
     '''
     Broadcasted division of a tensor (x) and a scalar (y).
@@ -76,6 +100,20 @@ class BroadcastDiv2(Operation):
             cotangents.accumulate(x, cotangents[z]/y)
         if cotangents.check(y):
             cotangents.accumulate(y, -csdl.sum(cotangents[z]*z)/y)
+
+    def get_monotonic_args(self) -> list[Variable]:
+        return [self.inputs[0]]
+    
+    def get_invertible_args(self) -> list[Variable]:
+        # example: [x0,x1,x2]/y = [z0,z1,z2]
+        # impossible to solve for:    y = f_inv(x_0, x_1, x_2, z_0, z_1, z_2)
+        # but possible to solve for:  x_i = y*z_i
+        return [self.inputs[0]]
+
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if x is None:
+            return y*z
 
 def div(x:VariableLike,y:VariableLike)->Variable:
     """Elementwise addition of two tensors x and y.
@@ -107,6 +145,8 @@ def div(x:VariableLike,y:VariableLike)->Variable:
 
     if x.shape == y.shape:
         op = Div(x,y)
+    elif x.size == 1 and y.size == 1:
+        op = Div(x.reshape(y.shape), y)
     elif x.size == 1:
         op = BroadcastDiv1(x.flatten(),y)
     elif y.size == 1:

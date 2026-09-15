@@ -1,4 +1,4 @@
-from csdl_alpha.src.transfomation_helper.checks import is_op
+from csdl_alpha.src.transfomation_helper.graph import is_op
 from csdl_alpha.src.graph.node import Node
 
 def delete_nodes(nodes:list, force_delete:bool = False):

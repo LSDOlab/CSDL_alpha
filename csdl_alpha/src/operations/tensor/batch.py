@@ -116,8 +116,8 @@ def batch_function(
                 output_types_post = tuple(output_types)
             else:
                 output_types_post = output_types
-            if len(output_types) != len(single_outs):
-                raise ValueError(f"output_types must be a tuple of integers that matches the outputs. {len(single_outs)} outputs given, {len(output_types)} output_types provided.")
+            if len(output_types_post) != len(single_outs):
+                raise ValueError(f"output_types must be a tuple of integers that matches the outputs. {len(single_outs)} outputs given, {len(output_types_post)} output_types provided.")
         
         batched_outs = []
         for output_type, out in zip(output_types_post, single_outs):

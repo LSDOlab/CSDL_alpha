@@ -1,3 +1,4 @@
+from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.src.operations.operation_subclasses import ElementwiseOperation
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 import numpy as np
@@ -5,6 +6,7 @@ from csdl_alpha.src.operations import add
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 import csdl_alpha.utils.testing_utils as csdl_tests
 
+@set_properties(invertible=True, monotonic=True)
 class Log(ElementwiseOperation):
     '''
     Elementwise logarithm of a tensor.
@@ -29,8 +31,17 @@ class Log(ElementwiseOperation):
         if cotangents.check(y):
             cotangents.accumulate(y, -vout * csdl.log(x) / (y * (csdl.log(y))**2))
 
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if x is None:
+            return y**z
+        elif y is None:
+            return x**(1/z)
+
 # We need a broadcast log even when the methods are exactly the same because Broadcast cannot inherit from ElementwiseOperation
 # TODO: Avoid code duplication
+        
+@set_properties(invertible=True, monotonic=True)
 class LeftBroadcastLog(Operation):
     '''
     Logarithm after the first input is broadcasted to the shape of the second input.
@@ -57,6 +68,18 @@ class LeftBroadcastLog(Operation):
         if cotangents.check(y):
             cotangents.accumulate(y, -vout * csdl.log(x) / (y * (csdl.log(y))**2))
 
+    def get_invertible_args(self) -> list[Variable]:
+        # [z0, z1] = log(x) / log([y0, y1])
+        # impossible to solve for:    x = f_inv(y_0, y_1, z_0, z_1)
+        # possible to solve for:    y_i = x**(1/z_i)
+        return [self.inputs[1]]
+    
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        # [z0, z1] = log(x) / log([y0, y1])
+        return x**(1/z)
+
+@set_properties(invertible=True, monotonic=True)
 class RightBroadcastLog(Operation):
     '''
     Logarithm after the second input is broadcasted to the shape of the first input.
@@ -82,6 +105,17 @@ class RightBroadcastLog(Operation):
             cotangents.accumulate(x, vout / (x * csdl.log(y)))
         if cotangents.check(y):
             cotangents.accumulate(y, - csdl.sum(vout *csdl.log(x) / (y * (csdl.log(y))**2)))
+
+    def get_invertible_args(self) -> list[Variable]:
+        # [z0, z1] = log([x0, x1]) / log(y)
+        # impossible to solve for:    y = f_inv(x_0, x_1, z_0, z_1)
+        # possible to solve for:    x_i = y**(z_i)
+        return [self.inputs[0]]
+    
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        # [z0, z1] = log(x) / log([y0, y1])
+        return y**z
 
 def log(x, base=None):
     '''
@@ -134,6 +168,8 @@ def log(x, base=None):
 
     if x.shape == y.shape:
         op = Log(x, y)
+    elif x.size == 1 and y.size == 1:
+        op = Log(x.reshape(y.shape), y)
     elif x.size == 1:
         op = LeftBroadcastLog(x.flatten(), y)
     elif y.size == 1:
