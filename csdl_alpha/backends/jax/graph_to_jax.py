@@ -283,7 +283,7 @@ def create_jax_interface(
 
         #### Potential analysis tools ####
         ## ----- compiled func cost estimates ----- 
-        traced = jax_function.trace(*jax_interface_inputs)
+        traced = jax_function.trace(*jax_interface_inputs, prng_key=prng_key)
         lowered = traced.lower()
         compiled = lowered.compile()
         # for compiled_costs in compiled.cost_analysis():
