@@ -11,7 +11,6 @@ import numpy as np
 # import jax
 import scipy.sparse.linalg as spsl
 import scipy.sparse as sps
-from jax.experimental import sparse
 import time
 
 @set_properties()
@@ -31,24 +30,20 @@ class SparseLinearSolve(Operation):
     
     def compute_jax(self, b):
         import jax.numpy as jnp
-        # return jnp.linalg.solve(A, b)
-        # Acoo = self.A.tocoo()
-        # data = np.array(Acoo.data)
-        # indices = np.array([Acoo.row, Acoo.col]).T
-        # indptr = np.array(Acoo.indptr)
-        # A = sparse.BCOO((data, indices), shape = self.A.shape)
+        from jax.experimental import sparse
         Acsr = self.A.tocsr()
-        # A = sparse.BCSR.from_bcoo(A)
-        # return sparse.linalg.spsolve(data=data, indices=indices, indptr=indptr, b=b).reshape(b.shape)
-        # return sparse.linalg.spsolve(data=jnp.asarray(Acsr.data), indices=jnp.array(Acsr.indices), indptr=jnp.array(Acsr.indptr), b=b.flatten(),
-        #                              reorder=1).reshape(b.shape)
-        x = jnp.zeros((self.A.shape[0], 3))
+        # CSDL right-hand sides are floating point, even for integer input data.
+        data = jnp.asarray(Acsr.data, dtype=b.dtype)
+        indices = jnp.asarray(Acsr.indices)
+        indptr = jnp.asarray(Acsr.indptr)
 
-        for i in range(b.shape[1]):
-            x = x.at[:, i].set(
-                sparse.linalg.spsolve(jnp.asarray(Acsr.data), jnp.array(Acsr.indices), jnp.array(Acsr.indptr), b[:, i])
-            )
-        return x
+        # JAX's sparse solver accepts one right-hand side at a time.
+        if b.ndim == 1:
+            return sparse.linalg.spsolve(data, indices, indptr, b)
+        return jnp.stack([
+            sparse.linalg.spsolve(data, indices, indptr, b[:, i])
+            for i in range(b.shape[1])
+        ], axis=1)
 
 
 
@@ -71,15 +66,15 @@ def solve_linear(
 
     Parameters
     ----------
-    A : VariableLike
-        2D matrix
+    A : scipy sparse matrix or array
+        Constant square 2D matrix.
     b : VariableLike
-        1D or 2D vector
+        Right-hand side with shape (n,) or (n, k).
 
     Returns
     -------
     x: Variable
-        1D or 2D vector
+        Solution with the same shape as b.
 
 
     Examples
@@ -102,11 +97,12 @@ def solve_linear(
     array([-4. ,  4.5])
     >>> recorder.stop()
     """
-    if not isinstance(A, sps.spmatrix):
-        raise TypeError(f"A must be a scipy sparse matrix. Got {type(A)}")
+    if not sps.issparse(A):
+        raise TypeError(f"A must be a scipy sparse matrix or array. Got {type(A)}")
     b = validate_and_variablize(b)
 
-    # A_mat, b_vec = process_matA_vecb(A, b)
+    if len(b.shape) not in (1, 2):
+        raise ValueError(f"b must be 1D or 2D, but has shape {b.shape}")
     if len(A.shape) != 2:
         raise ValueError(f"Matrix A must be 2D, but has shape {A.shape}")
     if A.shape[1] != b.shape[0]:
@@ -125,6 +121,38 @@ def solve_linear(
         return output.reshape((output.size,))
     
 class TestSparseLinear(csdl_tests.CSDLTest):
+
+    def test_inline_without_jax(self):
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        # Use a fresh interpreter so an already-imported JAX cannot mask a regression.
+        script = '''
+import importlib.abc
+import sys
+class BlockJax(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == 'jax' or fullname.startswith('jax.'):
+            raise ModuleNotFoundError('JAX intentionally unavailable for this test')
+sys.meta_path.insert(0, BlockJax())
+import csdl_alpha as csdl
+import numpy as np
+import scipy.sparse as sps
+recorder = csdl.Recorder(inline=True)
+recorder.start()
+b = csdl.Variable(value=np.array([2., 6.]))
+x = csdl.sparse.solve_linear(sps.csr_matrix([[2., 0.], [0., 3.]]), b)
+np.testing.assert_allclose(x.value, [1., 2.])
+np.testing.assert_allclose(csdl.derivative(x, b).value, np.diag([0.5, 1./3.]))
+assert 'jax' not in sys.modules
+'''
+        result = subprocess.run(
+            [sys.executable, '-c', script],
+            cwd=Path(__file__).resolve().parents[4],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
 
     def test_functionality(self,):
         self.prep()
@@ -175,6 +203,34 @@ class TestSparseLinear(csdl_tests.CSDLTest):
 
         self.run_tests(compare_values = compare_values, verify_derivatives=True)
     
+    @pytest.mark.parametrize('sparse_type', [
+        sps.csr_matrix, sps.csc_matrix, sps.csr_array, sps.csc_array,
+    ])
+    @pytest.mark.parametrize('rhs_shape', [(3,), (3, 1), (3, 2), (3, 4)])
+    def test_rhs_shapes(self, sparse_type, rhs_shape):
+        self.prep()
+        import csdl_alpha as csdl
+
+        # Nonsymmetric A also exercises the transpose solve in the VJP.
+        A_val = np.array([[4., 1., 0.], [0., 3., 1.], [1., 0., 2.]])
+        b_val = np.arange(np.prod(rhs_shape), dtype=float).reshape(rhs_shape) + 1
+        b = csdl.Variable(value=b_val)
+        x = csdl.sparse.solve_linear(sparse_type(A_val), b)
+        expected = np.linalg.solve(A_val, b_val)
+        self.run_tests(
+            compare_values=[csdl_tests.TestingPair(x, expected, decimal=8)],
+            verify_derivatives=True,
+        )
+
+    def test_invalid_inputs(self):
+        self.prep()
+        import csdl_alpha as csdl
+
+        with pytest.raises(TypeError, match='scipy sparse'):
+            csdl.sparse.solve_linear(np.eye(3), np.ones(3))
+        with pytest.raises(ValueError, match='b must be 1D or 2D'):
+            csdl.sparse.solve_linear(sps.eye(3), np.ones((3, 1, 1)))
+
     def test_errors(self,):
         self.prep()
 
@@ -231,3 +287,6 @@ if __name__ == '__main__':
     t.test_functionality()
     t.test_errors()
     t.test_docstrings()
+    t.test_rhs_shapes(sps.csr_matrix, (3,))
+    t.test_rhs_shapes(sps.csc_matrix, (3, 1))
+    t.test_invalid_inputs()
