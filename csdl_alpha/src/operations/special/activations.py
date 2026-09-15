@@ -3,6 +3,8 @@ from csdl_alpha.src.graph.operation import set_properties
 from csdl_alpha.src.graph.variable import Variable
 import csdl_alpha.utils.testing_utils as csdl_tests
 import numpy as np
+import warnings
+import pytest
 from csdl_alpha.utils.typing import VariableLike
 from csdl_alpha.utils.inputs import validate_and_variablize
 
@@ -47,7 +49,10 @@ class ReLU(ElementwiseOperation):
 
     def evaluate_vjp(self, cotangents, x, y):
         if cotangents.check(x):
-            # cotangents.accumulate(x, cotangents[y]*sigmoid(x))
+            warnings.warn('ReLU derivatives return NaN at x=0', 
+                RuntimeWarning,
+                stacklevel=2,
+            )
             cotangents.accumulate(x, cotangents[y]*(relu(x)/x))
 
 def softplus(x:VariableLike) -> Variable:
@@ -151,6 +156,28 @@ def sigmoid(x:VariableLike) -> Variable:
     return 0.5 * (csdl_alpha.tanh(x / 2) + 1)
 
 class TestActivations(csdl_tests.CSDLTest):
+
+    def test_relu_zero_derivative_warning(self):
+        self.prep(always_build_inline=True)
+        import csdl_alpha as csdl
+
+        x = csdl.Variable(value=np.array([-1., 0., 1.]))
+        y = csdl.relu(x)
+        with np.errstate(invalid='ignore'):
+            with pytest.warns(RuntimeWarning, match='ReLU derivative requested at zero'):
+                csdl.derivative(y, x)
+
+    def test_relu_nonzero_derivative_no_warning(self):
+        self.prep(always_build_inline=True)
+        import csdl_alpha as csdl
+
+        x = csdl.Variable(value=np.array([-1., 1.]))
+        y = csdl.relu(x)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            derivative = csdl.derivative(y, x)
+        assert not any('ReLU derivative requested' in str(w.message) for w in caught)
+        np.testing.assert_allclose(derivative.value, np.diag([0., 1.]))
     
     def test_functionality(self,):
         self.prep(always_build_inline=True)
@@ -248,4 +275,3 @@ class TestActivations(csdl_tests.CSDLTest):
         self.docstest(softplus)
         self.docstest(sigmoid)
         self.docstest(relu)
-
