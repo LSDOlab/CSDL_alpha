@@ -1,6 +1,6 @@
 from csdl_alpha.src.graph.node import Node
 import numpy as np
-from typing import Union
+from typing import Union, Optional
 from csdl_alpha.utils.inputs import ingest_value, get_shape, process_shape_and_value, get_type_string
 
 class Variable(Node):
@@ -119,13 +119,14 @@ class Variable(Node):
     def post_init(self):
         pass
 
-    def add_name(self, name: str):
+    def add_name(self, name: str)->'Variable':
         if self.name is None:
             self.name = name
         if self.recorder.active_namespace.prepend is not None:
             self.names.append(f'{self.recorder.active_namespace.prepend}.{name}')
         else:
             self.names.append(name)
+        return self
     
     def add_tag(self, tag: str):
         self.tags.append(tag)
@@ -143,14 +144,15 @@ class Variable(Node):
     # TODO: add checks for parents
     # TODO: allow float and arrays
     # TODO: add  checks for shape of upper, scaler, adder, etc
-    def set_as_design_variable(self, upper: float = None, lower: float = None, scaler: float = None, adder: float = None):
+    def set_as_design_variable(self, upper: float = None, lower: float = None, scaler: float = None, adder: float = None)->'Variable':
         scaler = ingest_value(scaler)
         adder = ingest_value(adder)
         upper = ingest_value(upper)
         lower = ingest_value(lower)
         self.recorder._add_design_variable(self, upper, lower, scaler, adder)
+        return self
 
-    def set_as_constraint(self, upper: float = None, lower: float = None, equals: float = None, scaler: float = None, adder: float = None):
+    def set_as_constraint(self, upper: float = None, lower: float = None, equals: float = None, scaler: float = None, adder: float = None)->'Variable':
         scaler = ingest_value(scaler)
         adder = ingest_value(adder)
         if equals is not None:
@@ -161,14 +163,16 @@ class Variable(Node):
         upper = ingest_value(upper)
         lower = ingest_value(lower)
         self.recorder._add_constraint(self, upper, lower, scaler, adder)
+        return self
 
-    def set_as_objective(self, scaler: float = None, adder: float = None):
+    def set_as_objective(self, scaler: float = None, adder: float = None)->'Variable':
         scaler = ingest_value(scaler)
         adder = ingest_value(adder)
 
         if self.size != 1:
             raise ValueError("Objective must be a scalar")
         self.recorder._add_objective(self, scaler, adder)
+        return self
 
     from csdl_alpha.src.operations.set_get.slice import Slice
     def set(self, slices:Slice, value:'VariableLike') -> 'Variable':

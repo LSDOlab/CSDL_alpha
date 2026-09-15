@@ -17,6 +17,7 @@ gitpython==3.1.31
 git+https://github.com/anugrahjo/sphinx-collections.git
 sphinxcontrib-bibtex==2.5.0
 rustworkx==0.14.2
+networkx
 pydot==2.0.0
 graphviz==0.20.3
 jax==0.4.29

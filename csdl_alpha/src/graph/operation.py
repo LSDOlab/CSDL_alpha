@@ -3,6 +3,8 @@ from csdl_alpha.src.graph.node import Node
 from csdl_alpha.utils.inputs import variablize
 import numpy as np
 
+from typing import Any, Union
+
 class Operation(Node):
     """
     Base Operation class.
@@ -20,6 +22,8 @@ class Operation(Node):
     # Properties for the operation
     properties = {
         'linear': False,
+        'invertible': False,
+        'monotonic': False,
         'elementwise': False,
         'diagonal_jacobian': False,
         'convex': False,
@@ -137,6 +141,56 @@ class Operation(Node):
             return self.outputs[0]
         else:
             return tuple(self.outputs)
+
+    def get_monotonic_args(self)->list[Variable]:
+        return self.inputs
+
+    def get_monotonic_inputs(self)->Union[list[Variable], None]:
+        if not self.properties['monotonic']:
+            return None
+        else:
+            return self.get_monotonic_args()
+
+    def get_invertible_args(self)->list[Variable]:
+        return self.inputs
+    
+    def get_invertible_inputs(self)->Union[list[Variable], None]:
+        if not self.properties['invertible']:
+            return None
+        else:
+            return self.get_invertible_args()
+        
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        raise NotImplementedError(f'Inverse not implemented for {self.__class__.__name__}')
+
+    def check_inverse_arg_inputs(self, x_target:Variable, y_target:Variable, y_value:Variable)->None:
+        invertible_args = set(self.get_invertible_args())
+        if x_target not in self.inputs:
+            raise ValueError(f"x_target {x_target.info()} is not an input to the operation {self.info()}")
+        if x_target not in invertible_args:
+            raise ValueError(f"x_target {x_target.info()} is not an invertible input to the operation {self.info()}")
+        if y_target not in self.outputs:
+            raise ValueError(f"y_target {y_target.info()} is not an output to the operation {self.info()}")
+        if y_value.shape != y_target.shape:
+            raise ValueError(f"y_value shape {y_value.shape} does not match y_target shape {y_target.shape}")
+    
+    def preprocess_inverse_arg_inputs(self, x_target:Variable, y_target:Variable, y_value:Variable)->tuple[tuple[Variable], tuple[Variable]]:
+        self.check_inverse_arg_inputs(x_target, y_target, y_value)
+
+        new_inputs = []
+        for input in self.inputs:
+            if input is not x_target:
+                new_inputs.append(input)
+            else:
+                new_inputs.append(None)
+
+        new_outputs = []
+        for output in self.outputs:
+            if output is y_target:
+                new_outputs.append(y_value)
+            else:
+                new_outputs.append(output)
+        return tuple(new_inputs), tuple(new_outputs)
 
     def disable_vjp_prep(self)->None:
         """If called, the operation cannot use any precomputed variables for reverse mode differentiation. 

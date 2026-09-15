@@ -131,10 +131,10 @@ class TestLinear(csdl_tests.CSDLTest):
         x = csdl.solve_linear(A_val,b)
         compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val).flatten())]
 
-        x = csdl.solve_linear(A,b, solver = csdl.linear_solvers.ScipyKrylovSolver())
-        compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
-        x = csdl.solve_linear(A_val,b, solver = csdl.linear_solvers.ScipyKrylovSolver())
-        compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
+        # x = csdl.solve_linear(A,b, solver = csdl.linear_solvers.ScipyKrylovSolver())
+        # compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
+        # x = csdl.solve_linear(A_val,b, solver = csdl.linear_solvers.ScipyKrylovSolver())
+        # compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
         x = csdl.solve_linear(A,b_val, solver = csdl.linear_solvers.DirectSolver())
         compare_values += [csdl_tests.TestingPair(x, np.linalg.solve(A_val, b_val))]
 

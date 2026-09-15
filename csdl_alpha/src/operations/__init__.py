@@ -24,7 +24,7 @@ from .set_get.getindex import get_index
 from .set_get.loop_slice import _loop_slice as slice
 
 # Trigonometric operations
-from .trig import sin, cos, tan, arcsin, arccos, arctan, sinh, cosh, tanh
+from .trig import sin, cos, tan, arcsin, arccos, arctan, arctan2, sinh, cosh, tanh
 
 # Cartesian operations
 from .cross import cross
@@ -56,6 +56,7 @@ from .derivatives.derivative import derivative
 
 # Special operations
 from .special.bessel import bessel
+from .special.activations import sigmoid, softplus, relu
 
 # other
 from .subop import subop

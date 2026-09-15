@@ -2,6 +2,8 @@ from csdl_alpha.src.graph.graph import Graph
 from csdl_alpha.utils.inputs import get_type_string
 import numpy as np
 from typing import Union
+from csdl_alpha.src.transformations.transformation import TransformationLogger, TransformationBase
+
 
 class Recorder:
     """
@@ -67,6 +69,9 @@ class Recorder:
         self.graph_to_tree_node_map = {
             self.active_graph: self.graph_tree
         }
+
+        # Transformations:
+        self.transformation_logger:TransformationLogger = TransformationLogger()
 
         manager.constructed_recorders.append(self)
         
@@ -434,13 +439,40 @@ class Recorder:
 
     def _add_node(self, node):
         """
-        Adds a node to the active namespace and graph.
+        Adds a node to the active graph.
 
         Args:
             node: The node to add.
         """
         self.active_graph.add_node(node)
         self.node_graph_map[node] = [self.active_graph]
+
+        # Record to transformation
+        current_transform:TransformationBase = self.transformation_logger.get_current()
+        current_transform.record_action('add', (node, self.active_graph))
+
+    def delete_node(self, node, graph:Graph = None, force_delete:bool = False):
+        """
+        Deletes a node from the active graph.
+
+        Args:
+            node: The node to add.
+            graph:
+        """
+        if graph is None:
+            graph = self.active_graph
+
+        if not force_delete:
+            from csdl_alpha.src.graph.variable import Variable
+            if isinstance(node, Variable):
+                if graph.in_degree(node) > 0 or graph.out_degree(node) > 0:
+                    raise ValueError('deleting just a variable is not allowed')
+        
+        graph._delete_node(node)
+
+        # Record to transformation
+        current_transform:TransformationBase = self.transformation_logger.get_current()
+        current_transform.record_action('del', (node, graph))
 
     def _set_namespace(self, node):
         """
@@ -554,7 +586,6 @@ class Recorder:
             self.active_graph.visualize(filename, trim_loops=trim_loops, format = format)
         elif visualize_style == 'hierarchical':
             self.visualize_hierarchical(filename)
-
         else:
             raise ValueError(f"Invalid visualize_style: {visualize_style}. Must be 'namespace' or 'hierarchical'")
 

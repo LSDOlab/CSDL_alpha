@@ -257,6 +257,9 @@ def finite_difference(
 
     # Run the forward evaluation once
     outputs = forward_evaluation(original_wrts)
+    # outputs_mem = forward_evaluation(original_wrts)
+    # outputs = outputs_mem[0]
+    # uncomment to get memory
     original_outputs = {of:outputs[of].copy() for of in ofs}
 
     # Store the finite differenced values
@@ -274,6 +277,9 @@ def finite_difference(
             perturbed_input[col_index] += step_size
             new_wrts[wrt] = perturbed_input.reshape(wrt.shape)
             perturbed_outputs = forward_evaluation(new_wrts)
+            # perturbed_outputs_mem = forward_evaluation(new_wrts)
+            # perturbed_outputs = perturbed_outputs_mem[0]
+            # uncomment to get memory
 
             # compute the output values
             for of in ofs:

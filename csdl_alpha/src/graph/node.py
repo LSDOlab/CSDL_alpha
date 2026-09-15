@@ -23,6 +23,20 @@ class Node(object):
         if self.recorder.debug:
             self._apply_debug()
 
+    def check_history(self):
+        tlog = self.recorder.transformation_logger
+
+        print(self.info(), 'transformation history:')
+        for transformation in tlog.call_history:
+            for var, graph in transformation.graph_actions['add']:
+                if var is self:
+                    print('\tcreated:', transformation.name)
+            for var, graph in transformation.graph_actions['del']:
+                if var is self:
+                    print('\tdeleted:', transformation.name)
+
+
+
     def _apply_debug(self):
         """
         Adds useful debugging information to a node.
@@ -40,12 +54,13 @@ class Node(object):
         trace = []
 
         banned_paths = ['csdl_alpha/src', 'csdl_alpha/utils']
+        # banned_paths = []
+        # banned_paths = ['/node', '/variable', '/operation']
+        
         # exception_paths = ['csdl_alpha/src/operations/loops']
         # exception_paths = ['test_']
-        
-        # banned_paths = ['/node', '/variable']
-        exception_paths=[]
-        
+        exception_paths=['csdl_alpha/src/transformations']
+
         if not any(path in info.filename for path in banned_paths):
             trace = [f"{info.filename}:{info.lineno} in {info.function}"]
             self.origin_info = {"filename": info.filename, "lineno": info.lineno, "function": info.function}

@@ -3,7 +3,9 @@ import csdl_alpha.utils.testing_utils as csdl_tests
 from csdl_alpha.utils.inputs import variablize, validate_and_variablize
 from csdl_alpha.src.graph.operation import Operation, set_properties 
 from csdl_alpha.utils.typing import VariableLike
+from csdl_alpha.src.graph.variable import Variable
 
+@set_properties(invertible=True, monotonic=True)
 class Mult(ElementwiseOperation):
 
     def __init__(self,x,y):
@@ -22,6 +24,14 @@ class Mult(ElementwiseOperation):
         if cotangents.check(y):
             cotangents.accumulate(y, cotangents[z]*x)
 
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        if x is None:
+            return z/y
+        elif y is None:
+            return z/x
+
+@set_properties(invertible=True, monotonic=True)
 class BroadcastMult(Operation):
 
     def __init__(self,x,y):
@@ -41,6 +51,14 @@ class BroadcastMult(Operation):
             cotangents.accumulate(x, cotangents[z].inner(y))
         if cotangents.check(y):
             cotangents.accumulate(y, x*cotangents[z])
+
+    def get_invertible_args(self) -> list[Variable]:
+        # Cannot invert with respect to the broadcasted input because information is lost
+        return [self.inputs[1]]
+
+    def inverse(self, x_target:Variable, y_target:Variable, y_value:Variable, debug:bool=False)->Variable:
+        (x,y),(z,) = self.preprocess_inverse_arg_inputs(x_target, y_target, y_value)
+        return z/x
 
 def mult(x,y):
     """Elementwise multiplication of two tensors x and y.
@@ -71,6 +89,8 @@ def mult(x,y):
     y = validate_and_variablize(y, raise_on_sparse = False)
     if x.shape == y.shape:
         op = Mult(x,y)
+    elif x.size == 1 and y.size == 1:
+        op = Mult(x.reshape(y.shape), y)
     elif x.size == 1:
         op = BroadcastMult(x.flatten(),y)
     elif y.size == 1:
