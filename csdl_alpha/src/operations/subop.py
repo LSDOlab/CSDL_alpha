@@ -41,7 +41,8 @@ class SubOperation(SubgraphOperation):
         if self.jit:
             output = jax.pure_callback(jax.jit(jax_function),
                                        [jax.ShapeDtypeStruct(output.shape, np.float64) for output in self.outputs],
-                                       *args)
+                                       *args,
+                                       vmap_method="sequential")
             return tuple(output)
             # return tuple(jax.jit(jax_function)(*args))
         else:

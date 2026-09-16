@@ -299,6 +299,14 @@ class ComposedOperation(SubgraphOperation):
         inverse = InvertedComposedOperation(y_value, *self.inputs).finalize_and_return_outputs()
         return inverse
 
+@set_properties()
+class RandomOperation(Operation):
+    """
+    Base class for random operations.
+    """
+    def evaluate_vjp(self, *args):
+        raise NotImplementedError("Random operations do not support VJP evaluation.")
+
 class SubgraphFunctionOperation(SubgraphOperation):
     def __init__(
             self,

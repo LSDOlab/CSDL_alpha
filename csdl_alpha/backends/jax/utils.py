@@ -15,7 +15,8 @@ def fallback_to_inline_jax(operation:Operation, *args:list['jnp.array'])->tuple[
     output = jax.pure_callback(
         new_inline_func,
         [jax.ShapeDtypeStruct(output.shape, np.float64) for output in operation.outputs],
-        *args)
+        *args,
+        vmap_method="sequential")
     return tuple(output)
 
 

@@ -58,5 +58,9 @@ from .derivatives.derivative import derivative
 from .special.bessel import bessel
 from .special.activations import sigmoid, softplus, relu
 
+# Random operations
+from .random.bernoulli import bernoulli
+from .random.normal import normal
+
 # other
 from .subop import subop

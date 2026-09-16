@@ -31,7 +31,15 @@ class SetVarIndex(Operation):
 
     def compute_inline(self, x, y, *slice_args):
         x_updated = x.copy()
-        x_updated[self.slice.evaluate(*slice_args)] = y
+        eval_slice = self.slice.evaluate(*slice_args)
+        tgt_shape = np.shape(x_updated[eval_slice])
+        # NumPy 2 no longer silently squeezes a size-1 RHS into a size-1 (e.g. scalar)
+        # target; reshape y to match so the assignment succeeds. Gated on the target
+        # also being size-1 so a genuinely mismatched y (a real bug elsewhere) still
+        # raises numpy's broadcast error instead of being silently reshaped.
+        if np.size(y) == 1 and int(np.prod(tgt_shape)) == 1 and np.shape(y) != tgt_shape:
+            y = np.asarray(y).reshape(tgt_shape)
+        x_updated[eval_slice] = y
         return x_updated
 
         # # Set item could add over duplicate indices.
