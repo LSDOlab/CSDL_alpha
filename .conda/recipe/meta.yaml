@@ -1,0 +1,39 @@
+{% set version = environ["PKG_VERSION"] %}
+
+package:
+  name: csdl_alpha
+  version: {{ version }}
+
+source:
+  path: ../..
+
+build:
+  number: 0
+  noarch: python
+  script: "{{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv"
+
+requirements:
+  host:
+    - python >=3.9
+    - pip
+    - setuptools
+  run:
+    - python >=3.9
+    - numpy
+    - scipy
+    - sympy
+    - rustworkx
+    - networkx
+    - h5py
+    - pydot
+    - pytest
+
+about:
+  home: https://github.com/LSDOlab/CSDL_alpha
+  license: LGPL-3.0-or-later
+  license_file: LICENSE
+  summary: Computational System Design Language.
+
+extra:
+  recipe-maintainers:
+    - LSDOlab
