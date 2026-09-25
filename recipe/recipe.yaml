@@ -1,16 +1,15 @@
-{% set version = environ["PKG_VERSION"] %}
+schema_version: 1
 
 package:
   name: csdl_alpha
-  version: {{ version }}
+  version: "0.0.0a2"
 
 source:
-  path: ../..
+  path: ..
 
 build:
-  number: 0
   noarch: python
-  script: "{{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv"
+  script: python -m pip install . --no-deps --no-build-isolation -vv
 
 requirements:
   host:
@@ -28,12 +27,13 @@ requirements:
     - pydot
     - pytest
 
-about:
-  home: https://github.com/LSDOlab/CSDL_alpha
-  license: LGPL-3.0-or-later
-  license_file: LICENSE
-  summary: Computational System Design Language.
+tests:
+  - python:
+      imports:
+        - csdl_alpha
 
-extra:
-  recipe-maintainers:
-    - LSDOlab
+about:
+  homepage: https://github.com/LSDOlab/csdl_alpha
+  license: LGPL-3.0-or-later
+  license_file: LICENSE.txt
+  summary: Computational System Design Language.

@@ -1,59 +1,37 @@
+# Builds the Conda package with Rattler and publishes it to Anaconda.org.
+# Manual runs build only unless the publish input is explicitly enabled.
+
 name: Publish Conda package
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
-
-permissions:
-  contents: read
+    inputs:
+      publish:
+        description: Upload the built package to Anaconda.org
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_API_TOKEN }}
-      ANACONDA_OWNER: LSDOlab
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Conda build tools
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          activate-environment: conda-build
-          python-version: "3.12"
-          channels: conda-forge
-          channel-priority: strict
-          auto-update-conda: false
-
-      - name: Install publishing tools
-        shell: bash -el {0}
-        run: conda install --yes --name base --channel conda-forge conda-build anaconda-client
-
-      - name: Read normalized package version
-        id: package
-        shell: bash
-        run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          from pathlib import Path
-          from packaging.version import Version
-          import re
-          text = Path("csdl_alpha/__init__.py").read_text()
-          match = re.search(r"^__version__\s*=\s*['\"]([^'\"]+)", text, re.M)
-          assert match, "version not found"
-          print(f"version={Version(match.group(1))}")
-          PY
-
       - name: Build Conda package
-        shell: bash -el {0}
-        env:
-          PKG_VERSION: ${{ steps.package.outputs.version }}
-        run: conda build .conda/recipe --channel conda-forge --output-folder "$RUNNER_TEMP/conda-bld"
+        uses: prefix-dev/rattler-build-action@v0.2.39
+        with:
+          recipe-path: recipe/recipe.yaml
+          build-args: -c conda-forge
+          upload-artifact: false
 
       - name: Publish to Anaconda.org
-        shell: bash -el {0}
+        if: github.event_name == 'push' || inputs.publish
+        env:
+          ANACONDA_API_KEY: ${{ secrets.ANACONDA_API_TOKEN || secrets.ANACONDA_API_KEY }}
         run: |
-          test -n "$ANACONDA_API_TOKEN" || { echo "::error::ANACONDA_API_TOKEN is not configured"; exit 1; }
-          package_file="$(find "$RUNNER_TEMP/conda-bld/noarch" -maxdepth 1 -type f \( -name '*.conda' -o -name '*.tar.bz2' \) -print -quit)"
-          test -n "$package_file" || { echo "::error::Conda build did not produce a noarch package"; exit 1; }
-          anaconda --token "$ANACONDA_API_TOKEN" upload --user "$ANACONDA_OWNER" --label main "$package_file"
+          for pkg in $(find output -type f \( -name "*.conda" -o -name "*.tar.bz2" \)); do
+            rattler-build upload anaconda -o LSDOlab "${pkg}"
+          done
