@@ -28,7 +28,7 @@ jobs:
 
       - name: Install publishing tools
         shell: bash -el {0}
-        run: conda install --yes --channel conda-forge conda-build anaconda-client
+        run: conda install --yes --name base --channel conda-forge conda-build anaconda-client
 
       - name: Read normalized package version
         id: package
