@@ -4,6 +4,12 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Upload the built package to Anaconda.org
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -51,6 +57,7 @@ jobs:
         run: conda build .conda/recipe --channel conda-forge --output-folder "$RUNNER_TEMP/conda-bld"
 
       - name: Publish to Anaconda.org
+        if: github.event_name == 'push' || inputs.publish
         shell: bash -el {0}
         run: |
           test -n "$ANACONDA_API_TOKEN" || { echo "::error::ANACONDA_API_TOKEN is not configured"; exit 1; }
