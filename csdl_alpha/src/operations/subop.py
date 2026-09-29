@@ -36,13 +36,13 @@ class SubOperation(SubgraphOperation):
     
     def compute_jax(self, *args):
         from csdl_alpha.backends.jax import create_jax_function
+        from csdl_alpha.backends.jax.utils import sequential_pure_callback
         import jax
         jax_function = create_jax_function(self._subgraph, self.outputs, self.inputs)
         if self.jit:
-            output = jax.pure_callback(jax.jit(jax_function),
-                                       [jax.ShapeDtypeStruct(output.shape, np.float64) for output in self.outputs],
-                                       *args,
-                                       vmap_method="sequential")
+            output = sequential_pure_callback(jax.jit(jax_function),
+                                              [jax.ShapeDtypeStruct(output.shape, np.float64) for output in self.outputs],
+                                              *args)
             return tuple(output)
             # return tuple(jax.jit(jax_function)(*args))
         else:

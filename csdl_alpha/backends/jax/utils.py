@@ -1,5 +1,24 @@
 from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.src.recorder import Recorder
+from functools import lru_cache
+
+@lru_cache(maxsize=None)
+def _pure_callback_has_vmap_method()->bool:
+    import inspect
+    import jax
+    return 'vmap_method' in inspect.signature(jax.pure_callback).parameters
+
+def sequential_pure_callback(callback, result_shape_dtypes, *args):
+    '''
+    Calls jax.pure_callback so that vmapped calls loop over the batch sequentially.
+
+    Newer JAX versions require vmap_method="sequential" for this, while older versions
+    (the latest supporting Python 3.9) don't accept vmap_method and are sequential by default.
+    '''
+    import jax
+    if _pure_callback_has_vmap_method():
+        return jax.pure_callback(callback, result_shape_dtypes, *args, vmap_method="sequential")
+    return jax.pure_callback(callback, result_shape_dtypes, *args)
 
 def fallback_to_inline_jax(operation:Operation, *args:list['jnp.array'])->tuple['jnp.array']:
     '''
@@ -12,11 +31,10 @@ def fallback_to_inline_jax(operation:Operation, *args:list['jnp.array'])->tuple[
         processed_inputs = [np.array(input) for input in args_in]
         return operation.compute_inline(*processed_inputs)
 
-    output = jax.pure_callback(
+    output = sequential_pure_callback(
         new_inline_func,
         [jax.ShapeDtypeStruct(output.shape, np.float64) for output in operation.outputs],
-        *args,
-        vmap_method="sequential")
+        *args)
     return tuple(output)
 
 

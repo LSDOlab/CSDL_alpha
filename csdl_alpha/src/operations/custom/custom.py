@@ -83,6 +83,7 @@ class CustomExplicitOperation(CustomOperation):
     
     def compute_jax(self, *args):
         import jax
+        from csdl_alpha.backends.jax.utils import sequential_pure_callback
 
         def new_inline_func(*args):
             processed_inputs = [np.array(input) for input in args]
@@ -94,11 +95,10 @@ class CustomExplicitOperation(CustomOperation):
         else:
             dtype = np.float32
 
-        output = jax.pure_callback(
+        output = sequential_pure_callback(
             new_inline_func,
             [jax.ShapeDtypeStruct(self.output_dict[output_var].shape, dtype) for output_var in self.output_dict],
-            *args,
-            vmap_method="sequential")
+            *args)
         # if len(output) == 1:
         #     output = output[0]
         return tuple(output)
@@ -450,6 +450,7 @@ class CustomJacOperation(Operation):
     
     def compute_jax(self, *args):
         import jax
+        from csdl_alpha.backends.jax.utils import sequential_pure_callback
 
         def new_inline_func(*args):
             processed_inputs = [np.array(input) for input in args]
@@ -461,11 +462,10 @@ class CustomJacOperation(Operation):
         else:
             dtype = np.float32
 
-        output = jax.pure_callback(
+        output = sequential_pure_callback(
             new_inline_func,
             [jax.ShapeDtypeStruct(in_cot.shape, dtype) for in_cot in self.input_cotangents],
-            *args,
-            vmap_method="sequential")
+            *args)
         # if len(output) == 1:
         #     output = output[0]
         
