@@ -96,6 +96,10 @@ def create_jax_function(
     all_sorted_node_indices = rx.topological_sort(current_graph.rxgraph)
     all_sorted_nodes = [current_graph.rxgraph[i] for i in all_sorted_node_indices]
     sorted_nodes:list = [node for node in all_sorted_nodes]
+    # Only the operations the outputs need: XLA drops the others, but not ordered callbacks
+    needed = set()
+    for output in outputs:
+        needed.update(current_graph.rxgraph[i] for i in rx.ancestors(current_graph.rxgraph, current_graph.node_table[output]))
     # print('FUNCTION:', len(inputs), len(outputs), len(sorted_nodes), current_graph.name)
     
     # Experiment?
@@ -135,6 +139,10 @@ def create_jax_function(
             
         for node in sorted_nodes:
             if isinstance(node, Variable):
+                continue
+            if node not in needed:
+                if isinstance(node, RandomOperation) and prng_key is not None:
+                    prng_key, _ = random.split(prng_key, 2) # keep the other random values unchanged
                 continue
 
 
