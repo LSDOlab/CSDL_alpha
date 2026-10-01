@@ -18,11 +18,23 @@ import numpy as np
 # warnings.simplefilter("always")
 
 class CustomOperation(Operation):
+    # Whether the JAX backend calls compute and its derivatives as ordered callbacks
+    # (one at a time, in program order), as MPI collectives in them require.
+    # None: only when running on more than one MPI process.
+    ordered_callbacks = None
+
     def __init__(self):
         self.input_dict = {}
         self.output_dict = {}
         self.derivative_parameters = {}
         self.name = self.__class__.__name__
+
+    def _uses_ordered_callbacks(self)->bool:
+        if self.ordered_callbacks is not None:
+            return self.ordered_callbacks
+        import sys
+        MPI = sys.modules.get('mpi4py.MPI') # only if already imported: never initialize MPI here
+        return MPI is not None and MPI.Is_initialized() and not MPI.Is_finalized() and MPI.COMM_WORLD.Get_size() > 1
 
 class CustomExplicitOperation(CustomOperation):
 
@@ -83,7 +95,7 @@ class CustomExplicitOperation(CustomOperation):
     
     def compute_jax(self, *args):
         import jax
-        from csdl_alpha.backends.jax.utils import sequential_pure_callback
+        from csdl_alpha.backends.jax.utils import host_callback
 
         def new_inline_func(*args):
             processed_inputs = [np.array(input) for input in args]
@@ -95,10 +107,10 @@ class CustomExplicitOperation(CustomOperation):
         else:
             dtype = np.float32
 
-        output = sequential_pure_callback(
+        output = host_callback(
             new_inline_func,
             [jax.ShapeDtypeStruct(self.output_dict[output_var].shape, dtype) for output_var in self.output_dict],
-            *args)
+            *args, ordered = self._uses_ordered_callbacks())
         # if len(output) == 1:
         #     output = output[0]
         return tuple(output)
@@ -450,7 +462,7 @@ class CustomJacOperation(Operation):
     
     def compute_jax(self, *args):
         import jax
-        from csdl_alpha.backends.jax.utils import sequential_pure_callback
+        from csdl_alpha.backends.jax.utils import host_callback
 
         def new_inline_func(*args):
             processed_inputs = [np.array(input) for input in args]
@@ -462,10 +474,10 @@ class CustomJacOperation(Operation):
         else:
             dtype = np.float32
 
-        output = sequential_pure_callback(
+        output = host_callback(
             new_inline_func,
             [jax.ShapeDtypeStruct(in_cot.shape, dtype) for in_cot in self.input_cotangents],
-            *args)
+            *args, ordered = self.custom_operation._uses_ordered_callbacks())
         # if len(output) == 1:
         #     output = output[0]
         

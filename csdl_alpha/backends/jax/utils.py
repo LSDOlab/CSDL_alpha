@@ -20,6 +20,24 @@ def sequential_pure_callback(callback, result_shape_dtypes, *args):
         return jax.pure_callback(callback, result_shape_dtypes, *args, vmap_method="sequential")
     return jax.pure_callback(callback, result_shape_dtypes, *args)
 
+def host_callback(callback, result_shape_dtypes, *args, ordered:bool = False):
+    '''
+    Calls a Python function from JAX. XLA may skip, reorder or run concurrently the
+    unordered (pure) callbacks; ordered ones run one at a time in program order, as
+    callbacks with side effects such as MPI collectives require. JAX cannot vmap
+    ordered callbacks, so under vmap they fall back to unordered ones.
+    '''
+    if ordered:
+        from jax.experimental import io_callback
+        try:
+            return io_callback(callback, result_shape_dtypes, *args, ordered=True)
+        except ValueError as error:
+            if 'vmap' not in str(error):
+                raise
+            import warnings
+            warnings.warn('An ordered callback is vmapped: it runs unordered instead.')
+    return sequential_pure_callback(callback, result_shape_dtypes, *args)
+
 def fallback_to_inline_jax(operation:Operation, *args:list['jnp.array'])->tuple['jnp.array']:
     '''
     If the operation has no jax implementation, fall back to the inline implementation.
