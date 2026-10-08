@@ -635,6 +635,43 @@ class TestJaxCompress(csdl_tests.CSDLTest):
         z_np = np.sum(sum(np.sin(x_val * (i + 1.0)) for i in range(3)) * x_val)
         self.run_tests([csdl_tests.TestingPair(f, np.array([np.exp(0.1 * z_np)]))], verify_derivatives=True)
 
+    def test_compress_inside_loop_body(self):
+        import csdl_alpha as csdl
+        x_val, p_val = np.array([0.2, 0.5, 0.9]), np.array([1.3])
+
+        def step(h, i, p, lib):
+            return lib.tanh(lib.sin(h * p) + (i + 1.0) * 0.3 * h) * 0.9 + h * 0.1
+
+        h_np = x_val
+        for i in range(4):
+            h_np = step(h_np, i, p_val, np)
+        f_np = np.array([np.sum(h_np**2)])
+
+        for loop_kind in ['frange', 'enter_loop']:
+            for compile_separately in [True, False]:
+                self.prep()
+                x = csdl.Variable(name='x', value=x_val)
+                p = csdl.Variable(name='p', value=p_val)
+                if loop_kind == 'frange':
+                    h = x
+                    for i in csdl.frange(4):
+                        h_new = step(h, i, p, csdl)
+                        compress(h, h_new, compile_separately=compile_separately)
+                        h = h_new
+                else:
+                    with csdl.experimental.enter_loop(vals=[list(range(4))]) as loop_builder:
+                        i = loop_builder.get_loop_indices()
+                        h0 = loop_builder.initialize_feedback(x)
+                        h1 = step(h0, i, p, csdl)
+                        compress(h0, h1, compile_separately=compile_separately)
+                        loop_builder.finalize_feedback(h0, h1)
+                    h = loop_builder.add_output(h1)
+                    loop_builder.finalize()
+                f = csdl.sum(h**2)
+                self.run_tests(
+                    [csdl_tests.TestingPair(f, f_np, tag=f'{loop_kind} separate={compile_separately}')],
+                    verify_derivatives=True)
+
 
 if __name__ == '__main__':
     test = TestCompressOp()

@@ -500,3 +500,71 @@ def test_compile_separately_nested_and_with_custom_and_implicit_ops():
         results.append((sim[f], d[f, a], d[f, x]))
     for ref, got in zip(*results):
         np.testing.assert_allclose(got, ref, rtol=1e-10)
+
+
+def _loop_model(compress_mode, loop_kind, use_index, inline):
+    """Four iterations of h <- 0.9 tanh(sin(p h) + s h) + 0.1 h, optionally compressing the body's region."""
+    rec = csdl.Recorder(inline=inline)
+    rec.start()
+    x = csdl.Variable(name='x', value=np.array([0.2, 0.5, 0.9]))
+    p = csdl.Variable(name='p', value=np.array([1.3]))  # read from outside the loop
+
+    def body(h, i):
+        scale = (i + 1.0) * 0.3 if use_index else 0.3
+        h_new = csdl.tanh(csdl.sin(h * p) + scale * h) * 0.9 + h * 0.1
+        if compress_mode is not None:
+            compress(h, h_new, compile_separately=(compress_mode == 'separate'))
+        return h_new
+
+    if loop_kind == 'frange':
+        h = x
+        for i in csdl.frange(4):
+            h = body(h, i)
+    else:
+        with csdl.experimental.enter_loop(vals=[list(range(4))]) as loop_builder:
+            i = loop_builder.get_loop_indices()
+            h0 = loop_builder.initialize_feedback(x)
+            h1 = body(h0, i)
+            loop_builder.finalize_feedback(h0, h1)
+        h = loop_builder.add_output(h1)
+        loop_builder.finalize()
+    return rec, x, p, csdl.sum(h**2)
+
+
+@pytest.mark.parametrize('compress_mode', ['fused', 'separate'])
+@pytest.mark.parametrize('use_index', [False, True])
+@pytest.mark.parametrize('loop_kind', ['frange', 'enter_loop'])
+def test_compress_inside_loop_body(loop_kind, use_index, compress_mode):
+    from csdl_alpha.src.graph.operation import Operation
+
+    def inline_results(mode):
+        rec, x, p, f = _loop_model(mode, loop_kind, use_index, inline=True)
+        results = [f.value]
+        for loop in [True, False]:
+            d = csdl.derivative(f, [x, p], loop=loop)
+            results += [d[x].value, d[p].value]
+        rec.stop()
+        return rec, results
+
+    def jax_sim_results(mode):
+        rec, x, p, f = _loop_model(mode, loop_kind, use_index, inline=False)
+        rec.stop()
+        sim = csdl.experimental.JaxSimulator(rec, gpu=False, additional_inputs=[x, p], additional_outputs=[f])
+        sim[x] = np.array([0.4, -0.3, 1.1])
+        sim.run()
+        d = sim.compute_totals()
+        return [sim[f], d[f, x], d[f, p]]
+
+    _, expected = inline_results(None)
+    rec, got = inline_results(compress_mode)
+    for g, e in zip(got, expected):
+        np.testing.assert_allclose(g, e, rtol=1e-10, atol=1e-12)
+    for g, e in zip(jax_sim_results(compress_mode), jax_sim_results(None)):
+        np.testing.assert_allclose(g, e, rtol=1e-10, atol=1e-12)
+
+    # The loop body holds one compressed operation in place of the sin/tanh chain.
+    loops = [n for n in rec.active_graph.node_table
+             if isinstance(n, SubgraphOperation) and not isinstance(n, JaxCompressedOperation)]
+    body_names = [n.name for n in loops[0].get_subgraph().node_table if isinstance(n, Operation)]
+    assert body_names.count('jax_compressed') == 1
+    assert not {'sin', 'tanh'} & set(body_names)
