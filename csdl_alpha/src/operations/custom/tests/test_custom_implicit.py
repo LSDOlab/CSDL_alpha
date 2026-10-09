@@ -54,7 +54,7 @@ class CustomImp(csdl.experimental.CustomImplicitOperation):
         # for mode = rev
         # d_residuals --> d_inputs
         if mode == 'rev':
-            d_inputs['a'][1,1] = d_residuals['x']*x_solved**2 + d_residuals['y']*y_solved**2
+            d_inputs['a'][1,1] = np.sum(d_residuals['x']*x_solved**2 + d_residuals['y']*y_solved**2)
             d_inputs['b'] = d_residuals['x']*x_solved + d_residuals['y']*(y_solved+y_solved**2)
             d_inputs['c'] = d_residuals['x'] + d_residuals['y']/2.0
 

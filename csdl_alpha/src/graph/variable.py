@@ -321,7 +321,7 @@ class Variable(Node):
         array([[3., 4., 5.]])
         >>> x[:].shape
         (2, 3)
-        >>> np.all(x[:].value == x.value)
+        >>> np.array_equal(x[:].value, x.value)
         True
         >>> x[1:2,:-1].shape
         (1, 2)

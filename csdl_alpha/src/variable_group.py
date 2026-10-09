@@ -1,4 +1,5 @@
 from typing import Union
+from dataclasses import fields, is_dataclass
 import warnings
 from csdl_alpha.src.graph.variable import Variable
 from csdl_alpha.utils.inputs import variablize
@@ -74,7 +75,7 @@ class VariableGroup:
         ValueError
             If parameters for the variable with the given name are already declared.
         """
-        if not name in self.__annotations__:
+        if not is_dataclass(self) or name not in {field.name for field in fields(self)}:
             raise ValueError(f"Variable {name} not found in the group.")
         if name in self._metadata:
             raise ValueError(f"Checks for variable {name} already declared.")
