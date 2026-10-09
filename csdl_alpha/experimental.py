@@ -5,6 +5,9 @@ from csdl_alpha.src.operations.custom.custom_nth import CustomExplicitOperationB
 # Tensor
 from csdl_alpha.src.operations.tensor.batch import batch_function
 
+# Compress a subgraph into one JAX-compiled operation
+from csdl_alpha.src.operations.compress_operations import compress, JaxCompressedOperation
+
 # Simulator API
 from csdl_alpha.backends.simulator import PySimulator
 from csdl_alpha.backends.jax.jax_simulator import JaxSimulator
