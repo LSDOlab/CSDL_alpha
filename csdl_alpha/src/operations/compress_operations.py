@@ -166,8 +166,23 @@ class JaxCompressedOperation(CompressedOperation):
         boundary; under ``vmap`` the callback runs once per batch element. With
         False, the operation is traced into the enclosing program instead.
 
-    Derivative operations inherit ``device``, ``jit_kwargs``, and
-    ``compile_separately``.
+    share_compiled : bool
+        Reuse the compiled function of an earlier ``JaxCompressedOperation`` in
+        this recorder whose subgraph is identical (same operations, parameters,
+        shapes, wiring, and compiled-in constants), by default True. The
+        earlier operation is ``shared_from``.
+    assume_custom_ops_match : bool
+        Treat operations that JAX runs through a Python callback (custom
+        operations, operations without a JAX implementation) as identical when
+        their class, shapes, and JAX trace match, by default False. JAX cannot
+        see the Python state such an operation computes with (for example a
+        parameter stored on the instance), so by default subgraphs containing
+        one are never shared. Set True only when you know those operations
+        compute the same function.
+
+    Derivative operations inherit ``device``, ``jit_kwargs``,
+    ``compile_separately``, ``share_compiled``, and
+    ``assume_custom_ops_match``.
     """
 
     def __init__(
@@ -179,6 +194,8 @@ class JaxCompressedOperation(CompressedOperation):
             device = None,
             jit_kwargs = None,
             compile_separately = True,
+            share_compiled = True,
+            assume_custom_ops_match = False,
         ):
         import jax
         jax.config.update("jax_enable_x64", True)
@@ -186,15 +203,32 @@ class JaxCompressedOperation(CompressedOperation):
         self.device = _resolve_device(device)
         self.jit_kwargs = dict(jit_kwargs or {})
         self.compile_separately = compile_separately
+        self.share_compiled = share_compiled
+        self.assume_custom_ops_match = assume_custom_ops_match
+        # The operation whose compiled function this one reuses, and, for each
+        # of that operation's inputs, the position of the matching input here.
+        self.shared_from = None
+        self._input_permutation = None
+        self._share_group = _ShareGroup(self)
+        if share_compiled:
+            _share_with_identical(self)
 
     @property
     def jit_fn(self):
         """The subgraph as a ``jax.jit`` function, built on first use."""
         if self.jax_function is None:
             import jax
-            from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
-            fn = create_jax_function(self.get_subgraph(), self.outputs, self.inputs)
-            self.jax_function = jax.jit(fn, **self.jit_kwargs)
+            if self.shared_from is not None:
+                shared_fn = self.shared_from.jit_fn
+                permutation = self._input_permutation
+                if permutation == list(range(len(permutation))):
+                    self.jax_function = shared_fn
+                else:
+                    self.jax_function = lambda *args: shared_fn(*(args[j] for j in permutation))
+            else:
+                from csdl_alpha.backends.jax.graph_to_jax import create_jax_function
+                fn = create_jax_function(self.get_subgraph(), self.outputs, self.inputs)
+                self.jax_function = jax.jit(fn, **self.jit_kwargs)
         return self.jax_function
 
     def compute_jax(self, *args):
@@ -225,11 +259,27 @@ class JaxCompressedOperation(CompressedOperation):
 
         inputs = inputs_outputs[:self.num_inputs]
         outputs = inputs_outputs[self.num_inputs:]
+        if self._input_permutation is not None:
+            # List inputs in the order of the operation that owns the compiled
+            # function, so derivative operations of operations that share it
+            # come out in one order and can share too.
+            inputs = [inputs[j] for j in self._input_permutation]
         # Outputs with a None cotangent contribute nothing; leave them out.
-        seeds = [(y, cotangents[y]) for y in outputs if cotangents.check(y) and cotangents[y] is not None]
-        wrts = [x for x in inputs if cotangents.check(x)]
-        if not seeds or not wrts:
+        seeded = [j for j, y in enumerate(outputs) if cotangents.check(y) and cotangents[y] is not None]
+        differentiated = [i for i, x in enumerate(inputs) if cotangents.check(x)]
+        if not seeded or not differentiated:
             return
+        seeds = [(outputs[j], cotangents[outputs[j]]) for j in seeded]
+        wrts = [inputs[i] for i in differentiated]
+
+        # Every operation in this group computes the same function, so a
+        # derivative operation another member made for the same seeded outputs
+        # and differentiated inputs computes the same function too: share its
+        # compiled function without checking. (Repeated variables among the
+        # inputs and seeds would change the derivative operation's inputs.)
+        vjp_inputs = list(inputs) + [seed for _, seed in seeds]
+        pattern = (tuple(seeded), tuple(differentiated)) if len(set(vjp_inputs)) == len(vjp_inputs) else None
+        shared_vjp = self._share_group.derivatives.get(pattern) if pattern is not None else None
 
         # Record CSDL's reverse mode into a copy of the subgraph, so the subgraph
         # itself stays a clean forward graph for later derivative calls. The
@@ -258,8 +308,14 @@ class JaxCompressedOperation(CompressedOperation):
             recorder._add_node(grad)
         # The copy also holds forward operations the VJP does not need; jax.jit drops them.
         vjp_op = JaxCompressedOperation(
-            work, list(inputs) + [seed for _, seed in seeds], grads, name=f'vjp_{self.name}',
-            device=self.device, jit_kwargs=self.jit_kwargs, compile_separately=self.compile_separately)
+            work, vjp_inputs, grads, name=f'vjp_{self.name}',
+            device=self.device, jit_kwargs=self.jit_kwargs, compile_separately=self.compile_separately,
+            share_compiled=False, assume_custom_ops_match=self.assume_custom_ops_match)
+        vjp_op.share_compiled = self.share_compiled
+        if shared_vjp is not None:
+            _share_explicitly(vjp_op, shared_vjp, list(range(len(vjp_inputs))))
+        elif pattern is not None:
+            self._share_group.derivatives[pattern] = vjp_op
         vjp_op.finalize_and_return_outputs()
         for x, grad in zip(wrts, grads):
             cotangents.accumulate(x, grad)
@@ -274,6 +330,10 @@ def compress(
         device = None,
         jit_kwargs = None,
         compile_separately = True,
+        share_compiled = True,
+        find_repeats = False,
+        assume_custom_ops_match = False,
+        share_with = None,
     ):
     """Replace the operations between ``inputs`` and ``outputs`` with one JAX-compiled operation.
 
@@ -321,14 +381,51 @@ def compress(
         program, by default True. Set False to let XLA compile and optimize
         the region together with the rest of the program. See
         :class:`JaxCompressedOperation`.
+    share_compiled : bool
+        Reuse the compiled function of an earlier compressed operation in this
+        recorder whose region is identical, by default True. Its derivative
+        operations share in the same way.
+    find_repeats : bool
+        Also find every other copy of this region in the active graph (same
+        operations, parameters, shapes, wiring, and constants, reading any
+        inputs) and compress each one with the same compiled function, by
+        default False. Copies that have an intermediate used outside them or
+        would create a cycle are skipped. The copies are ``op.repeats``.
+
+        Copies can overlap (in a chain ``x1 = sin(x0)``, ``x2 = sin(x1)``, ...,
+        a two-``sin`` region matches at every offset). The region given here
+        is always compressed as given, and copies are then taken greedily in
+        topological order of their outputs, skipping any that would reuse an
+        operation already compressed. This gives the most copies when
+        overlapping copies line up like a chain, but not necessarily in
+        branching graphs. To choose the copies exactly, compress each one and
+        pass ``share_with``.
+    assume_custom_ops_match : bool
+        Let regions containing custom operations (or other operations JAX runs
+        through a Python callback) count as identical when the operations'
+        class, shapes, and JAX trace match, by default False. JAX cannot see
+        the Python state a custom operation computes with, so only set this
+        when you know the custom operations in matching regions compute the
+        same function.
+    share_with : JaxCompressedOperation, optional
+        An earlier compressed operation whose compiled function this region
+        should reuse. The region is checked against it (same operations,
+        parameters, shapes, wiring, and constants; ``outputs`` in the same
+        order; inputs in any order) and a mismatch raises before the graph is
+        changed. Custom operations of the same class count as matching, since
+        naming ``share_with`` asserts that the regions compute the same
+        function. Derivative operations share as well. ``jit_kwargs`` are
+        taken from ``share_with``.
 
     Returns
     -------
     JaxCompressedOperation
         ``op.inputs`` is ``inputs`` followed by ``op.extra_inputs``,
         ``op.outputs`` is ``outputs`` followed by ``op.extra_outputs``
-        (intermediates added by ``intermediates``), and ``op.get_subgraph()``
-        is the region.
+        (intermediates added by ``intermediates``), ``op.get_subgraph()``
+        is the region, ``op.shared_from`` is the operation whose compiled
+        function it reuses (or None), and ``op.repeats`` lists the copies
+        compressed by ``find_repeats``.
 
     Examples
     --------
@@ -342,11 +439,16 @@ def compress(
     array([[0.39866767, 0.78936529]])
     """
     import csdl_alpha as csdl
-    from csdl_alpha.src.graph.variable import Constant
     from csdl_alpha.utils.inputs import listify_variables
 
     if intermediates not in ('none', 'used', 'all'):
         raise ValueError(f"intermediates must be 'none', 'used', or 'all', not {intermediates!r}.")
+    if share_with is not None:
+        if not isinstance(share_with, JaxCompressedOperation):
+            raise TypeError(f"share_with must be a JaxCompressedOperation, not {type(share_with).__name__}.")
+        if jit_kwargs is not None and dict(jit_kwargs) != share_with.jit_kwargs:
+            raise ValueError("jit_kwargs differ from share_with's; the shared compiled function uses share_with's.")
+        jit_kwargs = share_with.jit_kwargs
     device = _resolve_device(device)
     inputs = listify_variables(inputs)
     outputs = listify_variables(outputs)
@@ -377,9 +479,15 @@ def compress(
         for var in op.inputs:
             if var not in internal and var not in input_set and var not in seen:
                 seen.add(var)
-                is_literal = type(var) is Constant and var.value is not None
-                (constants if is_literal else extra_inputs).append(var)
+                (constants if _is_literal(var) else extra_inputs).append(var)
     op_inputs = inputs + extra_inputs
+
+    if share_with is not None:
+        share_permutation = _match(share_with, graph, op_inputs, outputs, set(ops), assume_custom_ops_match=True)
+        if share_permutation is None:
+            raise ValueError(
+                f"The region does not match the region of share_with ({share_with.info()}): they differ in "
+                "operations, parameters, shapes, wiring, constants, or the order of `outputs`.")
 
     # Move the region's operations into their own graph (this deletes them from
     # `graph` and keeps the variables there), then drop the intermediates and
@@ -395,11 +503,16 @@ def compress(
 
     compressed = JaxCompressedOperation(
         region, op_inputs, outputs, name=name, device=device,
-        jit_kwargs=jit_kwargs, compile_separately=compile_separately)
+        jit_kwargs=jit_kwargs, compile_separately=compile_separately,
+        share_compiled=share_compiled and share_with is None, assume_custom_ops_match=assume_custom_ops_match)
+    if share_with is not None:
+        compressed.share_compiled = share_compiled  # for its derivative operations
+        _share_explicitly(compressed, share_with, share_permutation)
     compressed.extra_inputs = extra_inputs
     compressed.extra_outputs = extra_outputs
     # Skip inline evaluation: the outputs already hold the values the region computed.
     compressed.finalize_and_return_outputs(skip_inline=True)
+    compressed.repeats = _compress_repeats(compressed, graph, len(inputs)) if find_repeats else []
     return compressed
 
 
@@ -480,6 +593,357 @@ def _absorb_feeders(graph, op_indices, input_indices, registered):
         if exclusive:
             op_indices.add(candidate)
             stack.extend(producers_of_inputs(candidate))
+
+
+# ---- Sharing compiled functions between identical regions ----------------------
+#
+# Two regions are identical when a one-to-one map pairs their operations and
+# variables such that paired operations are of the same class with the same
+# shapes, every operation input is wired from the paired producer output at the
+# same port, and compiled-in constants have equal values (the structural walk),
+# and the two regions, traced with JAX operation by operation in paired order,
+# give the same jaxpr (which checks parameters the walk cannot see, such as
+# reshape shapes or exponents). Template inputs may map to any variables.
+# Because operation inputs are ordered and each variable has one producer, the
+# walk goes back from the outputs port by port, with no search except where an
+# operation is reachable only forward from a variable (see _complete).
+#
+# Operations that share a compiled function form a _ShareGroup. Their
+# derivative operations are shared within the group without matching, since
+# they differentiate the same function.
+
+
+class _ShareGroup:
+    """Operations that compute one function, and the derivative operations made
+    for them, keyed by (seeded outputs, differentiated inputs) in the order of
+    the operation that owns the compiled function."""
+
+    def __init__(self, owner):
+        self.members = [owner]
+        self.derivatives = {}
+
+
+def _is_literal(var):
+    from csdl_alpha.src.graph.variable import Constant
+    return type(var) is Constant and var.value is not None
+
+
+def _registry_key(op):
+    num_ops = sum(isinstance(node, Operation) for node in op.get_subgraph().node_table)
+    return (
+        tuple(sorted(var.shape for var in op.inputs)),
+        tuple(var.shape for var in op.outputs),
+        num_ops,
+        repr(sorted(op.jit_kwargs.items())),
+    )
+
+
+def _root(op):
+    return op.shared_from if op.shared_from is not None else op
+
+
+def _share_explicitly(op, template, permutation):
+    """Make ``op`` use ``template``'s compiled function; ``permutation[i]`` is the
+    position in ``op.inputs`` of ``template``'s input ``i``."""
+    if template.shared_from is not None:
+        # Compose with the template's own mapping onto the function's owner.
+        permutation = [permutation[j] for j in template._input_permutation]
+    op.shared_from = _root(template)
+    op._input_permutation = permutation
+    template._share_group.members.append(op)
+    op._share_group = template._share_group
+
+
+def _share_with_identical(op):
+    """Point ``op`` at the compiled function of an identical earlier operation, or register it."""
+    entries = op.recorder.compressed_operations.setdefault(_registry_key(op), [])
+    for template in entries:
+        permutation = _match(template, op.get_subgraph(), op.inputs, op.outputs, None, op.assume_custom_ops_match)
+        if permutation is not None:
+            _share_explicitly(op, template, permutation)
+            return
+    entries.append(op)
+
+
+def _same_structure(t_op, c_op, ctx):
+    """Whether two operations can pair in the walk (class and shapes); their
+    parameters are compared later through the region trace."""
+    if type(t_op) is not type(c_op):
+        return False
+    if len(t_op.inputs) != len(c_op.inputs) or len(t_op.outputs) != len(c_op.outputs):
+        return False
+    if any(a.shape != b.shape for a, b in zip(t_op.inputs + t_op.outputs, c_op.inputs + c_op.outputs)):
+        return False
+    if isinstance(t_op, JaxCompressedOperation):
+        # Nested compressed operations sharing one compiled function, with the
+        # same input order, are identical: trace them as a placeholder.
+        if _root(t_op) is _root(c_op) and t_op._input_permutation == c_op._input_permutation:
+            ctx.placeholders.add(t_op)
+    return True
+
+
+class _MatchState:
+    def __init__(self):
+        self.var_map, self.op_map, self.used_vars, self.used_ops = {}, {}, set(), set()
+
+    def copy(self):
+        new = _MatchState()
+        new.var_map, new.op_map = dict(self.var_map), dict(self.op_map)
+        new.used_vars, new.used_ops = set(self.used_vars), set(self.used_ops)
+        return new
+
+
+class _MatchContext:
+    def __init__(self, template, c_graph, input_ok, leaf_ok, op_ok, assume_custom_ops_match):
+        self.template = template
+        self.t_graph = template.get_subgraph()
+        self.t_inputs = set(template.inputs)
+        self.t_ops = _live_ops(template)
+        self.c_graph, self.input_ok, self.leaf_ok, self.op_ok = c_graph, input_ok, leaf_ok, op_ok
+        self.assume = assume_custom_ops_match
+        self.placeholders = set()  # template operations traced as placeholders
+
+
+def _live_ops(op):
+    """Operations in ``op``'s subgraph that its outputs depend on, in topological order."""
+    if '_compress_live_ops' not in op.__dict__:
+        import rustworkx as rx
+        graph = op.get_subgraph()
+        indices = set()
+        for var in op.outputs:
+            indices |= rx.ancestors(graph.rxgraph, graph.node_table[var])
+        op._compress_live_ops = [graph.rxgraph[i] for i in rx.topological_sort(graph.rxgraph)
+                                 if i in indices and isinstance(graph.rxgraph[i], Operation)]
+    return op._compress_live_ops
+
+
+def _walk(state, pairs, ctx):
+    """Extend ``state`` by pairing template and candidate variables back to their producers; None on mismatch."""
+    stack = list(pairs)
+    while stack:
+        t, c = stack.pop()
+        if t in state.var_map:
+            if state.var_map[t] is not c:
+                return None
+            continue
+        if c in state.used_vars or t.shape != c.shape:
+            return None
+        state.var_map[t] = c
+        state.used_vars.add(c)
+        if t in ctx.t_inputs:
+            if not ctx.input_ok(c):
+                return None
+            continue
+        t_producers = ctx.t_graph.predecessors(t)
+        if not t_producers:  # a value compiled into the template's function
+            if not ctx.leaf_ok(c) or not np.array_equal(t.value, c.value):
+                return None
+            continue
+        t_op = t_producers[0]
+        c_producers = ctx.c_graph.predecessors(c) if c in ctx.c_graph.node_table else []
+        if not c_producers:
+            return None
+        c_op = c_producers[0]
+        if t_op in state.op_map:
+            if state.op_map[t_op] is not c_op:
+                return None
+            continue
+        if c_op in state.used_ops or not ctx.op_ok(c_op) or not _same_structure(t_op, c_op, ctx):
+            return None
+        state.op_map[t_op] = c_op
+        state.used_ops.add(c_op)
+        stack.extend(zip(t_op.outputs, c_op.outputs))
+        stack.extend(zip(t_op.inputs, c_op.inputs))
+    return state
+
+
+def _complete(state, ctx):
+    """Map template operations the backward walk did not reach, by trying the
+    consumers of an already-mapped variable at the same input port."""
+    missing = [op for op in ctx.t_ops if op not in state.op_map]
+    if not missing:
+        return state
+    for t_op in missing:
+        bound = [(port, var) for port, var in enumerate(t_op.inputs) if var in state.var_map]
+        if bound:
+            break
+    else:
+        return None
+    port, t_var = bound[0]
+    c_var = state.var_map[t_var]
+    graph = ctx.c_graph
+    for c_op in graph.rxgraph.successors(graph.node_table[c_var]):
+        if len(c_op.inputs) > port and c_op.inputs[port] is c_var and type(c_op) is type(t_op):
+            trial = _walk(state.copy(), list(zip(t_op.outputs, c_op.outputs)), ctx)
+            if trial is not None and trial.op_map.get(t_op) is c_op:
+                result = _complete(trial, ctx)
+                if result is not None:
+                    return result
+    return None
+
+
+def _jax_outputs(op, args):
+    """``op``'s outputs as JAX arrays, as ``create_jax_function`` evaluates it."""
+    from csdl_alpha.src.operations.loops.new_loop.new_loop import NewLoop
+    if isinstance(op, JaxCompressedOperation):
+        return list(op.jit_fn(*args))  # its own trace, not the callback of compile_separately
+    if isinstance(op, NewLoop):
+        outputs = {var: None for var in op.outputs}
+        op.evaluate_jax(dict(zip(op.inputs, args)), outputs=outputs)
+        return [outputs[var] for var in op.outputs]
+    outs = op.compute_jax(*args)
+    return list(outs) if isinstance(outs, (tuple, list)) else [outs]
+
+
+def _trace_region(ops, inputs, outputs, placeholders):
+    """``(jaxpr text, constants)`` of running ``ops`` in the given order, or None if it cannot be traced."""
+    import jax
+    import jax.numpy as jnp
+
+    def region(*args):
+        env = dict(zip(inputs, args))
+        for op in ops:
+            for var in op.inputs:
+                if var not in env:  # a value compiled in
+                    env[var] = jnp.asarray(var.value)
+            if op in placeholders:
+                outs = [jnp.zeros(var.shape) for var in op.outputs]
+            else:
+                outs = _jax_outputs(op, [env[var] for var in op.inputs])
+            for var, out in zip(op.outputs, outs):
+                env[var] = jnp.reshape(out, var.shape)
+        return [env[var] for var in outputs]
+
+    try:
+        closed = jax.make_jaxpr(region)(*(jax.ShapeDtypeStruct(var.shape, np.float64) for var in inputs))
+    except Exception:
+        return None
+    return str(closed.jaxpr), tuple((np.shape(c), np.asarray(c).tobytes()) for c in closed.consts)
+
+
+def _traces_match(state, ctx, c_inputs):
+    """Whether the candidate paired in ``state`` traces like the template;
+    ``c_inputs`` are the candidate inputs in the template's input order."""
+    template = ctx.template
+    cache = template.__dict__.setdefault('_compress_traces', {})
+    key = frozenset(id(op) for op in ctx.placeholders)
+    if key not in cache:
+        cache[key] = _trace_region(ctx.t_ops, template.inputs, template.outputs, ctx.placeholders)
+    t_trace = cache[key]
+    c_ops = [state.op_map[op] for op in ctx.t_ops]
+    c_placeholders = {state.op_map[op] for op in ctx.placeholders}
+    c_outputs = [state.var_map[var] for var in template.outputs]
+    c_trace = _trace_region(c_ops, c_inputs, c_outputs, c_placeholders)
+    if t_trace is None or c_trace is None or t_trace != c_trace:
+        return False
+    # JAX cannot see what a callback computes, so identical traces do not
+    # imply identical regions unless the user says so.
+    return ctx.assume or 'callback' not in t_trace[0]
+
+
+def _match(template, c_graph, c_inputs, c_outputs, c_ops, assume_custom_ops_match):
+    """How a candidate region computes ``template``'s function: for each template
+    input, the position of the matching candidate input; None if they differ.
+
+    The candidate region is ``c_ops`` (all operations of ``c_graph`` if None)
+    with inputs ``c_inputs`` and outputs ``c_outputs``, which match the
+    template's outputs in order.
+    """
+    if len(c_inputs) != len(template.inputs) or len(c_outputs) != len(template.outputs):
+        return None
+    c_input_set = set(c_inputs)
+    ctx = _MatchContext(
+        template, c_graph,
+        input_ok=lambda var: var in c_input_set,
+        leaf_ok=lambda var: var not in c_input_set and c_graph.in_degree(var) == 0,
+        op_ok=(lambda op: True) if c_ops is None else (lambda op: op in c_ops),
+        assume_custom_ops_match=assume_custom_ops_match,
+    )
+    state = _walk(_MatchState(), list(zip(template.outputs, c_outputs)), ctx)
+    state = _complete(state, ctx) if state is not None else None
+    if state is None:
+        return None
+    # Inputs the function reads are mapped exactly; inputs it ignores pair up in order.
+    position = {var: j for j, var in enumerate(c_inputs)}
+    unused = [j for j, var in enumerate(c_inputs) if var not in state.used_vars]
+    permutation = []
+    for t_var in template.inputs:
+        if t_var in state.var_map:
+            permutation.append(position[state.var_map[t_var]])
+        elif unused and c_inputs[unused[0]].shape == t_var.shape:
+            permutation.append(unused.pop(0))
+        else:
+            return None
+    if unused or not _traces_match(state, ctx, [c_inputs[j] for j in permutation]):
+        return None
+    return permutation
+
+
+def _compress_repeats(template, graph, num_inputs):
+    """Compress every other copy of ``template``'s region in ``graph`` with its compiled function."""
+    import rustworkx as rx
+    t_graph = template.get_subgraph()
+    t_output = template.outputs[0]
+    t_anchor = t_graph.predecessors(t_output)[0]
+    port = next(k for k, var in enumerate(t_anchor.outputs) if var is t_output)
+    registered = set(template.recorder.constraints) | set(template.recorder.objectives)
+    anchors = [graph.rxgraph[i] for i in rx.topological_sort(graph.rxgraph)]
+    anchors = [op for op in anchors if type(op) is type(t_anchor) and len(op.outputs) == len(t_anchor.outputs)]
+
+    repeats = []
+    for anchor in anchors:
+        if anchor not in graph.node_table:  # compressed into an earlier copy
+            continue
+        ctx = _MatchContext(
+            template, graph,
+            input_ok=lambda var: True,
+            leaf_ok=lambda var: _is_literal(var) and graph.in_degree(var) == 0,
+            op_ok=lambda op: op in graph.node_table,
+            assume_custom_ops_match=template.assume_custom_ops_match,
+        )
+        state = _walk(_MatchState(), [(t_output, anchor.outputs[port])], ctx)
+        state = _complete(state, ctx) if state is not None else None
+        if state is None or any(var not in state.var_map for var in template.inputs):
+            continue
+
+        # The same checks compress applies to a region: no intermediate used
+        # outside the copy, and no input that depends on the copy itself.
+        ops = set(state.op_map.values())
+        inputs = [state.var_map[var] for var in template.inputs]
+        outputs = [state.var_map[var] for var in template.outputs]
+        internal = {var for op in ops for var in op.outputs}
+        output_set = set(outputs)
+        if internal & set(inputs):
+            continue
+        escapes = any(
+            var in registered or any(user not in ops for user in graph.rxgraph.successors(graph.node_table[var]))
+            for var in internal - output_set
+        )
+        op_indices = {graph.node_table[op] for op in ops}
+        if escapes or any(op_indices & rx.ancestors(graph.rxgraph, graph.node_table[var]) for var in inputs):
+            continue
+        if not _traces_match(state, ctx, inputs):
+            continue
+
+        constants = [c for t, c in state.var_map.items() if t not in set(template.inputs) and not t_graph.predecessors(t)]
+        region = graph.extract_subgraph_nodes(ops | internal | set(inputs) | set(constants))
+        region.name = template.name
+        graph._delete_nodes(
+            [var for var in internal if var not in output_set]
+            + [var for var in constants if graph.out_degree(var) == 0]
+        )
+        copy = JaxCompressedOperation(
+            region, inputs, outputs, name=template.name, device=template.device,
+            jit_kwargs=template.jit_kwargs, compile_separately=template.compile_separately,
+            share_compiled=False, assume_custom_ops_match=template.assume_custom_ops_match)
+        copy.share_compiled = template.share_compiled
+        _share_explicitly(copy, template, list(range(len(inputs))))
+        copy.extra_inputs = inputs[num_inputs:]
+        copy.extra_outputs = outputs[len(outputs) - len(template.extra_outputs):]
+        copy.repeats = []
+        copy.finalize_and_return_outputs(skip_inline=True)
+        repeats.append(copy)
+    return repeats
 
 
 class TestCompressOp(csdl_tests.CSDLTest):
@@ -671,6 +1135,40 @@ class TestJaxCompress(csdl_tests.CSDLTest):
                 self.run_tests(
                     [csdl_tests.TestingPair(f, f_np, tag=f'{loop_kind} separate={compile_separately}')],
                     verify_derivatives=True)
+
+    def test_repeated_regions_share_compiled_function(self):
+        import csdl_alpha as csdl
+        x_vals = [np.array([0.1, 0.4, 0.7]) + 0.2 * k for k in range(3)]
+        t_vals = [np.array([1.0 + 0.1 * k]) for k in range(3)]
+        c_val = np.array([0.5, -1.0, 2.0])
+        f_np = np.array([sum(np.sum(np.sin(x * t)**2 * c_val) for x, t in zip(x_vals, t_vals))])
+        for compile_separately in [True, False]:
+            self.prep()
+            c = csdl.Variable(name='c', value=c_val)
+            xs = [csdl.Variable(name=f'x{k}', value=v) for k, v in enumerate(x_vals)]
+            ts = [csdl.Variable(name=f't{k}', value=v) for k, v in enumerate(t_vals)]
+            rs = [csdl.sum(csdl.sin(x * t)**2 * c) for x, t in zip(xs, ts)]
+            op = compress([xs[0], ts[0]], rs[0], find_repeats=True, compile_separately=compile_separately)
+            assert len(op.repeats) == 2 and all(r.shared_from is op for r in op.repeats)
+            f = rs[0] + rs[1] + rs[2]
+            self.run_tests(
+                [csdl_tests.TestingPair(f, f_np, tag=f'find_repeats separate={compile_separately}')],
+                verify_derivatives=True)
+
+            # The same with explicit sharing and the inputs in another order.
+            self.prep()
+            c = csdl.Variable(name='c', value=c_val)
+            xs = [csdl.Variable(name=f'x{k}', value=v) for k, v in enumerate(x_vals)]
+            ts = [csdl.Variable(name=f't{k}', value=v) for k, v in enumerate(t_vals)]
+            rs = [csdl.sum(csdl.sin(x * t)**2 * c) for x, t in zip(xs, ts)]
+            op = compress([xs[0], ts[0]], rs[0], share_compiled=False, compile_separately=compile_separately)
+            for k in (1, 2):
+                other = compress([ts[k], xs[k]], rs[k], share_with=op, compile_separately=compile_separately)
+                assert other.shared_from is op
+            f = rs[0] + rs[1] + rs[2]
+            self.run_tests(
+                [csdl_tests.TestingPair(f, f_np, tag=f'share_with separate={compile_separately}')],
+                verify_derivatives=True)
 
 
 if __name__ == '__main__':

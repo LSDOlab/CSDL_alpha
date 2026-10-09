@@ -58,6 +58,11 @@ class Recorder:
         self.constraints:dict[Variable, tuple[np.array, np.array, np.array]] = {}
         self.objectives:dict[Variable, np.array] = {}
 
+        # Compressed operations that own a compiled function, by a cheap
+        # structural key, so identical regions can share it (see
+        # csdl_alpha.src.operations.compress_operations.compress).
+        self.compressed_operations:dict[tuple, list] = {}
+
         self.namespace_tree = Namespace(None)
         self.active_namespace = self.namespace_tree
 

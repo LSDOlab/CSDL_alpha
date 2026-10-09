@@ -568,3 +568,366 @@ def test_compress_inside_loop_body(loop_kind, use_index, compress_mode):
     body_names = [n.name for n in loops[0].get_subgraph().node_table if isinstance(n, Operation)]
     assert body_names.count('jax_compressed') == 1
     assert not {'sin', 'tanh'} & set(body_names)
+
+
+# ---- Sharing compiled functions between identical regions ----------------------
+
+def _blocks(n, exponent=2.0, scale=1.0, inline=True):
+    """n copies of r = sum(sin(x * t) ** exponent * c) * scale, each with its own x, t; c is shared."""
+    rec = csdl.Recorder(inline=inline)
+    rec.start()
+    c = csdl.Variable(name='c', value=np.array([0.5, -1.0, 2.0]))
+    xs, ts, rs = [], [], []
+    for k in range(n):
+        x = csdl.Variable(name=f'x{k}', value=np.array([0.1, 0.4, 0.7]) + 0.2 * k)
+        t = csdl.Variable(name=f't{k}', value=np.array([1.0 + 0.1 * k]))
+        rs.append(csdl.sum(csdl.sin(x * t) ** exponent * c) * scale)
+        xs.append(x)
+        ts.append(t)
+    return rec, c, xs, ts, rs
+
+
+def _total(rs):
+    return sum(rs[1:], rs[0])
+
+
+def _block_results(n, compress_fn, wrt=lambda xs, ts, c: xs + ts + [c]):
+    rec, c, xs, ts, rs = _blocks(n)
+    ops = compress_fn(xs, ts, rs)
+    f = _total(rs)
+    d = csdl.derivative(f, wrt(xs, ts, c))
+    rec.stop()
+    return ops, rec, [f.value] + [d[w].value for w in wrt(xs, ts, c)]
+
+
+def _assert_all_close(got, expected):
+    for g, e in zip(got, expected):
+        np.testing.assert_allclose(g, e, rtol=1e-10, atol=1e-12)
+
+
+def test_identical_compress_calls_share_one_compiled_function():
+    _, _, expected = _block_results(3, lambda xs, ts, rs: None)
+    ops, rec, got = _block_results(3, lambda xs, ts, rs: [compress([x, t], r) for x, t, r in zip(xs, ts, rs)])
+    _assert_all_close(got, expected)
+    first, *others = ops
+    assert first.shared_from is None
+    assert all(op.shared_from is first for op in others)
+    assert all(op.jit_fn is first.jit_fn for op in others)  # same input order: the very same jitted function
+    rec.execute()                                            # evaluates all three forward operations
+    assert first.jit_fn._cache_size() == 1                   # compiled once for all three
+
+    # Their derivative operations share in the same way.
+    vjps = _vjp_ops(rec)
+    assert len(vjps) == 3 and sum(op.shared_from is None for op in vjps) == 1
+
+
+def _all_nodes(graph):
+    for node in graph.node_table:
+        yield node
+        if isinstance(node, SubgraphOperation) and not isinstance(node, JaxCompressedOperation):
+            yield from _all_nodes(node.get_subgraph())
+
+
+def test_sharing_with_inputs_in_a_different_order():
+    _, _, expected = _block_results(2, lambda xs, ts, rs: None)
+    ops, rec, got = _block_results(2, lambda xs, ts, rs: [compress([xs[0], ts[0]], rs[0]),
+                                                          compress([ts[1], xs[1]], rs[1])])
+    _assert_all_close(got, expected)
+    assert ops[1].shared_from is ops[0] and ops[1]._input_permutation != [0, 1, 2]
+    vjps = _vjp_ops(rec)  # derivative operations are built in the shared order, so they share too
+    assert len(vjps) == 2 and sum(op.shared_from is None for op in vjps) == 1
+
+
+@pytest.mark.parametrize('difference', ['exponent', 'constant'])
+def test_regions_with_different_parameters_do_not_share(difference):
+    rec = csdl.Recorder(inline=True)
+    rec.start()
+    x1 = csdl.Variable(value=np.array([0.3, 0.6]))
+    x2 = csdl.Variable(value=np.array([0.3, 0.6]))
+    if difference == 'exponent':        # a parameter stored on the operation
+        r1, r2 = csdl.sum(csdl.sin(x1) ** 2.0), csdl.sum(csdl.sin(x2) ** 3.0)
+    else:                               # a compiled-in literal constant
+        r1, r2 = csdl.sum(csdl.sin(x1) * 2.0), csdl.sum(csdl.sin(x2) * 3.0)
+    expected = r2.value.copy()
+    op1, op2 = compress(x1, r1, absorb_feeders=True), compress(x2, r2, absorb_feeders=True)
+    rec.stop()
+    assert op2.shared_from is None
+    sim = csdl.experimental.PySimulator(rec)
+    sim.run()
+    np.testing.assert_allclose(sim[r2], expected)
+
+
+class _Scale(csdl.CustomExplicitOperation):
+    def __init__(self, k):
+        super().__init__()
+        self.k = k
+
+    def evaluate(self, x):
+        self.declare_input('x', x)
+        f = self.create_output('f', x.shape)
+        self.declare_derivative_parameters('f', 'x')
+        return f
+
+    def compute(self, input_vals, output_vals):
+        output_vals['f'] = self.k * input_vals['x']**2
+
+    def compute_derivatives(self, input_vals, output_vals, derivatives):
+        derivatives['f', 'x'] = np.diag(2 * self.k * input_vals['x'])
+
+
+@pytest.mark.parametrize('assume', [False, True])
+def test_custom_operations_share_only_when_assumed(assume):
+    ks = [2.0, 2.0, 5.0]
+    def build(do_compress):
+        rec = csdl.Recorder(inline=True)
+        rec.start()
+        xs = [csdl.Variable(value=np.array([0.2, 0.9])) for _ in ks]
+        rs = [csdl.sum(csdl.sin(_Scale(k).evaluate(x))) for k, x in zip(ks, xs)]
+        # Assume only for the two that really match; the k=5 one never assumes.
+        ops = [compress(x, r, assume_custom_ops_match=(assume and k == 2.0)) for k, x, r in zip(ks, xs, rs)] if do_compress else None
+        f = _total(rs)
+        g = csdl.derivative(f, xs)
+        rec.stop()
+        return ops, [f.value] + [g[x].value for x in xs]
+
+    _, expected = build(False)
+    ops, got = build(True)
+    _assert_all_close(got, expected)
+    assert (ops[1].shared_from is ops[0]) == assume
+    assert ops[2].shared_from is None
+
+
+def test_find_repeats_compresses_every_copy():
+    _, _, expected = _block_results(3, lambda xs, ts, rs: None)
+    ops, rec, got = _block_results(3, lambda xs, ts, rs: [compress([xs[0], ts[0]], rs[0], find_repeats=True)])
+    _assert_all_close(got, expected)
+    template = ops[0]
+    assert len(template.repeats) == 2
+    assert all(op.shared_from is template for op in template.repeats)
+    names = [n.name for n in rec.active_graph.node_table if hasattr(n, 'inputs')]
+    assert names.count('jax_compressed') == 3 and 'sin' not in names
+
+
+def test_find_repeats_in_a_chain_takes_non_overlapping_copies():
+    def build(do_compress, layers_per_copy):
+        rec = csdl.Recorder(inline=True)
+        rec.start()
+        x = csdl.Variable(value=np.array([0.2, 0.5]))
+        hs, h = [], x
+        for _ in range(6):
+            h = csdl.tanh(h * 0.9) + 0.05
+            hs.append(h)
+        op = compress(x, hs[layers_per_copy - 1], find_repeats=True) if do_compress else None
+        f = csdl.sum(h**2)
+        g = csdl.derivative(f, x)
+        rec.stop()
+        return op, [f.value, g.value]
+
+    _, expected = build(False, 1)
+    for layers_per_copy, num_repeats in [(1, 5), (2, 2), (4, 0)]:
+        op, got = build(True, layers_per_copy)
+        _assert_all_close(got, expected)
+        assert len(op.repeats) == num_repeats
+
+
+def test_find_repeats_skips_a_copy_with_an_escaping_intermediate():
+    rec, c, xs, ts, rs = _blocks(3)
+    # In block 1, the intermediate x1 * t1 is also used outside the block.
+    leak = [n for n in rec.active_graph.node_table if hasattr(n, 'inputs') and xs[1] in n.inputs][0].outputs[0]
+    w = csdl.sum(leak)
+    op = compress([xs[0], ts[0]], rs[0], find_repeats=True)
+    rec.stop()
+    assert len(op.repeats) == 1 and op.repeats[0].outputs == [rs[2]]
+
+
+def test_find_repeats_with_outputs_on_independent_paths():
+    # Output 1 is not upstream of output 0, so its operations are found by
+    # walking forward from the shared input.
+    def build(do_compress):
+        rec = csdl.Recorder(inline=True)
+        rec.start()
+        xs = [csdl.Variable(value=np.array([0.3, 0.8]) + k) for k in range(3)]
+        outs = [(csdl.sum(csdl.sin(x)), csdl.cos(x) * 2.0) for x in xs]
+        op = compress(xs[0], list(outs[0]), find_repeats=True) if do_compress else None
+        f = sum((r + csdl.sum(q**2) for r, q in outs[1:]), outs[0][0] + csdl.sum(outs[0][1]**2))
+        g = csdl.derivative(f, xs)
+        rec.stop()
+        return op, [f.value] + [g[x].value for x in xs]
+
+    _, expected = build(False)
+    op, got = build(True)
+    _assert_all_close(got, expected)
+    assert len(op.repeats) == 2
+
+
+@pytest.mark.parametrize('compile_separately', [True, False])
+def test_find_repeats_under_jax_simulator(compile_separately):
+    def results(do_compress):
+        rec, c, xs, ts, rs = _blocks(3, inline=False)
+        op = compress([xs[0], ts[0]], rs[0], find_repeats=True, compile_separately=compile_separately) if do_compress else None
+        f = _total(rs)
+        rec.stop()
+        sim = csdl.experimental.JaxSimulator(rec, gpu=False, additional_inputs=xs + ts + [c], additional_outputs=[f])
+        sim.run()
+        d = sim.compute_totals()
+        return op, [sim[f]] + [d[f, w] for w in xs + ts + [c]]
+
+    _, expected = results(False)
+    op, got = results(True)
+    _assert_all_close(got, expected)
+    assert len(op.repeats) == 2
+    if compile_separately:  # all three copies called one compiled function
+        assert op.jit_fn._cache_size() == 1
+
+
+# ---- Explicit sharing: compress(..., share_with=op) ------------------------------
+
+def _vjp_ops(rec):
+    # An operation can sit in more than one graph (a derivative loop's body reuses it), so dedupe.
+    nodes = dict.fromkeys(_all_nodes(rec.active_graph))
+    return [n for n in nodes if isinstance(n, JaxCompressedOperation) and n.name.startswith('vjp')]
+
+
+def test_share_with_reuses_function_and_derivatives():
+    _, _, expected = _block_results(2, lambda xs, ts, rs: None)
+    def compress_both(xs, ts, rs):
+        first = compress([xs[0], ts[0]], rs[0], share_compiled=False)
+        second = compress([ts[1], xs[1]], rs[1], share_compiled=False, share_with=first)
+        return [first, second]
+    ops, rec, got = _block_results(2, compress_both)
+    _assert_all_close(got, expected)
+    assert ops[1].shared_from is ops[0]
+    vjps = _vjp_ops(rec)
+    assert len(vjps) == 2 and sum(op.shared_from is None for op in vjps) == 1
+
+
+def test_share_with_second_derivatives_share_too():
+    def build(do_compress):
+        rec, c, xs, ts, rs = _blocks(2)
+        if do_compress:
+            first = compress([xs[0], ts[0]], rs[0], share_compiled=False)
+            compress([xs[1], ts[1]], rs[1], share_compiled=False, share_with=first)
+        f = _total(rs)
+        g = csdl.derivative(f, xs)
+        h = csdl.derivative(g[xs[0]] + g[xs[1]], xs)
+        rec.stop()
+        return rec, [h[x].value for x in xs]
+
+    _, expected = build(False)
+    rec, got = build(True)
+    _assert_all_close(got, expected)
+    vjps = _vjp_ops(rec)
+    first_order = [op for op in vjps if not op.name.startswith('vjp_vjp')]
+    second_order = [op for op in vjps if op.name.startswith('vjp_vjp')]
+    assert len(first_order) == 2 and sum(op.shared_from is None for op in first_order) == 1
+    assert len(second_order) == 2 and sum(op.shared_from is None for op in second_order) == 1
+
+
+def test_share_with_custom_operations():
+    def build(do_compress):
+        rec = csdl.Recorder(inline=True)
+        rec.start()
+        xs = [csdl.Variable(value=np.array([0.2, 0.9]) + k) for k in range(2)]
+        rs = [csdl.sum(csdl.sin(_Scale(2.0).evaluate(x))) for x in xs]
+        ops = None
+        if do_compress:
+            first = compress(xs[0], rs[0])
+            ops = [first, compress(xs[1], rs[1], share_with=first)]  # no assume_custom_ops_match needed
+        f = _total(rs)
+        g = csdl.derivative(f, xs)
+        rec.stop()
+        return ops, rec, [f.value] + [g[x].value for x in xs]
+
+    _, _, expected = build(False)
+    ops, rec, got = build(True)
+    _assert_all_close(got, expected)
+    assert ops[1].shared_from is ops[0]
+    vjps = _vjp_ops(rec)
+    assert len(vjps) == 2 and sum(op.shared_from is None for op in vjps) == 1
+
+
+def test_share_with_mismatch_raises_before_changing_graph():
+    rec = csdl.Recorder(inline=True)
+    rec.start()
+    x1 = csdl.Variable(value=np.array([0.3, 0.6]))
+    x2 = csdl.Variable(value=np.array([0.3, 0.6]))
+    r1, r2 = csdl.sum(csdl.sin(x1) ** 2.0), csdl.sum(csdl.sin(x2) ** 3.0)
+    first = compress(x1, r1)
+    before = op_names(rec)
+    with pytest.raises(ValueError, match='does not match the region of share_with'):
+        compress(x2, r2, share_with=first)
+    with pytest.raises(TypeError, match='share_with must be'):
+        compress(x2, r2, share_with='first')
+    assert op_names(rec) == before
+    rec.stop()
+
+
+def test_share_with_takes_jit_kwargs_from_the_shared_operation():
+    rec, c, xs, ts, rs = _blocks(2)
+    first = compress([xs[0], ts[0]], rs[0], jit_kwargs={'keep_unused': True})
+    with pytest.raises(ValueError, match='jit_kwargs differ'):
+        compress([xs[1], ts[1]], rs[1], share_with=first, jit_kwargs={'keep_unused': False})
+    second = compress([xs[1], ts[1]], rs[1], share_with=first)
+    rec.stop()
+    assert second.jit_kwargs == {'keep_unused': True} and second.shared_from is first
+
+
+@pytest.mark.parametrize('how', ['automatic', 'share_with'])
+def test_derivatives_share_when_blocks_are_compressed_as_they_are_recorded(how):
+    # Compressing a block frees node indices that later blocks reuse, so later
+    # blocks are numbered differently from the first. Sharing renumbers each
+    # matched subgraph like its template, so CSDL records their derivative
+    # graphs identically and those share one compiled function too.
+    def build(do_compress):
+        rec = csdl.Recorder(inline=True)
+        rec.start()
+        x = csdl.Variable(value=np.array([0.2, 0.5, 0.9]))
+        h, first = x, None
+        for _ in range(4):
+            start = h
+            for _ in range(5):
+                h = csdl.tanh(0.9 * h + 0.1) + 0.05 * csdl.sin(h)
+            if do_compress:
+                op = compress(start, h, absorb_feeders=True, share_with=first if how == 'share_with' else None)
+                first = first or op
+        f = csdl.sum(h**2)
+        g = csdl.derivative(f, x)
+        rec.stop()
+        return rec, [f.value, g.value]
+
+    _, expected = build(False)
+    rec, got = build(True)
+    _assert_all_close(got, expected)
+    vjps = _vjp_ops(rec)
+    owners = {id(op.shared_from or op) for op in vjps}
+    assert len(vjps) == 4 and len(owners) == 1
+    rec.execute()
+    owner = vjps[0].shared_from or vjps[0]
+    assert owner.jit_fn._cache_size() == 1
+
+
+def test_derivatives_of_shared_operations_share_without_matching(monkeypatch):
+    import csdl_alpha.src.operations.compress_operations as compress_module
+    rec, c, xs, ts, rs = _blocks(3)
+    first = compress([xs[0], ts[0]], rs[0], share_compiled=False)
+    for k in (1, 2):
+        compress([ts[k], xs[k]], rs[k], share_with=first)
+
+    calls = {'match': 0, 'trace': 0}
+    real_match, real_trace = compress_module._match, compress_module._trace_region
+    def counting_match(*args, **kwargs):
+        calls['match'] += 1
+        return real_match(*args, **kwargs)
+    def counting_trace(*args, **kwargs):
+        calls['trace'] += 1
+        return real_trace(*args, **kwargs)
+    monkeypatch.setattr(compress_module, '_match', counting_match)
+    monkeypatch.setattr(compress_module, '_trace_region', counting_trace)
+
+    f = _total(rs)
+    csdl.derivative(f, xs + ts)
+    csdl.derivative(f, xs + ts)  # a second derivative call reuses the first's derivative function
+    rec.stop()
+    assert calls == {'match': 0, 'trace': 0}
+    vjps = _vjp_ops(rec)
+    assert len(vjps) == 6 and len({id(op.shared_from or op) for op in vjps}) == 1
