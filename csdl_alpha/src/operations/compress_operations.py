@@ -3,6 +3,7 @@ from csdl_alpha.src.graph.operation import Operation
 from csdl_alpha.src.operations.operation_subclasses import SubgraphOperation
 import csdl_alpha.utils.testing_utils as csdl_tests
 import numpy as np
+import re
 
 class CompressedOperation(SubgraphOperation):
     def __init__(self, subgraph, inputs, outputs, name, jax_jit=True):
@@ -818,7 +819,11 @@ def _trace_region(ops, inputs, outputs, placeholders):
         closed = jax.make_jaxpr(region)(*(jax.ShapeDtypeStruct(var.shape, np.float64) for var in inputs))
     except Exception:
         return None
-    return str(closed.jaxpr), tuple((np.shape(c), np.asarray(c).tobytes()) for c in closed.consts)
+    # Some JAX versions print a callback's Python function with its memory
+    # address, which differs between otherwise identical regions. Whether a
+    # callback may match at all is decided separately (assume_custom_ops_match).
+    text = re.sub(r'0x[0-9a-fA-F]+', '0x?', str(closed.jaxpr))
+    return text, tuple((np.shape(c), np.asarray(c).tobytes()) for c in closed.consts)
 
 
 def _traces_match(state, ctx, c_inputs):
