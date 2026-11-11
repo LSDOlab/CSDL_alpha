@@ -18,7 +18,7 @@ additional_modules += list((package_loc / "csdl_alpha" / "src" / "operations" / 
 additional_modules += list((package_loc / "csdl_alpha" / "src" / "operations" / "derivatives").glob("*.py"))
 additional_modules += list((package_loc / "csdl_alpha" / "src" / "operations" / "special").glob("*.py"))
 
-def pytest_collect_file(file_path, path, parent):
+def pytest_collect_file(file_path, parent=None, **kwargs):
     if file_path in additional_modules:
         return Module.from_parent(path=file_path, parent=parent)
     else:

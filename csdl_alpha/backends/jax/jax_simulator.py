@@ -337,10 +337,13 @@ class JaxSimulator(SimulatorBase):
 
         if not use_finite_difference:
             if self.opt_derivs_func is None:
+                import gc
+                gc.collect()
 
                 self.recorder.start()
                 self.build_objective_constraint_derivatives(self.derivatives_kwargs)
                 self.recorder.stop()
+                gc.collect()
                 print(f"compiling 'compute_optimization_derivatives' function ... ({len(self.recorder.node_graph_map)} nodes)")
 
                 opt_derivs = []

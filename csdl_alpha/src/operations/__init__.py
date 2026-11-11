@@ -53,6 +53,7 @@ from .tensor.concatenate import concatenate
 from . import sparse
 
 from .derivatives.derivative import derivative
+from .derivatives.reverse import vjp
 
 # Special operations
 from .special.bessel import bessel

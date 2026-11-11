@@ -31,7 +31,10 @@ class SetVarIndex(Operation):
 
     def compute_inline(self, x, y, *slice_args):
         x_updated = x.copy()
-        x_updated[self.slice.evaluate(*slice_args)] = y
+        evaluated_slice = self.slice.evaluate(*slice_args)
+        if isinstance(y, np.ndarray) and y.size == 1 and (isinstance(evaluated_slice, (int, np.integer)) or (isinstance(evaluated_slice, tuple) and all(isinstance(s, (int, np.integer)) for s in evaluated_slice))):
+            y = y.item()
+        x_updated[evaluated_slice] = y
         return x_updated
 
         # # Set item could add over duplicate indices.

@@ -225,9 +225,9 @@ def create_jax_interface(
 
         #### Potential analysis tools ####
         ## ----- compiled func cost estimates ----- 
-        traced = jax_function.trace(*jax_interface_inputs)
-        lowered = traced.lower()
-        compiled = lowered.compile()
+        # traced = jax_function.trace(*jax_interface_inputs)
+        # lowered = traced.lower()
+        # compiled = lowered.compile()
         # for compiled_costs in compiled.cost_analysis():
         #     print(compiled_costs)
         # print(compiled.memory_analysis())

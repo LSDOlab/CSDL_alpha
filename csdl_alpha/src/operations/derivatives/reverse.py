@@ -4,7 +4,7 @@ from csdl_alpha.src.graph.operation import Operation, set_properties
 from csdl_alpha.src.graph.variable import Variable
 from typing import Union
 from csdl_alpha.src.graph.graph import Graph
-from csdl_alpha.utils.inputs import validate_and_variablize, variablize
+from csdl_alpha.utils.inputs import validate_and_variablize, variablize, get_type_string
 
 
 class VJPOperation(SubgraphOperation):
@@ -37,22 +37,35 @@ def preprocess_reverse(
             node.prep_vjp()
     return node_order
 
-def vjp(seeds:list[tuple[Variable, Variable]],
+def vjp(seeds:Union[tuple[Variable, Variable], list[tuple[Variable, Variable]]],
         wrts:Union[Variable, list[Variable]],
-        graph:Graph,
-    )->dict[Variable]:
+        graph:Graph = None,
+    )->dict[Variable, Variable]:
     # Preprocess inputs
+    if graph is None:
+        import csdl_alpha as csdl
+        graph = csdl.get_current_recorder().active_graph
+    elif not isinstance(graph, Graph):
+        raise TypeError(f"Expected graph to be a Graph, but got {get_type_string(graph)}.")
+
+    if isinstance(seeds, tuple) and len(seeds) == 2 and not isinstance(seeds[0], tuple):
+        seeds = [seeds]
+
     of_vars = []
+    processed_seeds = []
     for of_var, of_seeds in seeds:
-        of_vars.append(validate_and_variablize(of_var))
+        var = validate_and_variablize(of_var)
+        seed_var = validate_and_variablize(of_seeds)
+        of_vars.append(var)
 
         # Seeds must match shape of the variable
-        if of_seeds.shape != of_var.shape:
-            raise ValueError(f"Seed shape {of_seeds.shape} and variable shape {of_var.shape} do not match.")
+        if seed_var.shape != var.shape:
+            raise ValueError(f"Seed shape {seed_var.shape} and variable shape {var.shape} do not match.")
+        processed_seeds.append((var, seed_var))
 
     wrt_vars = listify_and_verify_variables(wrts)
     node_order = preprocess_reverse(of_vars, wrt_vars, graph)
-    return _vjp(seeds, wrt_vars, node_order)
+    return _vjp(processed_seeds, wrt_vars, node_order)
 
 def _vjp(seeds:list[tuple[Variable, Variable]],
         wrt_vars:Union[Variable, list[Variable]],

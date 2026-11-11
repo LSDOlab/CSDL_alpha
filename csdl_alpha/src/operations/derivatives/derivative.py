@@ -51,7 +51,20 @@ def reverse(
             jacobians[wrt_var] = jacobians[wrt_var].set(csdl.slice[diag_indices, diag_indices], wrt_cotangent.flatten())
             jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}_diag')
         return jacobians
-    
+
+    # Fast bypass for scalar outputs (avoids loops, subgraphs, lax.scan, and dynamic slicing)
+    if of_var.size == 1:
+        current_output_seed = csdl.Variable(name=f'seed_{of.name}', value=np.ones(of_var.shape))
+        vjp_cotangents = _vjp([(of_var, current_output_seed)], wrt_vars, node_order)
+
+        for wrt_var in wrt_vars:
+            wrt_cotangent = vjp_cotangents[wrt_var]
+            if wrt_cotangent is None:
+                continue
+            jacobians[wrt_var] = wrt_cotangent.flatten().reshape((1, wrt_var.size))
+            jacobians[wrt_var].add_name(f'jac_{of.name}_wrt_{wrt_var.name}')
+        return jacobians
+
     if loop is False:
         # ===TESTING VRANGE===:
         batched_wrt_vjps = {}
